@@ -127,23 +127,12 @@ const MSAL_CONFIG = {
       authority: 'https://login.microsoftonline.com/' +
                  (_PC_AUTH.tenantId || '38f48feb-4b87-481f-bd79-c2d633594e2f'),
 
-      // GH2.2: redirectUri dinámico — funciona en localhost Y GitHub Pages
-      // Para GitHub Pages: origin = 'https://user.github.io', pathname = '/repo'
-      redirectUri: (() => {
-        if (typeof window === 'undefined') return 'http://localhost';
-        if (_PC_AUTH.redirectUri) return _PC_AUTH.redirectUri;
-        const base = window.location.origin + window.location.pathname
-          .replace(/\/[^/]*\.[^/]*$/, '')
-          .replace(/\/$/, '');
-        return base || window.location.origin;
-      })(),
+      // GH3.16: redirectUri explícito — valor exacto registrado en Azure AD como SPA.
+      // Eliminado cálculo dinámico con window.location.pathname (causa de AADSTS9002326).
+      redirectUri: 'https://crcastr024.github.io/PMC-TI-REN26_GH/',
 
-      // GH2.2: postLogoutRedirectUri — volver al origen tras logout
-      postLogoutRedirectUri: (() => {
-        if (typeof window === 'undefined') return 'http://localhost';
-        if (_PC_AUTH.postLogoutRedirectUri) return _PC_AUTH.postLogoutRedirectUri;
-        return window.location.origin + (window.location.pathname || '');
-      })(),
+      // GH3.16: postLogoutRedirectUri explícito — misma URL que redirectUri.
+      postLogoutRedirectUri: 'https://crcastr024.github.io/PMC-TI-REN26_GH/',
 
       // GH2.2: navigateToLoginRequestUrl = false
       // Para flujo popup, MSAL no debe navegar de vuelta tras el login.
@@ -195,15 +184,6 @@ const MSAL_CONFIG = {
     },
   };
 
-  // GH1.6: Settings SPA para aplicación web estática (GitHub Pages, Netlify, o cualquier servidor)
-  // Navegación y logout configurados para aplicación web independiente
-  if (typeof window !== 'undefined' && window.PRODUCTION_CONFIG) {
-    const _PC = window.PRODUCTION_CONFIG;
-    MSAL_CONFIG.auth.postLogoutRedirectUri = _PC.postLogoutRedirectUri || window.location.origin;
-    // navigateToLoginRequestUrl=false: para flujo popup no navegar de vuelta post-login
-    MSAL_CONFIG.auth.navigateToLoginRequestUrl = false;
-  }
-
   // RC1 GL-2: Actualizar MSAL_CONFIG desde PRODUCTION_CONFIG (fuente única de IDs)
   if (typeof window !== 'undefined' && window.PRODUCTION_CONFIG) {
     const _PC = window.PRODUCTION_CONFIG;
@@ -235,6 +215,9 @@ const MSAL_CONFIG = {
         return false;
       }
       try {
+        // GH3.16 · DIAGNÓSTICO (temporal — solo para verificar valores exactos en consola)
+        console.error('[MSAL DIAG] redirectUri:', MSAL_CONFIG.auth.redirectUri);
+        console.error('[MSAL DIAG] postLogoutRedirectUri:', MSAL_CONFIG.auth.postLogoutRedirectUri);
         _app = new msal.PublicClientApplication(MSAL_CONFIG);
         await _app.initialize();
         _initialized = true;

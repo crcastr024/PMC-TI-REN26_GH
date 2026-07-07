@@ -766,7 +766,6 @@ const GraphPayloadBuilder = (() => {
         wouldWrite: validation.valid && !!(record && record.sp_item_id),
       };
 
-      console.group('[GraphPayloadBuilder.dryRun] — NO SE EJECUTA PATCH');
 
 
 
@@ -1319,7 +1318,6 @@ const JSONProvider = {
         const data = await res.json();
         this._cache = data;
 
-          (data.renovaciones || []).length + ' renovaciones');
         return data;
       } catch(e) {
 
@@ -1432,7 +1430,6 @@ const SplitJsonProvider = {
         data.usuarios_sistema = data.usuarios_sistema.map(u => DataMapper.normalizeUsuarioSistema(u));
         this._cache = data;
 
-          data.renovaciones.length + ' renovaciones · ' + data.inventario_equipos.length + ' inventario');
         return data;
       } catch(e) {
 
@@ -1448,6 +1445,8 @@ const SplitJsonProvider = {
   async getRoles() { const d = await this.loadData(); return (d && d.roles) || []; },
   async getConfiguracion() { const d = await this.loadData(); return (d && d.configuracion) || []; },
   invalidateCache() { this._cache = null; this._loadPromise = null; },
+};
+window.SplitJsonProvider = SplitJsonProvider;
 
 // ════════════════════════════════════════════════════════════════════════
 // GH2.5.6 — GraphResolver
@@ -1663,8 +1662,6 @@ const BUILD_INFO = Object.freeze({
 });
 window.BUILD_INFO = BUILD_INFO;
 
-};
-window.SplitJsonProvider = SplitJsonProvider;
 
 /** Selector de provider según APP_CONFIG.dataSource */
 DataService.getProvider = function() {
