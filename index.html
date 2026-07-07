@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#D30034">
+<meta name="description" content="PMC-TI REN26 · Dashboard de Renovación Tecnológica · Heinsohn Business Technology">
+<!-- Open Graph -->
+<meta property="og:title" content="PMC-TI REN26 · Heinsohn">
+<meta property="og:description" content="Dashboard de Renovación Tecnológica 2026">
+<title>PMC-TI-REN26 · Renovación Tecnológica 2026 · Heinsohn</title>
+<!-- GH1.7: Todas las rutas son relativas -->
+<!-- GH2.8: Fuentes locales — sin dependencia de CDN externo
+     El CSS define un stack de sistema que incluye Inter cuando está disponible
+     (disponible nativamente en macOS 12+, Windows 11+) con fallback a UI system fonts. -->
+<!-- GH1.3: CSS modularizado -->
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/responsive.css">
+<!-- GH1.4: Favicon -->
+<link rel="icon" href="assets/favicon.ico" type="image/x-icon">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/logo-heinsohn.svg">
+<!-- GH1.10 (complemento): manifest -->
+<link rel="manifest" href="manifest.json">
+</head>
+<body>
+<!-- ════════════════════════ LANDING SCREEN ════════════════════════ -->
+<div id="landing">
+  <div class="landing-header">
+    <div class="landing-logo"><img src="" alt="HEINSOHN" id="landing-logo"></div>
+    <div class="landing-eyebrow-top">Plan IT 2026 · Heinsohn</div>
+  </div>
+
+  <div class="landing-content">
+    <div class="landing-eyebrow">PMC-TI-REN26 · Renovación Tecnológica</div>
+    <h1 class="landing-title">Renovamos <strong>146&nbsp;equipos</strong><br>para <strong id="hero-colabs">140</strong>&nbsp;colaboradores</h1>
+    <p class="landing-sub">Plataforma operativa para gestión y trazabilidad del proyecto de renovación tecnológica 2026 en HBT y HGS. Coordinación centralizada · trazabilidad serial por serial · auditoría completa.</p>
+
+    <div class="landing-kpis">
+      <div class="lkpi"><span class="lkpi-label">Total equipos</span><span class="lkpi-val accent">146</span><span class="lkpi-sub">HBT 88 · HGS 58</span></div>
+      <div class="lkpi"><span class="lkpi-label">Colaboradores</span><span class="lkpi-val">132</span><span class="lkpi-sub">Únicos por cédula</span></div>
+      <div class="lkpi"><span class="lkpi-label">Empresas</span><span class="lkpi-val">2</span><span class="lkpi-sub">HBT + HGS</span></div>
+      <div class="lkpi"><span class="lkpi-label">Cobertura</span><span class="lkpi-val">23</span><span class="lkpi-sub">Ciudades</span></div>
+    </div>
+
+    <button class="landing-cta" onclick="enterDashboard()" id="landing-cta">
+      Ingresar al dashboard
+      <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+  </div>
+
+  <div class="landing-foot">
+    <div><strong>Heinsohn Business Technology</strong> · HBT + HGS</div>
+    <div>Sponsor: Gabriel Gómez · Coordinación: Dayana González · PMO: Cristian Castro</div>
+  </div>
+</div>
+
+<div class="app" id="app">
+
+  <!-- ════════════════════════ SIDEBAR ════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="sb-logo">
+        <img class="logo-light" src="" alt="Heinsohn" id="sb-logo-light">
+        <img class="logo-dark" src="" alt="Heinsohn" id="sb-logo-dark">
+      </div>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-section-title">Operativas</div>
+      <div class="sb-item active" data-view="resumen">
+        <div class="sb-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></div>
+        <span>Resumen</span>
+      </div>
+      <div class="sb-item" data-view="usuarios">
+        <div class="sb-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <span>Usuarios</span>
+        <span class="sb-badge" id="b-usuarios">—</span>
+      </div>
+      <div class="sb-item" data-view="tecnicos">
+        <div class="sb-icon"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+        <span>Por técnico</span>
+      </div>
+      <div class="sb-item" data-view="ciudades">
+        <div class="sb-icon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <span>Por ciudad</span>
+      </div>
+      <div class="sb-item" data-view="devoluciones">
+        <div class="sb-icon"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg></div>
+        <span>Devoluciones</span>
+      </div>
+
+      <div class="sb-item" data-view="home-tecnico" id="sb-home-tecnico" style="display:none">
+        <div class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></div>
+        <span>Mi cola</span>
+        <span class="sb-badge" id="b-home-tecnico">—</span>
+      </div>
+
+      <div class="sb-item" data-view="panel" id="sb-panel" style="display:none">
+        <div class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+        <span>Panel ejecutivo</span>
+      </div>
+
+            <div class="sb-section-title">Reportes</div>
+      <div class="sb-item" data-view="reportes">
+        <div class="sb-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+        <span>Ejecutivos</span>
+        <span class="sb-badge">6</span>
+      </div>
+
+      <div class="sb-item" data-view="aprobaciones" id="sb-aprobaciones" style="display:none">
+        <div class="sb-icon"><svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <span>Aprobaciones</span>
+        <span class="sb-badge" id="b-aprobaciones">0</span>
+      </div>
+
+      <div class="sb-section-title">Sistema</div>
+      <div class="sb-item" data-view="actividad">
+        <div class="sb-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+        <span>Actividad</span>
+        <span class="sb-badge" id="b-actividad">0</span>
+      </div>
+      <div class="sb-item" data-view="ajustes">
+        <div class="sb-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+        <span>Ajustes</span>
+      </div>
+    </nav>
+
+    <div class="sb-spacer"></div>
+
+    <div class="sb-foot">
+      <div class="sb-avatar" id="user-avatar">CC</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name" id="user-name">Cris Castro</div>
+        <div class="sb-user-role" id="user-role">Super Admin · TI</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ════════════════════════ TOPBAR ════════════════════════ -->
+  <header class="topbar">
+    <div class="tb-crumb">
+      <span class="tb-crumb-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+      <span class="tb-crumb-text">PMC-TI-REN26 · <strong id="crumb-view">Resumen</strong></span>
+    </div>
+
+    <div class="tb-status">
+      <span class="tb-status-dot"></span>
+      <span id="tb-sync">Sincronizado</span>
+    </div>
+
+    <!-- F4 · Selector de rol (dev tool) -->
+    <div class="tb-role-badge" id="tb-role-badge" onclick="toggleRoleSwitcher()" title="Cambiar rol activo">
+      <div class="role-dot" id="tb-role-dot"></div>
+      <span id="tb-role-label">—</span>
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+      <div class="role-switcher-menu" id="role-switcher-menu">
+        <div class="role-option" data-role="super_admin" onclick="switchRole('super_admin',event)">
+          <div class="role-dot super_admin"></div>
+          <div><div>Super Admin</div><div class="role-option-sub">Acceso total</div></div>
+        </div>
+        <div class="role-option" data-role="gestor_activos" onclick="switchRole('gestor_activos',event)">
+          <div class="role-dot gestor_activos"></div>
+          <div><div>Gestor de Activos</div><div class="role-option-sub">Operativo completo</div></div>
+        </div>
+        <div class="role-option" data-role="tecnico" onclick="switchRole('tecnico',event)">
+          <div class="role-dot tecnico"></div>
+          <div><div>Técnico</div><div class="role-option-sub">Ejecución asignada</div></div>
+        </div>
+        <div class="role-option" data-role="visitante" onclick="switchRole('visitante',event)">
+          <div class="role-dot visitante"></div>
+          <div><div>Visitante</div><div class="role-option-sub">Solo lectura</div></div>
+        </div>
+      </div>
+    </div>
+
+        <button class="tb-btn-icon" id="btn-preview-visitante" onclick="previewVisitante()" title="Ver como visitante (Panel ejecutivo)" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+
+    <button class="tb-btn-icon" onclick="toggleTheme()" title="Cambiar tema">
+      <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+
+    <button class="tb-btn-icon" onclick="toggleNotifCenter()" title="Notificaciones">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="dot-badge" id="notif-dot" style="display:none"></span>
+    </button>
+
+    <button class="tb-btn" onclick="openCreateModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nuevo registro
+    </button>
+  </header>
+
+  <!-- ════════════════════════ MAIN ════════════════════════ -->
+  <main class="main" id="main-scroll">
+
+    <!-- ═════ VISTA: RESUMEN ═════ -->
+    <div class="view active" id="view-resumen">
+      <div class="hero">
+        <div class="hero-inner">
+          <div class="hero-eyebrow">PMC-TI-REN26 · Renovación Tecnológica</div>
+          <h1 class="hero-title">Renovamos <strong>146</strong> equipos<br>para <strong id="h-users">134</strong> colaboradores</h1>
+          <p class="hero-sub">Coordinación operativa centralizada · Trazabilidad serial por serial · <strong>HBT + HGS</strong></p>
+          <div class="hero-kpis">
+            <div class="hero-kpi"><span class="hero-kpi-label">Total equipos</span><span class="hero-kpi-val">146</span><span class="hero-kpi-sub" id="h-empresas">HBT 88 · HGS 58</span></div>
+            <div class="hero-kpi"><span class="hero-kpi-label">Pendientes</span><span class="hero-kpi-val accent" id="h-pendientes">—</span><span class="hero-kpi-sub">Sin iniciar</span></div>
+            <div class="hero-kpi"><span class="hero-kpi-label">En proceso</span><span class="hero-kpi-val amb" id="h-proceso">—</span><span class="hero-kpi-sub">Alistamiento + envío</span></div>
+            <div class="hero-kpi"><span class="hero-kpi-label">Entregados</span><span class="hero-kpi-val grn" id="h-entregados">—</span><span class="hero-kpi-sub">En manos del usuario</span></div>
+            <div class="hero-kpi"><span class="hero-kpi-label">Avance global</span><span class="hero-kpi-val red" id="h-pct">0%</span><span class="hero-kpi-sub">Ponderado</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div>
+            <div class="section-eyebrow">Indicadores operativos</div>
+            <h2 class="section-title">Estado en tiempo real</h2>
+            <p class="section-sub">Click en cualquier tarjeta para filtrar la tabla</p>
+          </div>
+        </div>
+        <div class="cards-grid">
+          <div class="metric-card" onclick="goView('usuarios')">
+            <div class="metric-card-head"><span class="metric-card-label">Total</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div></div>
+            <div class="metric-card-val" id="k-total">—</div>
+            <div class="metric-card-sub" id="k-total-sub">Equipos con usuario</div>
+          </div>
+          <div class="metric-card grn" onclick="setStateFilter('Entregado')">
+            <div class="metric-card-head"><span class="metric-card-label">Entregados</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+            <div class="metric-card-val" id="k-entregados">—</div>
+            <div class="metric-card-sub"><strong id="k-pct">0%</strong> completado</div>
+          </div>
+          <div class="metric-card amb" onclick="setStateFilter('Alistamiento')">
+            <div class="metric-card-head"><span class="metric-card-label">En alistamiento</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div></div>
+            <div class="metric-card-val" id="k-alistamiento">—</div>
+            <div class="metric-card-sub">En preparación</div>
+          </div>
+          <div class="metric-card blu" onclick="setStateFilter('Pendiente')">
+            <div class="metric-card-head"><span class="metric-card-label">Pendientes</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div></div>
+            <div class="metric-card-val" id="k-pendientes">—</div>
+            <div class="metric-card-sub">Por iniciar</div>
+          </div>
+          <div class="metric-card pur">
+            <div class="metric-card-head"><span class="metric-card-label">Actas firmadas</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div></div>
+            <div class="metric-card-val" id="k-actas">—</div>
+            <div class="metric-card-sub">PandaDoc</div>
+          </div>
+          <div class="metric-card amb">
+            <div class="metric-card-head"><span class="metric-card-label">Backup</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div></div>
+            <div class="metric-card-val" id="k-backup">14</div>
+            <div class="metric-card-sub" id="k-backup-sub">10 HBT + 4 HGS</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" style="padding-top:0">
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head"><div><div class="panel-title">Distribución por empresa</div><div class="panel-sub">HBT y HGS · operativos vs backup</div></div></div>
+            <div id="empresa-chart"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><div class="panel-title">Carga por técnico</div><div class="panel-sub">Asignaciones operativas</div></div></div>
+            <div id="tecnico-chart"></div>
+          </div>
+        </div>
+
+        <div class="map-card">
+          <div class="map-head">
+            <div>
+              <div class="map-title">Distribución geográfica</div>
+              <div class="map-sub">Constelación de ciudades · click para filtrar</div>
+            </div>
+          </div>
+          <svg class="map-svg" id="map-svg" viewBox="0 0 1200 540" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════ VISTA: USUARIOS ═════ -->
+    <div class="view" id="view-usuarios">
+      <div class="hero compact">
+        <div class="hero-inner">
+          <div class="hero-eyebrow">Tabla maestra</div>
+          <h1 class="hero-title">Lista de <strong>usuarios</strong></h1>
+          <p class="hero-sub">146 equipos · trazabilidad serial · filtra, busca, edita</p>
+        </div>
+      </div>
+      <div class="section">
+        <div class="toolbar">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="search-input" placeholder="Buscar por nombre, cédula, serial, hostname, placa, ciudad…">
+          </div>
+          <select class="filter-pill" id="filter-empresa"><option value="">Todas las empresas</option><option>HBT</option><option>HGS</option></select>
+          <select class="filter-pill" id="filter-tipo"><option value="">Todos los tipos</option><option>PORTATIL</option><option>TORRE</option></select>
+          <select class="filter-pill" id="filter-tecnico"><option value="">Todos los técnicos</option><option>Cristian</option><option>Santiago</option><option>Nicolas</option></select>
+          <select class="filter-pill" id="filter-proyecto"><option value="">Todos los proyectos</option></select>
+          <select class="filter-pill" id="filter-estado"><option value="">Todos los estados</option><option>Pendiente</option><option>Alistamiento</option><option>En tránsito</option><option>Entregado</option><option>Completado</option><option>BACKUP</option></select>
+          <span class="filter-count" id="tbl-count">— registros</span>
+        </div>
+        <div class="tbl-wrap"><div class="tbl-scroll"><table class="tbl">
+          <thead><tr><th>ID</th><th>Emp</th><th>Tipo</th><th>Nombre</th><th>Ciudad</th><th>Proyecto</th><th>Equipo</th><th>Serial</th><th>Placa</th><th>Hostname</th><th>Técnico</th><th>Estado</th><th>Acta</th></tr></thead>
+          <tbody id="tbl-body"></tbody>
+        </table></div></div>
+      </div>
+    </div>
+
+    <!-- ═════ VISTA: TÉCNICOS ═════ -->
+    <div class="view" id="view-tecnicos">
+      <div class="hero compact">
+        <div class="hero-inner">
+          <div class="hero-eyebrow">Equipo operativo</div>
+          <h1 class="hero-title">Por <strong>técnico</strong></h1>
+          <p class="hero-sub">3 técnicos coordinados · carga de trabajo balanceada</p>
+        </div>
+      </div>
+      <div class="section">
+        <div class="tec-grid" id="tec-grid"></div>
+      </div>
+    </div>
+
+    <!-- ═════ VISTA: CIUDADES ═════ -->
+    <div class="view" id="view-ciudades">
+      <div class="hero compact">
+        <div class="hero-inner">
+          <div class="hero-eyebrow">Cobertura geográfica</div>
+          <h1 class="hero-title">Por <strong>ciudad</strong></h1>
+          <p class="hero-sub">Distribución nacional · 23 ciudades con presencia activa</p>
+        </div>
+      </div>
+      <div class="section">
+        <div class="cities-grid" id="cities-grid"></div>
+      </div>
+    </div>
+
+    <!-- ═════ VISTA: DEVOLUCIONES ═════ -->
+    <div class="view" id="view-devoluciones">
+      <div class="hero compact">
+        <div class="hero-inner">
+          <div class="hero-eyebrow">Control de tránsito</div>
+          <h1 class="hero-title"><strong>Devoluciones</strong></h1>
+          <p class="hero-sub">Equipos antiguos pendientes de recuperación · seguimiento en bodega</p>
+        </div>
+      </div>
+      <div class="section">
+        <div class="tbl-wrap"><div class="tbl-scroll"><table class="tbl">
+          <thead><tr><th>ID</th><th>Nombre</th><th>Ciudad</th><th>Equipo anterior</th><th>Serial</th><th>Estado dev.</th><th>Recibido bodega</th><th>Reasignable</th></tr></thead>
+          <tbody id="tbl-dev"></tbody>
+        </table></div></div>
+      </div>
+    </div>
+
+    <!-- ═════ VISTA: REPORTES ═════ -->
+    <div class="view" id="view-reportes">
+      <div class="hero compact">
+        <div class="hero-inner">
+          <div class="hero-eyebrow">Centro de reportes</div>
+          <h1 class="hero-title">Reportes <strong>ejecutivos</strong></h1>
+          <p class="hero-sub">Seis vistas operativas para gerencia · filtros por empresa y proyecto</p>
+        </div>
+      </div>
+      <div class="section">
+        <div class="toolbar">
+          <span style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3);margin-right:6px">Filtros globales:</span>
+          <select class="filter-pill" id="rep-filter-empresa"><option value="">Todas las empresas</option><option>HBT</option><option>HGS</option></select>
+          <select class="filter-pill" id="rep-filter-tipo"><option value="">Todos los tipos</option><option>PORTATIL</option><option>TORRE</option></select>
+          <select class="filter-pill" id="rep-filter-proyecto"><option value="">Todos los proyectos</option></select>
+          <select class="filter-pill" id="rep-filter-tecnico"><option value="">Todos los técnicos</option><option>Cristian</option><option>Santiago</option><option>Nicolas</option></select>
+          <span class="filter-count" id="rep-base-count">— de 132 base</span>
+        </div>
+        <div class="reports-grid">
+          <div class="report-card" data-rep="alistamiento" onclick="setReport('alistamiento', this)">
+            <div class="report-head"><span class="report-code">REP-01</span><span class="report-icon"><svg viewBox="0 0 24 24"><path d="M9 11H1l8-8 8 8h-8v8z"/></svg></span></div>
+            <div class="report-title">Alistamiento</div>
+            <div class="report-value" id="r-alistamiento">—</div>
+            <div class="report-desc">Equipos en preparación</div>
+          </div>
+          <div class="report-card" data-rep="entregados" onclick="setReport('entregados', this)">
+            <div class="report-head"><span class="report-code">REP-02</span><span class="report-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span></div>
+            <div class="report-title">Entregados</div>
+            <div class="report-value" id="r-entregados" style="color: var(--green)">—</div>
+            <div class="report-desc">En manos del usuario</div>
+          </div>
+          <div class="report-card" data-rep="actas" onclick="setReport('actas', this)">
+            <div class="report-head"><span class="report-code">REP-03</span><span class="report-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span></div>
+            <div class="report-title">Actas firmadas</div>
+            <div class="report-value" id="r-actas" style="color: var(--blue)">—</div>
+            <div class="report-desc">PandaDoc</div>
+          </div>
+          <div class="report-card" data-rep="devoluciones" onclick="setReport('devoluciones', this)">
+            <div class="report-head"><span class="report-code">REP-04</span><span class="report-icon"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></span></div>
+            <div class="report-title">Devoluciones</div>
+            <div class="report-value" id="r-devoluciones" style="color: var(--amber)">—</div>
+            <div class="report-desc">Equipos antiguos recibidos</div>
+          </div>
+          <div class="report-card" data-rep="finalizados" onclick="setReport('finalizados', this)">
+            <div class="report-head"><span class="report-code">REP-05</span><span class="report-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg></span></div>
+            <div class="report-title">Finalizados</div>
+            <div class="report-value" id="r-finalizados" style="color: var(--green)">—</div>
+            <div class="report-desc">Proceso completo</div>
+          </div>
+          <div class="report-card" data-rep="feedback" onclick="setReport('feedback', this)">
+            <div class="report-head"><span class="report-code">REP-06</span><span class="report-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span></div>
+            <div class="report-title">Feedback</div>
+            <div class="report-value" id="r-feedback">—</div>
+            <div class="report-desc">Encuestas a usuarios</div>
+          </div>
+        </div>
+        <div class="panel" id="report-detail">
+          <div class="empty">
+            <div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+            <div class="empty-title">Selecciona un reporte arriba</div>
+            <div class="empty-msg">Los filtros globales aplican a los conteos y al detalle</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════ VISTA: ACTIVIDAD (Activity Log) ═════ -->
+    <div class="view" id="view-actividad">
+      <div class="hero compact">
+        <div class="hero-inner">
+          <div class="hero-eyebrow">Registro histórico</div>
+          <h1 class="hero-title">Centro de <strong>actividad</strong></h1>
+          <p class="hero-sub">Trazabilidad completa de todos los cambios · auditoría operativa</p>
+        </div>
+      </div>
+      <div class="section">
+        <div class="toolbar">
+          <span style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Filtrar por tipo:</span>
+          <select class="filter-pill" id="act-filter-type">
+            <option value="">Todos</option>
+            <option value="info">Informativo</option>
+            <option value="warning">Advertencia</option>
+            <option value="critical">Crítico</option>
+          </select>
+          <select class="filter-pill" id="act-filter-cat">
+            <option value="">Todas las categorías</option>
+            <option value="create">Creación</option>
+            <option value="edit">Edición</option>
+            <option value="state">Cambio de estado</option>
+            <option value="acta">Acta</option>
+            <option value="bodega">Bodega</option>
+            <option value="system">Sistema</option>
+          </select>
+          <button class="btn" onclick="clearActivityLog()">Limpiar historial</button>
+          <span class="filter-count" id="act-count">0 eventos</span>
+        </div>
+        <div class="panel">
+          <div class="activity-timeline" id="activity-timeline"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════ VISTA: AJUSTES ═════ -->
+    <div class="view" id="view-ajustes">
+      <div class="hero compact">
+        <div class="hero-inner">
+          <div class="hero-eyebrow">Preferencias del operador</div>
+          <h1 class="hero-title"><strong>Ajustes</strong></h1>
+          <p class="hero-sub">Configura notificaciones, sonido y eventos que generan alertas</p>
+        </div>
+      </div>
+      <div class="section">
+        <div class="settings-section">
+          <div class="settings-section-title">Notificaciones</div>
+          <p class="settings-section-sub">Controla cómo recibes alertas cuando se actualizan registros</p>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Toast interno</div>
+              <div class="settings-row-desc">Mensaje breve en la esquina inferior derecha al guardar un cambio</div>
+            </div>
+            <div class="settings-row-control"><div class="switch" id="sw-toast" onclick="toggleSetting('toast', this)"></div></div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Notificaciones del navegador</div>
+              <div class="settings-row-desc">Popup nativo del sistema operativo (requiere permiso del navegador)</div>
+            </div>
+            <div class="settings-row-control"><div class="switch" id="sw-browser" onclick="toggleSetting('browser', this)"></div></div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Sonido al notificar</div>
+              <div class="settings-row-desc">Beep sintetizado distinto por nivel de prioridad (info, advertencia, crítico)</div>
+            </div>
+            <div class="settings-row-control"><div class="switch" id="sw-sound" onclick="toggleSetting('sound', this)"></div></div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Highlight de fila modificada</div>
+              <div class="settings-row-desc">Destaca temporalmente la fila editada en la tabla</div>
+            </div>
+            <div class="settings-row-control"><div class="switch" id="sw-highlight" onclick="toggleSetting('highlight', this)"></div></div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Probar sonidos</div>
+              <div class="settings-row-desc">Reproduce un sonido de cada nivel para validar configuración</div>
+            </div>
+            <div class="settings-row-control" style="display:flex;gap:6px">
+              <button class="btn" onclick="playSound('info')">Info</button>
+              <button class="btn" onclick="playSound('warning')">Warn</button>
+              <button class="btn" onclick="playSound('critical')">Crit</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Eventos que generan alertas</div>
+          <p class="settings-section-sub">Activa solo los eventos relevantes para tu rol</p>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Creación de registro nuevo</div>
+              <div class="settings-row-desc">Cuando se agrega un equipo al sistema</div>
+            </div>
+            <div class="settings-row-control"><div class="switch" id="sw-evt-create" onclick="toggleEventSetting('create', this)"></div></div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Edición de campos</div>
+              <div class="settings-row-desc">Cualquier modificación a un registro existente</div>
+            </div>
+            <div class="settings-row-control"><div class="switch" id="sw-evt-edit" onclick="toggleEventSetting('edit', this)"></div></div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Cambio de estado</div>
+              <div class="settings-row-desc">Transiciones: Pendiente → Alistamiento → Entregado</div>
+            </div>
+            <div class="settings-row-control"><div class="switch" id="sw-evt-state" onclick="toggleEventSetting('state', this)"></div></div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Acta firmada</div>
+              <div class="settings-row-desc">Confirmación PandaDoc del usuario receptor</div>
+            </div>
+            <div class="settings-row-control"><div class="switch" id="sw-evt-acta" onclick="toggleEventSetting('acta', this)"></div></div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Recepción en bodega</div>
+              <div class="settings-row-desc">Equipo antiguo recibido físicamente</div>
+            </div>
+            <div class="settings-row-control"><div class="switch" id="sw-evt-bodega" onclick="toggleEventSetting('bodega', this)"></div></div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Datos y mantenimiento</div>
+          <p class="settings-section-sub">Acciones para limpieza y exportación</p>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Limpiar historial de actividad</div>
+              <div class="settings-row-desc">Elimina todos los eventos registrados localmente</div>
+            </div>
+            <div class="settings-row-control"><button class="btn" onclick="clearActivityLog()">Limpiar</button></div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Restablecer preferencias</div>
+              <div class="settings-row-desc">Vuelve a los valores por defecto del sistema</div>
+            </div>
+            <div class="settings-row-control"><button class="btn" onclick="resetSettings()">Restablecer</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ═════ F3 · VISTA: APROBACIONES ═════ -->
+    <div class="view" id="view-aprobaciones">
+      <div class="hero compact">
+        <div class="hero-inner">
+          <div class="hero-eyebrow">Validación de cierre</div>
+          <h1 class="hero-title"><strong>Aprobaciones</strong> pendientes</h1>
+          <p class="hero-sub" id="aprob-count">—</p>
+        </div>
+      </div>
+      <div class="section" id="aprob-content"></div>
+    </div>
+
+    <!-- ═════ F4 · VISTA: PANEL EJECUTIVO (Visitante) ═════ -->
+    <div class="view" id="view-panel">
+      <div class="panel-hero">
+        <div class="panel-hero-inner">
+          <div class="panel-hero-eyebrow">Panel ejecutivo · PMC-TI-REN26</div>
+          <h1 class="panel-hero-title">Renovación Tecnológica <strong>2026</strong></h1>
+          <p class="panel-hero-sub" id="pe-sub">Heinsohn Business Technology · HBT + HGS</p>
+          <div class="panel-kpi-strip">
+            <div class="panel-kpi">
+              <div class="panel-kpi-label">Total equipos</div>
+              <div class="panel-kpi-val" id="pe-total">—</div>
+              <div class="panel-kpi-sub">HBT + HGS</div>
+            </div>
+            <div class="panel-kpi">
+              <div class="panel-kpi-label">Completados</div>
+              <div class="panel-kpi-val grn" id="pe-completados">—</div>
+              <div class="panel-kpi-sub" id="pe-pct-sub">Avance del proyecto</div>
+            </div>
+            <div class="panel-kpi">
+              <div class="panel-kpi-label">En proceso</div>
+              <div class="panel-kpi-val amb" id="pe-proceso">—</div>
+              <div class="panel-kpi-sub">En ejecución activa</div>
+            </div>
+            <div class="panel-kpi">
+              <div class="panel-kpi-label">Pendientes</div>
+              <div class="panel-kpi-val accent" id="pe-pendientes">—</div>
+              <div class="panel-kpi-sub">Sin iniciar</div>
+            </div>
+            <div class="panel-kpi">
+              <div class="panel-kpi-label">Actas firmadas</div>
+              <div class="panel-kpi-val" id="pe-actas">—</div>
+              <div class="panel-kpi-sub">De renovaciones completadas</div>
+            </div>
+          </div>
+          <div class="panel-progress-bar">
+            <span class="panel-progress-label">Avance global</span>
+            <div class="panel-progress-track">
+              <div class="panel-progress-fill" id="pe-prog-fill" style="width:0%"></div>
+            </div>
+            <span class="panel-progress-pct" id="pe-prog-pct">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="panel-grid-2">
+          <div class="panel-card">
+            <div class="panel-card-title">Por empresa</div>
+            <div class="panel-stat-row">
+              <span class="panel-stat-label">HBT</span>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span class="panel-stat-val" id="pe-hbt-n">—</span>
+                <span class="panel-stat-pct grn" id="pe-hbt-pct">—</span>
+              </div>
+            </div>
+            <div class="panel-stat-row">
+              <span class="panel-stat-label">HGS</span>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span class="panel-stat-val" id="pe-hgs-n">—</span>
+                <span class="panel-stat-pct grn" id="pe-hgs-pct">—</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel-card">
+            <div class="panel-card-title">Por técnico</div>
+            <div id="pe-por-tecnico"></div>
+          </div>
+        </div>
+
+        <div class="panel-grid-3" style="margin-top:16px">
+          <div class="panel-card">
+            <div class="panel-card-title">Clasificación RAEE</div>
+            <div class="raee-ring-wrap">
+              <canvas id="pe-raee-canvas" width="100" height="100" style="flex-shrink:0"></canvas>
+              <div class="raee-ring-labels" id="pe-raee-labels"></div>
+            </div>
+          </div>
+          <div class="panel-card">
+            <div class="panel-card-title">Distribución de estados</div>
+            <div id="pe-estados-list"></div>
+          </div>
+          <div class="panel-card">
+            <div class="panel-card-title">Aprobaciones pendientes</div>
+            <div style="text-align:center;padding:16px 0">
+              <div class="panel-kpi-val accent" id="pe-aprobaciones">—</div>
+              <div class="panel-kpi-sub" style="margin-top:6px">Esperando validación</div>
+            </div>
+            <div class="panel-stat-row">
+              <span class="panel-stat-label">Corrección requerida</span>
+              <span class="panel-stat-val" id="pe-correccion">—</span>
+            </div>
+            <div class="panel-stat-row">
+              <span class="panel-stat-label">Bloqueados</span>
+              <span class="panel-stat-val" id="pe-bloqueados">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════ F4 · VISTA: HOME TÉCNICO ═════ -->
+    <div class="view" id="view-home-tecnico">
+      <div class="home-tec-hero">
+        <div class="home-tec-avatar" id="ht-avatar">—</div>
+        <div class="home-tec-info">
+          <div class="home-tec-name" id="ht-nombre">—</div>
+          <div class="home-tec-meta" id="ht-meta">—</div>
+        </div>
+        <div class="home-tec-kpis">
+          <div class="home-tec-kpi">
+            <div class="home-tec-kpi-val accent" id="ht-pendientes">—</div>
+            <div class="home-tec-kpi-label">Pendientes</div>
+          </div>
+          <div class="home-tec-kpi">
+            <div class="home-tec-kpi-val amb" id="ht-proceso">—</div>
+            <div class="home-tec-kpi-label">En proceso</div>
+          </div>
+          <div class="home-tec-kpi">
+            <div class="home-tec-kpi-val grn" id="ht-listos">—</div>
+            <div class="home-tec-kpi-label">Completados</div>
+          </div>
+          <div class="home-tec-kpi">
+            <div class="home-tec-kpi-val" id="ht-total" style="color:var(--text-1)">—</div>
+            <div class="home-tec-kpi-label">Total</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div id="ht-bloqueados-section" style="display:none;margin-bottom:18px">
+          <div class="home-queue-header">
+            <span class="home-queue-title" style="color:var(--red)">Requieren atención</span>
+            <span class="home-queue-count" id="ht-bloq-count"></span>
+          </div>
+          <div id="ht-bloqueados-list"></div>
+        </div>
+
+        <div>
+          <div class="home-queue-header">
+            <span class="home-queue-title">Cola de trabajo</span>
+            <span class="home-queue-count" id="ht-cola-count"></span>
+          </div>
+          <div id="ht-cola-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════ VISTA: DETALLE TÉCNICO (sub-vista de Técnicos) ═════ -->
+    <div class="view" id="view-tecnico-detail">
+      <div class="hero compact">
+        <div class="hero-inner">
+          <button class="back-btn" onclick="goView('tecnicos')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6"/></svg>
+            Volver a técnicos
+          </button>
+          <div class="hero-eyebrow">Detalle del técnico</div>
+          <div class="td-header">
+            <div class="td-avatar" id="td-avatar">—</div>
+            <div class="td-header-info">
+              <h1 class="hero-title" style="margin-bottom:6px" id="td-name">—</h1>
+              <p class="hero-sub" id="td-meta">—</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div>
+            <div class="section-eyebrow">Carga de trabajo</div>
+            <h2 class="section-title">Indicadores operativos</h2>
+            <p class="section-sub">Distribución por estado de las renovaciones asignadas</p>
+          </div>
+        </div>
+        <div class="cards-grid" id="td-kpis"></div>
+      </div>
+
+      <div class="section" style="padding-top:0">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Usuarios asignados</div>
+              <div class="panel-sub" id="td-users-count">—</div>
+            </div>
+          </div>
+          <div class="tbl-wrap" style="border:none;border-radius:0;box-shadow:none">
+            <div class="tbl-scroll">
+              <table class="tbl">
+                <thead><tr><th>ID</th><th>Emp</th><th>Nombre</th><th>Ciudad</th><th>Proyecto</th><th>Equipo nuevo</th><th>Estado</th><th>Acta</th></tr></thead>
+                <tbody id="td-users"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ════════════════════════ FOOTER ════════════════════════ -->
+  <footer class="footer">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <div class="footer-brand-logo"><img src="" alt="HEINSOHN" id="footer-brand-logo"></div>
+        <div class="footer-brand-desc">Plan de Trabajo · Renovación Tecnológica 2026.<br>Para HBT y HGS.</div>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Proyecto</div>
+        <div class="footer-item"><strong>PMC-TI-REN26</strong></div>
+        <div class="footer-item">Renovación Tecnológica 2026</div>
+        <div class="footer-item" id="footer-stats">146 equipos · 132 usuarios</div>
+        <div class="footer-item">HBT · HGS</div>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Equipo del proyecto</div>
+        <div class="footer-item"><strong>Sponsor:</strong> Gabriel Gómez</div>
+        <div class="footer-item dim">Gerente TI</div>
+        <div class="footer-item"><strong>Coordinación:</strong> Dayana González</div>
+        <div class="footer-item dim">Coordinadora TI</div>
+        <div class="footer-item"><strong>Gestión &amp; PMO:</strong> Cristian Castro</div>
+        <div class="footer-item dim">Gestor TI Jr.</div>
+        <div class="footer-item"><strong>Ejecución técnica:</strong> Santiago Castillo · Nicolás Henao</div>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Contacto</div>
+        <a class="footer-link" href="mailto:crcastro@heinsohn.com.co">crcastro@heinsohn.com.co</a>
+        <a class="footer-link" href="#">Excel maestro (OneDrive)</a>
+        <a class="footer-link" href="#">Sistema PMO IT 2026</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span><strong>Heinsohn Business Technology</strong> · HBT + HGS</span>
+      <span>Dashboard v8.4.4 (F3.5 reorden de secciones) · Última sincronización: <span id="footer-date">—</span></span>
+    </div>
+  </footer>
+
+</div><!-- /app -->
+
+<!-- ════════════════════════ NOTIFICATION CENTER ════════════════════════ -->
+<div class="notif-overlay" id="notif-overlay" onclick="closeNotifCenter()"></div>
+<aside class="notif-center" id="notif-center">
+  <div class="notif-head">
+    <div>
+      <div class="notif-head-title">Notificaciones</div>
+      <div class="notif-head-sub" id="notif-head-sub">Sin notificaciones nuevas</div>
+    </div>
+    <button class="notif-close" onclick="closeNotifCenter()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="notif-toolbar">
+    <div class="notif-filter active" data-filter="all" onclick="filterNotifs('all', this)">Todas</div>
+    <div class="notif-filter" data-filter="unread" onclick="filterNotifs('unread', this)">No leídas</div>
+    <div class="notif-filter" data-filter="info" onclick="filterNotifs('info', this)">Info</div>
+    <div class="notif-filter" data-filter="warning" onclick="filterNotifs('warning', this)">Avisos</div>
+    <div class="notif-filter" data-filter="critical" onclick="filterNotifs('critical', this)">Críticos</div>
+    <div class="notif-mark-all" onclick="markAllRead()">Marcar todas leídas</div>
+  </div>
+  <div class="notif-list" id="notif-list"></div>
+</aside>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- Scroll to top -->
+<button class="scroll-top" id="scroll-top-btn" onclick="scrollMainTop()" title="Volver arriba">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="18 15 12 9 6 15"/></svg>
+</button>
+
+<!-- ════════════════════════ MODAL (form completo) ════════════════════════ -->
+
+<!-- ═══ F3 · Modal: Solicitar validación de cierre ═══ -->
+<div class="modal-bg" id="val-modal-bg" onclick="if(event.target===this)closeValidationModal()">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <div class="modal-title-block">
+        <div class="modal-eyebrow" id="val-modal-eyebrow">—</div>
+        <div class="modal-title" id="val-modal-title">Solicitar validación de cierre</div>
+      </div>
+      <button class="modal-close" onclick="closeValidationModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="val-modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeValidationModal()">Cancelar</button>
+      <button class="btn btn-primary" id="val-modal-send" onclick="submitValidation()">Solicitar validación</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ F3 · Modal: Bloquear renovación ═══ -->
+<div class="modal-bg" id="block-modal-bg" onclick="if(event.target===this)closeBlockModal()">
+  <div class="modal sub-modal">
+    <div class="modal-head">
+      <div class="modal-title-block">
+        <div class="modal-eyebrow" id="block-modal-eyebrow">—</div>
+        <div class="modal-title">🚧 Bloquear renovación</div>
+      </div>
+      <button class="modal-close" onclick="closeBlockModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-2);margin-bottom:16px;line-height:1.5">El bloqueo detiene el flujo. Debes registrar un motivo claro · cuando se resuelva el impedimento, podrás desbloquear desde el mismo botón.</p>
+      <div class="form-group">
+        <label class="form-label">Categoría del bloqueo</label>
+        <!-- F3.5: opciones desde ConfigService.CATEGORIAS_BLOQUEO -->
+        <select class="form-select" id="block-category" id="block-category-select">
+        </select>
+      </div>
+      <div class="form-group" style="margin-top:14px">
+        <label class="form-label">Motivo detallado (obligatorio)</label>
+        <textarea class="form-textarea" id="block-reason" rows="4" placeholder="Describe la razón del bloqueo · esta información queda en auditoría"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeBlockModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="submitBlock()">Bloquear renovación</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ F3 · Vista Aprobaciones ═══ -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title-block">
+        <div class="modal-eyebrow" id="modal-eyebrow">Editar registro</div>
+        <div class="modal-title" id="modal-title">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" id="modal-block-btn" onclick="openBlockModal()">🚧 Bloquear</button>
+      <button class="btn" id="modal-validate-btn" onclick="openValidationModal()" style="background:var(--amber-l);color:var(--amber);border-color:var(--amber)">Solicitar validación de cierre</button>
+      <button class="btn btn-primary" onclick="saveRecord()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+<!-- RC2.7 · Login Screen — mostrada cuando authMode=msal y no autenticado -->
+<div id="rc2-login-screen" style="display:none;position:fixed;inset:0;z-index:10001;background:linear-gradient(135deg,#0A0A0F 60%,#1a0a1a);flex-direction:column;align-items:center;justify-content:center;gap:0;">
+  <div style="text-align:center;max-width:460px;padding:0 24px;">
+    <!-- Logo -->
+    <div style="margin-bottom:32px;">
+      <div style="display:inline-flex;align-items:center;gap:12px;">
+        <div style="width:44px;height:44px;background:#D30034;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+          <img src="assets/logo-heinsohn.svg" alt="Heinsohn" width="26" height="26" style="filter: brightness(0) invert(1);">
+        </div>
+        <span style="font-size:20px;font-weight:800;color:#fff;letter-spacing:0.5px;">HEINSOHN</span>
+      </div>
+    </div>
+    <!-- Título -->
+    <h1 style="font-size:28px;font-weight:800;color:#fff;margin:0 0 8px;line-height:1.2;">PMC-TI REN26</h1>
+    <p style="font-size:16px;color:rgba(255,255,255,0.65);margin:0 0 40px;">Renovación Tecnológica 2026</p>
+    <!-- Card -->
+    <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:36px 32px;">
+      <div style="width:52px;height:52px;background:rgba(255,255,255,0.08);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <p style="color:rgba(255,255,255,0.75);font-size:15px;margin:0 0 28px;line-height:1.55;">
+        Debe iniciar sesión con su cuenta corporativa de Microsoft para acceder al Dashboard.
+      </p>
+      <button id="rc2-login-btn" onclick="RC2_doLogin()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#1a1a1a;border:none;border-radius:10px;padding:14px 20px;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;letter-spacing:0.2px;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#fff'">
+        <svg width="20" height="20" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+          <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+          <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+          <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+        </svg>
+        Iniciar sesión con Microsoft
+      </button>
+      <p id="rc2-login-error" style="color:#FF6B6B;font-size:12px;margin:14px 0 0;display:none;"></p>
+    </div>
+    <!-- Footer -->
+    <p style="color:rgba(255,255,255,0.3);font-size:11px;margin-top:24px;">
+      Heinsohn Business Technology · Coordinación TI
+    </p>
+  </div>
+</div>
+
+<!-- RC1 GL-1 · Boot Error Screen (producción) -->
+<div id="rc1-boot-error" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(10,10,15,.92);display:none;align-items:center;justify-content:center;"></div>
+
+<!-- MVP P4 · Loading Screen -->
+<div id="mvp-loading-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg-base,#0A0A0F);flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+  <div style="width:48px;height:48px;border:3px solid #333;border-top-color:#D30034;border-radius:50%;animation:mvp-spin 0.8s linear infinite;"></div>
+  <div style="color:#fff;font-size:16px;font-family:'Montserrat',sans-serif;font-weight:600;">Cargando datos del Excel Maestro...</div>
+  <div style="color:#888;font-size:13px;font-family:'Montserrat',sans-serif;">PMC-TI-REN26 · v8.8.4-MVP-1.0</div>
+</div>
+<!-- mvp-spin en css/styles.css -->
+
+<!-- GH1.3: Scripts modulares — orden obligatorio de carga -->
+<!-- 1. Configuración (IDs Azure/SharePoint) -->
+<script src="js/config.js"></script>
+<!-- 2. MSAL SDK v3.28.1 (local — sin dependencia de CDN externo) -->
+<script src="js/msal-browser.min.js"></script>
+<!-- 3. Inicialización (LOGOS, arrays vacíos, CONFIG) -->
+<script src="js/init.js"></script>
+<!-- 4. Utilidades puras, estado global, EventBus, RBAC, navegación -->
+<script src="js/utils.js"></script>
+<!-- 5. Autenticación: SessionManager, AuthProvider, MSAL config -->
+<script src="js/auth.js"></script>
+<!-- 6. Microsoft Graph: GraphClient, SharePointResolver, Write stack -->
+<script src="js/graph.js"></script>
+<!-- 7. DataService: StateMachine, normalizeRecord_F3, DataMapper -->
+<script src="js/dataService.js"></script>
+<!-- 8. Proveedores de datos: TableRegistry, ExcelMapper, WorkbookLoader, ExcelProvider -->
+<script src="js/provider.js"></script>
+<!-- 9. Sincronización: ViewModelRegistry, RefreshManager, SynchronizationManager -->
+<script src="js/sync.js"></script>
+<!-- 10. Actualización: ConflictDetector, listeners online/offline -->
+<script src="js/refresh.js"></script>
+<!-- 11. Dashboard: KPIService, IntegrityService, DashboardFactory, renders -->
+<script src="js/dashboard.js"></script>
+<!-- 12. UI: vistas, modales, filtros, reportes, aprobaciones -->
+<script src="js/ui.js"></script>
+<!-- 13. Bootstrap: BootstrapManager, boot(), RC2_doLogin -->
+<script src="js/boot.js"></script>
+<!-- 14. Entry point: DOMContentLoaded → boot() -->
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMC-TI-REN26 · Redirigiendo...</title>
+<!-- GH1.11: SPA fallback para GitHub Pages
+     GitHub Pages no tiene server-side routing.
+     Este 404.html redirige al index.html manteniendo la ruta original.
+-->
+<script>
+  // Guardar la ruta original y redirigir a index.html
+  // Técnica estándar para SPA en GitHub Pages
+  var path = window.location.pathname;
+  var repo = '';  // Ajustar si el repo tiene base path: '/nombre-repo'
+  sessionStorage.setItem('gh_pages_redirect', path);
+  window.location.replace(
+    window.location.origin + repo + '/' +
+    window.location.search
+  );
+</script>
+</head>
+<body>
+  <p style="font-family:sans-serif;text-align:center;margin-top:40px;color:#666">
+    Redirigiendo...
+  </p>
+</body>
+</html>

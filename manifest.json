@@ -1,0 +1,33 @@
+{
+  "name": "PMC-TI REN26 — Renovación Tecnológica",
+  "short_name": "PMC-TI REN26",
+  "description": "Dashboard de Renovación Tecnológica 2026 — Heinsohn Business Technology",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0A0A0F",
+  "theme_color": "#D30034",
+  "orientation": "landscape-primary",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "assets/favicon.ico",
+      "sizes": "16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/logo-heinsohn.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": [
+    "business",
+    "productivity"
+  ]
+}

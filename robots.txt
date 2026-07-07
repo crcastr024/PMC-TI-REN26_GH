@@ -1,0 +1,10 @@
+# PMC-TI-REN26 Dashboard
+# robots.txt — GitHub Pages
+
+User-agent: *
+# GH2: El Dashboard requiere autenticación Microsoft.
+# No hay contenido indexable para motores de búsqueda.
+Disallow: /
+
+# Prevenir indexación de cualquier ruta
+Sitemap:
