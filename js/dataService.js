@@ -34,10 +34,11 @@ function normalizeRecord_F3(r) {
   if (r.placa == null && r.eq_nvo_placa) r.placa = r.eq_nvo_placa;
   if (r.hostname == null && r.eq_nvo_hostname) r.hostname = r.eq_nvo_hostname;
   if (r.procesador == null && r.eq_nvo_procesador) r.procesador = r.eq_nvo_procesador;
-  if (r.ram == null && (r.eq_nvo_ram || r.eq_nvo_memoria)) r.ram = r.eq_nvo_ram || r.eq_nvo_memoria;
+  if (r.ram == null && r.eq_nvo_ram) r.ram = r.eq_nvo_ram;  // GH3.26: eq_nvo_memoria eliminado del Excel
   if (r.disco == null && r.eq_nvo_disco) r.disco = r.eq_nvo_disco;
   
   // ── Garantizar campos F3 nuevos
+  if (r.eq_ant_disco == null) r.eq_ant_disco = '';  // GH3.26: EQ_ANT_DISCO — col U
   if (r.eq_ant_af == null) r.eq_ant_af = '';
   if (r.eq_ant_placa == null) r.eq_ant_placa = '';
   if (r.eq_ant_clasif == null) r.eq_ant_clasif = '';
@@ -55,6 +56,13 @@ function normalizeRecord_F3(r) {
   // (antes el registro quedaba sin clasificar en absoluto, no "Revisión manual").
   if (!r.estado_eq_ant) {
     Object.assign(r, ObsolescenceService.classifyRecord(r));
+    // GH3.24: log diagnóstico cuando debug=true
+    if (window.PRODUCTION_CONFIG && window.PRODUCTION_CONFIG.debug) {
+      console.error('[RAEE DIAG] ID:', r.id,
+        '| Procesador:', r.eq_ant_procesador || '(vacío)',
+        '| Clasificación:', r.clasificacion_obsolescencia,
+        '| Generación:', r.generacion_cpu);
+    }
   }
   
   // ── Mapear "ciudad" lowercase amigable

@@ -549,7 +549,8 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Placa</label><input type="text" class="form-input" id="m-eq_ant_placa" value="' + esc(u.eq_ant_placa) + '"></div>' +
       '<div class="form-group"><label class="form-label">Hostname</label><input type="text" class="form-input" id="m-eq_ant_hostname" value="' + esc(u.eq_ant_hostname) + '"></div>' +
       '<div class="form-group"><label class="form-label">Procesador</label><input type="text" class="form-input" id="m-eq_ant_procesador" value="' + esc(u.eq_ant_procesador) + '"></div>' +
-      '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" class="form-input" id="m-eq_ant_ram" value="' + esc(u.eq_ant_ram) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" class="form-input" id="m-eq_ant_memoria" value="' + esc(u.eq_ant_memoria) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Disco duro (ant.)</label><input type="text" class="form-input" id="m-eq_ant_disco" value="' + esc(u.eq_ant_disco) + '"></div>' +
       '<div class="form-group"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_ant_so" value="' + esc(u.eq_ant_so) + '"></div>' +
     '</div></div>' +
     
@@ -567,7 +568,7 @@ function openEditModal(id) {
     '</div></div>' +
     
     '<div class="form-section"><div class="form-section-head">5 · Estado y seguimiento</div><div class="form-grid">' +
-      '<div class="form-group"><label class="form-label">Técnico asignado</label><select class="form-select" id="m-tecnico"><option value="">—</option><option' + (u.tecnico === 'Cristian' ? ' selected' : '') + '>Cristian</option><option' + (u.tecnico === 'Santiago' ? ' selected' : '') + '>Santiago</option><option' + (u.tecnico === 'Nicolas' ? ' selected' : '') + '>Nicolas</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Técnico asignado</label><select class="form-select" id="m-tecnico">' + '<option value="">— Sin asignar —</option>' + (window.CONFIG.technicians || []).map(function(t){ return '<option value="' + esc(t) + '"' + ((u.tecnico||'').toLowerCase()===t.toLowerCase()?' selected':'') + '>' + esc(t) + '</option>'; }).join('') + '</select></div>' +
       '<div class="form-group"><label class="form-label">Estado proceso REN26</label><select class="form-select" id="m-estado">' + estadoOpts + '</select></div>' +
       // F3.6 · estado_entrega_equipo_nuevo: entidad física independiente del estado del proceso
       '<div class="form-group"><label class="form-label">Estado entrega equipo nuevo</label><select class="form-select" id="m-estado_entrega_equipo_nuevo">' + entregaEqNvoOpts + '</select></div>' +
@@ -631,6 +632,22 @@ function openEditModal(id) {
       s.classList.toggle('active', n <= init);
     });
   }
+
+  // GH3.24: CASO_ENVIO dinámico — si es 'Oficina', deshabilitar fecha_envio
+  (function() {
+    const _casoEl  = $('m-caso_envio');
+    const _fechaEl = $('m-fecha_envio');
+    if (!_casoEl || !_fechaEl) return;
+    const _toggleFechaEnvio = function() {
+      const isOficina = (_casoEl.value || '').trim().toLowerCase() === 'oficina';
+      _fechaEl.disabled = isOficina;
+      const _p = _fechaEl.closest ? _fechaEl.closest('.form-group') : null;
+      if (_p) _p.style.opacity = isOficina ? '0.4' : '1';
+      if (isOficina) _fechaEl.value = '';
+    };
+    _toggleFechaEnvio();
+    _casoEl.addEventListener('input', _toggleFechaEnvio);
+  })();
   $('modal-bg').classList.add('active');
 }
 window.openEditModal = openEditModal;
@@ -668,13 +685,24 @@ function saveRecord() {
   // Construir objeto de cambios desde el formulario
   const fields = [
     'empresa','nombre','cedula','usuario','correo','ciudad','ceco','proyecto','cargo','gerente','registro',
-    'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname','eq_ant_procesador','eq_ant_ram','eq_ant_so',
+    'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname','eq_ant_procesador','eq_ant_memoria','eq_ant_so',
     'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname','eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco',
     'tecnico','estado','estado_entrega_equipo_nuevo','alistamiento','caso_envio','fecha_asignacion','fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta',
     'estado_devolucion','disposicion_final','fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega','observaciones'
   ];
   const changes = {};
-  fields.forEach(f => { const el = $('m-' + f); if (el) changes[f] = el.value; });
+  fields.forEach(f => {
+    const el = $('m-' + f);
+    if (!el) return;
+    const val = el.value;
+    // GH3.24: Para 'tecnico', si el select quedó vacío (sin selección)
+    // mantener el valor original del registro — nunca sobrescribir con ''
+    if (f === 'tecnico' && val === '') {
+      changes[f] = u.tecnico || '';
+    } else {
+      changes[f] = val;
+    }
+  });
   changes.acta_enviada    = $('m-acta_enviada').checked;
   changes.acta_firmada    = $('m-acta_firmada').checked;
   changes.acta_entrega_url = ($('m-acta_entrega_url') ? $('m-acta_entrega_url').value.trim() : '') || '';
@@ -692,12 +720,29 @@ function saveRecord() {
     DataService.updateRenewal(id, changes, state.user);
     // MVP P5 · Escribir al Excel Maestro (async, no bloquea la UI)
     if (DataService.syncToProvider) {
-      DataService.syncToProvider(id, changes).catch(err => {
-
-        if (err.graphCode === 'CONFLICT') {
-          toast('Conflicto de versión — otro usuario modificó este registro', 'warning');
-        }
-      });
+      // GH3.25 P2: Después de escribir → recargar desde Excel → re-render
+      DataService.syncToProvider(id, changes)
+        .then(function() {
+          // Recarga desde el workbook real (no reutilizar objeto local)
+          if (DataService.reloadFromProvider) {
+            return DataService.reloadFromProvider().then(function(ok) {
+              if (ok) {
+                // Re-render vista actual desde datos frescos
+                if (state.view === 'usuarios') renderUsuarios();
+                else if (state.view === 'reportes') renderReportes();
+                else renderResumen();
+                toast('Excel sincronizado', 'success');
+              }
+            });
+          }
+        })
+        .catch(function(err) {
+          if (err && err.graphCode === 'CONFLICT') {
+            toast('Conflicto de versión — otro usuario modificó este registro', 'warning');
+          } else {
+            console.error('[SYNC ERROR]', err && err.message);
+          }
+        });
     }
   } catch(e) {
     console.error('[saveRecord]', e);
@@ -763,7 +808,7 @@ function openCreateModal() {
     empresa: 'HBT', perfil: '', nombre: '', cedula: '', usuario: '', correo: '',
     ciudad: '', ceco: '', proyecto: '', cargo: '', gerente: '', nivel: '',
     eq_ant_tipo: '', eq_ant_marca: '', eq_ant_modelo: '', eq_ant_serial: '',
-    eq_ant_placa: '', eq_ant_hostname: '', eq_ant_procesador: '', eq_ant_ram: '',
+    eq_ant_placa: '', eq_ant_hostname: '', eq_ant_procesador: '', eq_ant_memoria: '',
     eq_ant_so: '', eq_ant_clasificacion: '',
     tipo: 'PORTATIL', marca: '', modelo: '', serial: '', placa: '', hostname: '',
     procesador: '', ram: '', disco: '', dato_maestro: 'Pendiente', nombre_sap: '',
