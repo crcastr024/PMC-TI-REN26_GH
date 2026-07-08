@@ -14,7 +14,7 @@ window.INVENTORY    = [];  // Poblado en boot() → reloadFromProvider()
 window.SYSTEM_USERS = [];  // Poblado en boot() → reloadFromProvider()
 window.ROLES        = [];  // Poblado en boot() → reloadFromProvider()
 window.ROLES_PERMISOS = [];  // RC2: poblado por BootstrapManager tras autenticación
-window.CONFIGURATION  = [];  // RC2: poblado por BootstrapManager tras autenticación
+// GH3.18: CONFIGURATION eliminado — era dead code (análisis GH3.18)
 window.LOGOS = {
   // RC3.2: Logos extraídos a assets/ — referencias a archivos externos
   horizontal_color: 'assets/logo-heinsohn-horizontal-color.png',

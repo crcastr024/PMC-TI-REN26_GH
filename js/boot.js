@@ -53,27 +53,12 @@ const BootstrapManager = (() => {
   }
 
   // ── Paso 5: Cargar configuración ─────────────────────────────────────────
-  async function _loadConfiguration() {
+  // GH3.18: _loadConfiguration() eliminada — CONFIGURATION fue dead code:
+  // ConfigService inicializa (línea 927) ANTES de que _loadConfiguration() rellene
+  // window.CONFIGURATION. _updateConfig no existía. 4 parámetros sin efecto real.
+  // Ver análisis completo en GH3.18.
 
-    const config = await _loadTable(TableRegistry.CONFIG);
-    window.CONFIGURATION = config;
-
-    // Parsear a objeto key:value y notificar a ConfigService
-    const cfg = {};
-    config.forEach(row => {
-      if (row.clave || row.key) {
-        cfg[row.clave || row.key] = row.valor || row.value;
-      }
-    });
-
-    // Actualizar ConfigService si existe
-    if (typeof ConfigService !== 'undefined' && ConfigService._updateConfig) {
-      ConfigService._updateConfig(cfg);
-    }
-    return cfg;
-  }
-
-  // ── Paso 6+7: Crear sesión ───────────────────────────────────────────────
+  // ── Paso 5+6: Crear sesión ───────────────────────────────────────────────
   function _createSession(account, role, permissions, config, token) {
     SessionManager.createFromBootstrap({
       username:    account.username || account.email || '',
@@ -123,11 +108,9 @@ const BootstrapManager = (() => {
       // Paso 4: permisos
       const permissions = await _loadPermissions(role);
 
-      // Paso 5: configuración
-      const config = await _loadConfiguration();
-
-      // Paso 6: crear sesión RC2.5 completa
-      _createSession(account, role, permissions, config, token);
+      // Paso 5+6: crear sesión RC2.5 completa
+      // GH3.18: config eliminado — CONFIGURATION era dead code
+      _createSession(account, role, permissions, {}, token);
 
       // Aplicar rol al estado de la UI
       SessionManager.applyToState();
@@ -926,21 +909,16 @@ window.ApprovalService = ApprovalService;
 // ═══════════════════════════════════════════════════════════════════
 const ConfigService = (() => {
 
-  // Leer CONFIGURACION.json una vez
-  const cfg = {};
-  if (window.CONFIGURATION && Array.isArray(window.CONFIGURATION)) {
-    window.CONFIGURATION.forEach(c => { cfg[c.Parametro] = c.Valor; });
-  }
+  // GH3.18: cfg eliminado — window.CONFIGURATION era dead code.
+  // ConfigService se inicializa antes de que BootstrapManager cargue datos.
+  // Los 4 parámetros tenían defaults hardcodeados que son los valores reales usados.
 
-  // ── 1. Parámetros de negocio (provienen de CONFIGURACION.json)
-  const RAEE_INTEL_THRESHOLD = parseInt(cfg['generacion_raee_intel'] || '10', 10);
-  const ESTADO_INICIAL       = cfg['estado_inicial']     || 'Pendiente';
-  const ARCHIVO_MAESTRO      = cfg['archivo_maestro']    || 'Plan_Maestro_REN26.xlsx';
-  const REFRESH_INTERVAL_MS  = (() => {
-    const v = cfg['refresh_dashboard'] || '20 segundos';
-    const n = parseInt(v, 10);
-    return (isNaN(n) ? 20 : n) * 1000;
-  })();
+  // ── 1. Parámetros de negocio (valores fijos — fuente única: código)
+  const RAEE_INTEL_THRESHOLD = 10;     // Gen Intel ≤ 10 = RAEE
+  const ESTADO_INICIAL       = 'Pendiente';
+  const ARCHIVO_MAESTRO      = 'Plan_Maestro_REN26.xlsx';
+  const REFRESH_INTERVAL_MS  = (window.PRODUCTION_CONFIG && window.PRODUCTION_CONFIG.refreshInterval)
+                               || 10000;  // GH3.18: leer de config.js (fuente única de verdad)
 
   // ── 2. Estados del proceso REN26 (fuente: StateMachine — se exponen aquí
   //       para que los componentes los lean sin importar StateMachine directamente)
@@ -1021,17 +999,11 @@ const ConfigService = (() => {
     getStates,
     getFlow,
 
-    // Fuente cruda (para debug/admin)
-    _raw: cfg,
   };
 })();
 window.ConfigService = ConfigService;
 
-// Sincronizar ObsolescenceService con el threshold de CONFIGURACION.json
-// (antes estaba hardcodeado en 10; ahora lo lee ConfigService que viene del JSON)
-if (window.ObsolescenceService) {
-  ObsolescenceService.config.raee_intel_threshold = ConfigService.RAEE_INTEL_THRESHOLD;
-}
+// GH3.18: ObsolescenceService.config.raee_intel_threshold = 10 (hardcodeado, sin cambio)
 
 
 // ════════════════════════════════════════════════════════════════════
@@ -1070,9 +1042,8 @@ window.APP_CONFIG = (() => {
     clientId:           PC.clientId,
   };
 })();
-// F3.5 · Sincronizar refreshInterval desde CONFIGURACION.json (via ConfigService)
-window.APP_CONFIG.refreshInterval = ConfigService.REFRESH_INTERVAL_MS;
-window.APP_CONFIG.raee_intel_threshold = ConfigService.RAEE_INTEL_THRESHOLD;
+// GH3.18: refreshInterval viene de config.js via PRODUCTION_CONFIG (APP_CONFIG ya lo tiene)
+// raee_intel_threshold: ObsolescenceService usa su propio valor hardcodeado (10)
 
 // ═══════════════════════════════════════════════════════════════════
 // F3 · KPIService (métricas agregadas, dominio puro)

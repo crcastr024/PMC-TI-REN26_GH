@@ -15,7 +15,7 @@ const TableRegistry = {
   USUARIOS:       'PMC_USUARIOS',
   ROLES:          'PMC_ROLES',
   ROLES_PERMISOS: 'PMC_ROLES_PERMISOS',
-  CONFIG:         'PMC_CONFIG',
+  // GH3.18: CONFIG / PMC_CONFIG eliminado — tabla no existe y era dead code
   AUDITORIA:      'PMC_AUDITORIA',
   NOTIFICACIONES: 'PMC_NOTIFICACIONES',
   META:           'PMC_META',
@@ -302,7 +302,7 @@ const ExcelProvider = (() => {
           renovacionesResult,
         ] = await Promise.allSettled([
           WorkbookLoader.loadTable(TableRegistry.META).catch(() => ({ headers: [], rows: [] })),
-          WorkbookLoader.loadTable(TableRegistry.CONFIG).catch(() => ({ headers: [], rows: [] })),
+          // GH3.18: PMC_CONFIG eliminado — TableRegistry.CONFIG ya no existe
           WorkbookLoader.loadTable(TableRegistry.USUARIOS).catch(() => ({ headers: [], rows: [] })),
           WorkbookLoader.loadTable(TableRegistry.ROLES).catch(() => ({ headers: [], rows: [] })),
           WorkbookLoader.loadTable(TableRegistry.INVENTARIO).catch(() => ({ headers: [], rows: [] })),
@@ -313,7 +313,7 @@ const ExcelProvider = (() => {
           return r.status === 'fulfilled' ? r.value : { headers: [], rows: [] };
         }
 
-        const config    = unwrap(configResult);
+        // GH3.18: configResult eliminado
         const usuarios  = unwrap(usuariosResult);
         const roles     = unwrap(rolesResult);
         const inv       = unwrap(inventarioResult);
@@ -323,7 +323,7 @@ const ExcelProvider = (() => {
         const renovaciones    = ExcelMapper.toJson(ren.headers,      ren.rows);
         const inventario      = ExcelMapper.toJson(inv.headers,      inv.rows);
         const usuarios_sis    = ExcelMapper.toJson(usuarios.headers, usuarios.rows);
-        const configuracion   = ExcelMapper.toJson(config.headers,   config.rows);
+        // GH3.18: configuracion eliminado
         const rolesData       = ExcelMapper.toJson(roles.headers,    roles.rows);
 
         // Cachear headers para WorkbookWriter
@@ -343,7 +343,7 @@ const ExcelProvider = (() => {
           })),
           roles:           rolesData,
           roles_permisos:  [],
-          configuracion:   configuracion,
+          configuracion:   [],  // GH3.18: eliminado
           auditoria:       [],
           notificaciones:  [],
         };

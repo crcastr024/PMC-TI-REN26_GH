@@ -1138,7 +1138,7 @@ const GraphProvider = (() => {
           usuarios_sistema:   window.SYSTEM_USERS || [],
           roles:              window.ROLES        || [],
           roles_permisos:     window.ROLES_PERMISOS || [],
-          configuracion:      window.CONFIGURATION  || [],
+          // GH3.18: CONFIGURATION eliminado
           auditoria:          [],
           notificaciones:     [],
         };
