@@ -297,7 +297,7 @@ const ExcelProvider = (() => {
         // Orden obligatorio: CONFIG → USUARIOS → INVENTARIO → RENOVACIONES
         const [
           metaResult,
-          configResult,
+          // GH3.22: configResult eliminado — coincide con los 5 promises del array
           usuariosResult,
           rolesResult,
           inventarioResult,
