@@ -50,8 +50,19 @@ function renderEmpresaChart() {
     return {
       label: emp, total: all.length,
       backup: all.filter(u => u.es_backup).length,
-      entregados: all.filter(u => u.estado === 'Entregado' || u.estado === 'Completado').length,
-      proceso: all.filter(u => u.estado === 'Alistamiento' || u.estado === 'En tránsito').length,
+      // GH3.22 P8: estados canónicos + aliases legacy para consistencia
+      entregados: all.filter(u => {
+        const s = u.estado || '';
+        return s === 'Entregado equipo nuevo' || s === 'Pendiente recoger equipo anterior' ||
+               s === 'En tránsito equipo anterior' || s === 'Equipo antiguo recibido' ||
+               s === 'Renovación completada' || s === 'Pendiente aprobación' ||
+               s === 'Cerrado' || s === 'Entregado' || s === 'Completado';
+      }).length,
+      proceso: all.filter(u => {
+        const s = u.estado || '';
+        return s === 'Alistamiento' || s === 'Programado' ||
+               s === 'En tránsito equipo nuevo' || s === 'En tránsito';
+      }).length,
       pend: all.filter(u => u.estado === 'Pendiente').length,
     };
   });
@@ -487,7 +498,13 @@ function openEditModal(id) {
   // F3.5 · Niveles desde ConfigService (no hardcodeados en componente UI)
   const niveles = ConfigService.NIVELES_REGISTRO;
   const nivelOpts = '<option value="">—</option>' + niveles.map(n => '<option' + (u.registro === n ? ' selected' : '') + '>' + esc(n) + '</option>').join('');
-  const estados = ['Pendiente', 'Alistamiento', 'En tránsito', 'Entregado', 'Completado', 'BACKUP'];
+  // GH3.22 P4: usar nombres canónicos del modelo (StateMachine) para escritura
+  const estados = ConfigService.getFlow
+    ? ConfigService.getFlow().concat([StateMachine.states.BACKUP])
+    : ['Pendiente','Alistamiento','Programado','En tránsito equipo nuevo',
+       'Entregado equipo nuevo','Pendiente recoger equipo anterior',
+       'En tránsito equipo anterior','Equipo antiguo recibido',
+       'Renovación completada','Pendiente aprobación','Cerrado','BACKUP'];
   const estadoOpts = estados.map(e => '<option' + (u.estado === e ? ' selected' : '') + '>' + e + '</option>').join('');
   // F3.3 fix: la UI consume EXCLUSIVAMENTE el modelo normalizado (equipoNuevo),
   // nunca los campos planos legacy (u.marca/u.modelo/...) que nunca se completan.

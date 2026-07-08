@@ -25,7 +25,7 @@ window.LOGOS = {
 window.CONFIG = {
   appName: 'PMC-TI-REN26',
   appShort: 'PMC-REN26',
-  technicians: ['Técnico A', 'Técnico B', 'Técnico C'],
+  technicians: ['CRISTIAN', 'SANTIAGO', 'NICOLAS'],  // GH3.22 P3: valores reales del Excel
   version: 'v8.8.4-RC1-PRODUCTION',
 };
 

@@ -218,13 +218,25 @@ const StateMachine = {
   isPendingApproval(state) { return state === STATES.PENDIENTE_APROBACION; },
   
   // Backward compat: estados v8 legacy se mapean
+  // GH3.22 P4/P9: normalize() — aliases legacy + lookup insensible a mayúsculas
+  // Permite que valores del Excel en MAYÚSCULAS (PENDIENTE, BACKUP) se normalicen
+  // al valor canónico equivalente del modelo (Pendiente, BACKUP).
   normalize(legacyState) {
+    if (!legacyState) return legacyState;
+    // 1. Alias legacy explícitos (v8 → nombres completos actuales)
     const map = {
       'En tránsito':  STATES.TRANSITO_NUEVO,
       'Entregado':    STATES.ENTREGADO_NUEVO,
       'Completado':   STATES.CERRADO,
     };
-    return map[legacyState] || legacyState;
+    if (map[legacyState]) return map[legacyState];
+    // 2. Exacto ya normalizado
+    const canonical = Object.values(STATES);
+    if (canonical.indexOf(legacyState) >= 0) return legacyState;
+    // 3. Lookup insensible a mayúsculas (PENDIENTE → Pendiente, BACKUP → BACKUP)
+    const lower = String(legacyState).toLowerCase();
+    const match = canonical.find(s => s.toLowerCase() === lower);
+    return match || legacyState;
   },
 };
 window.StateMachine = StateMachine;

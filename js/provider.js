@@ -555,14 +555,15 @@ const WorkbookWriter = (() => {
       sessionId = await acquireSession();
       const sessionHeaders = { 'workbook-session-id': sessionId };
 
-      // Stage 5: PATCH cada celda (con workbook-session-id)
+      // Stage 5: PATCH cada celda — con workbook-session-id para sesión persistente
       const base = workbookBase();
       const sheetName = 'RENOVACIONES';
       for (const upd of cellUpdates) {
         await GraphClient.patch(
           `${base}/worksheets/${sheetName}/range(address='${upd.address}')`,
           { values: [[upd.value]] },
-          SCOPES
+          SCOPES,
+          sessionHeaders   // GH3.22 P2: inyectar workbook-session-id en cada PATCH
         );
       }
 

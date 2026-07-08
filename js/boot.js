@@ -474,8 +474,10 @@ const ObsolescenceService = {
       const num = intelModel[1];
       let gen;
       if (num.length === 4) {
-        // 4 dígitos: el primer dígito es la generación (Y → 8250 = gen 8)
-        gen = parseInt(num[0]);
+        // GH3.22 P10: gen 11-13 tienen modelos 4-digit (1165→gen 11, 1240→gen 12, 1340→gen 13)
+        // 1165G7→'1165'→substring(0,2)='11'→gen 11 ✓ | 8250U→'8250'→'82'>19→parseInt('8')=8 ✓
+        const twoDigit = parseInt(num.substring(0, 2));
+        gen = (twoDigit >= 10 && twoDigit <= 19) ? twoDigit : parseInt(num[0]);
       } else {
         // 5 dígitos: los primeros 2 son la generación (10510 = gen 10)
         gen = parseInt(num.substring(0, 2));

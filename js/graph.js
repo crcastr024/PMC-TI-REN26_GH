@@ -53,7 +53,9 @@ const GraphClient = (() => {
   }
 
   // ── Token + fetch con timeout ─────────────────────────────────
-  async function doRequest(method, path, body, extraScopes) {
+  async function doRequest(method, path, body, extraScopes, extraHeaders) {
+    // GH3.22 P1: extraHeaders permite inyectar workbook-session-id y otros headers custom
+    extraHeaders = extraHeaders || {};
     const scopes = extraScopes || _config.scopes;
     let token;
     try {
@@ -79,6 +81,7 @@ const GraphClient = (() => {
         'Content-Type':  'application/json',
         'Accept':        'application/json',
         'ConsistencyLevel': 'eventual',
+        ...extraHeaders,   // GH3.22 P1: merge custom headers (ej: workbook-session-id)
       };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -121,19 +124,19 @@ const GraphClient = (() => {
     },
 
     /** Ejecuta una petición arbitraria con retry automático */
-    async request(method, path, body, scopes) {
+    async request(method, path, body, scopes, extraHeaders) {
       if (!_initialized) this.initialize();
-      return withRetry(() => doRequest(method, path, body, scopes));
+      return withRetry(() => doRequest(method, path, body, scopes, extraHeaders));
     },
 
     /** GET conveniente */
     async get(path, scopes)         { return this.request('GET',    path, null, scopes); },
     /** POST conveniente */
-    async post(path, body, scopes)  { return this.request('POST',   path, body, scopes); },
+    async post(path, body, scopes, extraHeaders)  { return this.request('POST',   path, body, scopes, extraHeaders); },
     /** PATCH conveniente */
-    async patch(path, body, scopes) { return this.request('PATCH',  path, body, scopes); },
+    async patch(path, body, scopes, extraHeaders) { return this.request('PATCH',  path, body, scopes, extraHeaders); },
     /** DELETE conveniente */
-    async delete(path, scopes)      { return this.request('DELETE', path, null, scopes); },
+    async delete(path, scopes, extraHeaders)      { return this.request('DELETE', path, null, scopes, extraHeaders); },
 
     /** Descarga un archivo y retorna su contenido */
     async download(path, scopes) {
