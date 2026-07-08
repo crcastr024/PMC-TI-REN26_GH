@@ -230,9 +230,11 @@ window.WorkbookLoader = WorkbookLoader;
 const ExcelProvider = (() => {
   let _connected = false;
 
+  // GH3.20: único criterio de disponibilidad del Excel — arquitectura GH2.5
+  // WorkbookLoader y ExcelProvider comparten el mismo origen de verdad: GraphResolver.
+  // APP_CONFIG.sharePoint.driveId/itemId no existen desde GH2.5 (ver diagnóstico GH3.19).
   function isExcelReady() {
-    const sp = (window.APP_CONFIG && window.APP_CONFIG.sharePoint) || {};
-    return !!(sp.driveId && sp.itemId);
+    return typeof GraphResolver !== 'undefined' && GraphResolver.isResolved();
   }
 
   return {
