@@ -459,6 +459,81 @@ window.GraphCache = GraphCache;
 // Contrato único de escritura. Toda operación de PATCH debe pasar
 // por este contrato. Es la fuente de verdad para GraphWriteValidator.
 // ═══════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════
+// GH3.28 — RAEEEngine v1.0
+// Motor RAEE para clasificación de destino final de equipos.
+// Fuente única de reglas — NO distribuir lógica en UI ni otros módulos.
+// ════════════════════════════════════════════════════════════════════
+const RAEEEngine = (() => {
+  const VERSION = '1.0';
+  const VALID   = ['Excelente', 'Bueno', 'Regular', 'Malo'];
+  const SCORES  = { 'Excelente': 4, 'Bueno': 3, 'Regular': 2, 'Malo': 1 };
+
+  /**
+   * Calcular recomendación de destino final.
+   * @param {string} bateria
+   * @param {string} teclado
+   * @param {string} touchpad
+   * @param {string} estetico
+   * @returns {{ recomendacion, motivo, version, fechaEvaluacion }|null}
+   */
+  function calcular(bateria, teclado, touchpad, estetico) {
+    const vals = [bateria, teclado, touchpad, estetico].filter(function(v) {
+      return VALID.indexOf(v) >= 0;
+    });
+    if (vals.length === 0) return null;
+
+    var malos    = vals.filter(function(v){ return v === 'Malo'; }).length;
+    var regulares= vals.filter(function(v){ return v === 'Regular'; }).length;
+    var avg      = vals.reduce(function(s,v){ return s + SCORES[v]; }, 0) / vals.length;
+
+    var recomendacion, motivo;
+
+    if (malos >= 2) {
+      recomendacion = 'RAEE';
+      motivo = malos + ' componentes en estado Malo — requiere disposicion especial (RAEE)';
+    } else if (regulares >= 2) {
+      recomendacion = 'Donacion';
+      motivo = regulares + ' componentes en estado Regular — apto para donacion';
+    } else if (avg >= 3 && malos === 0) {
+      recomendacion = 'Venta interna';
+      motivo = 'Promedio igual o superior a Bueno sin componentes Malo — apto para venta interna';
+    } else {
+      recomendacion = 'Reasignacion';
+      motivo = 'Estado general aceptable — apto para reasignacion interna';
+    }
+
+    return {
+      recomendacion:    recomendacion,
+      motivo:           motivo,
+      version:          VERSION,
+      fechaEvaluacion:  new Date().toISOString().split('T')[0],
+    };
+  }
+
+  /** Validar que los cuatro campos tienen valores válidos. */
+  function validar(bateria, teclado, touchpad, estetico) {
+    var campos = [
+      { nombre: 'Bateria',  valor: bateria },
+      { nombre: 'Teclado',  valor: teclado },
+      { nombre: 'Touchpad', valor: touchpad },
+      { nombre: 'Estetico', valor: estetico },
+    ];
+    var faltantes = campos.filter(function(c){ return VALID.indexOf(c.valor) < 0; });
+    return {
+      ok:       faltantes.length === 0,
+      faltante: faltantes.map(function(c){ return c.nombre; }),
+    };
+  }
+
+  /** Opciones válidas para los controles de UI. */
+  function opciones() { return VALID.slice(); }
+
+  return { calcular: calcular, validar: validar, opciones: opciones, VERSION: VERSION };
+})();
+window.RAEEEngine = RAEEEngine;
+
 const WriteContract = (() => {
   // Campos que NUNCA deben ir a SharePoint
   const PROTECTED_FIELDS = new Set([
@@ -504,6 +579,12 @@ const WriteContract = (() => {
     'blocked', 'block_reason', 'block_category', 'block_previous_state',
     // General
     'observaciones', 'aun_trabaja',
+    // GH3.27 nuevos campos — requieren columnas en Excel: LISTA_RECOLECCION,
+    // EVAL_BATERIA, EVAL_TECLADO, EVAL_TOUCHPAD, EVAL_ESTETICO
+    'lista_recoleccion', 'eval_bateria', 'eval_teclado', 'eval_touchpad', 'eval_estetico',
+    // GH3.28: Motor RAEE — columnas creadas en Excel Maestro GH3.28
+    'recomendacion_raee', 'motivo_raee', 'motor_raee_version', 'fecha_evaluacion_raee',
+    'usuario_evaluacion_raee',  // GH3.29
   ];
 
   // Campos requeridos (no pueden ser null/vacío al escribir)

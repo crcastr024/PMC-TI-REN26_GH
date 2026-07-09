@@ -197,6 +197,7 @@ const TRANSITIONS = {
 const StateMachine = {
   states: STATES,
   flow: STATE_FLOW,
+  TRANSITIONS: TRANSITIONS,  // GH3.30: exportado para GraphWriteValidator y UI
   
   isValidTransition(from, to) {
     if (!from || !to) return false;

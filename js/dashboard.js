@@ -32,7 +32,13 @@ const KPIService = {
     const correccion = records.filter(r => r.estado === 'Corrección requerida').length;
     const actasFirmadas = records.filter(r => r.acta_firmada === true).length;
     
-    return {
+      // GH3.28: KPIs Motor RAEE
+    const destinoRAEE        = records.filter(r => r.recomendacion_raee === 'RAEE').length;
+    const destinoDonacion    = records.filter(r => r.recomendacion_raee === 'Donacion').length;
+    const destinoVenta       = records.filter(r => r.recomendacion_raee === 'Venta interna').length;
+    const destinoReasign     = records.filter(r => r.recomendacion_raee === 'Reasignacion').length;
+    const conEvaluacion      = records.filter(r => r.recomendacion_raee).length;
+  return {
       total,
       entregados,
       enProceso,
@@ -44,6 +50,8 @@ const KPIService = {
       actasFirmadas,
       porcentajeAvance: total ? Math.round((entregados / total) * 100) : 0,
       porcentajeCierre: total ? Math.round((cerrados / total) * 100) : 0,
+      // GH3.28: destinos RAEE
+      destinoRAEE, destinoDonacion, destinoVenta, destinoReasign, conEvaluacion,
     };
   },
   
@@ -440,8 +448,17 @@ const DashboardFactory = {
   /** VISITANTE — lectura pública, sin datos sensibles de gestión */
   getVisitanteViewModel() {
     const all = DataService.getRenewals({});
-    return {
-      kpisPublicos:     KPIService.calculate(all),
+        // GH3.28: KPIs destino final
+    const kpiAll = KPIService.calculate(all);
+return {
+      kpisPublicos: kpiAll,
+      destinoFinal: {
+        RAEE:         kpiAll.destinoRAEE || 0,
+        Donacion:     kpiAll.destinoDonacion || 0,
+        VentaInterna: kpiAll.destinoVenta || 0,
+        Reasignacion: kpiAll.destinoReasign || 0,
+        total:        kpiAll.conEvaluacion || 0,
+      },
       reportes:         all,
       avanceGeneral: {
         total:          all.length,

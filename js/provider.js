@@ -471,6 +471,16 @@ window.WriteQueue = WriteQueue;
 // Stage 1: Validación → 2: OptimisticUpdate → 3: Lock → 4: VersionCheck
 // → 5: Session → 6: PATCH → 7: CloseSession → 8: PostCommit
 // ────────────────────────────────────────────────────────────────────
+// GH3.31 BLOQUE 1: Mapa de aliases campo_interno → columna_excel
+// Permite que campos con nombre histórico distinto lleguen correctamente al Excel.
+const FIELD_COLUMN_ALIASES = {
+  'alistamiento':     'fecha_alistamiento',
+  'fecha_envio_acta': 'fecha_acta_enviada',
+  'fecha_firma_acta': 'fecha_acta_firmada',
+  'observaciones':    'observacion',
+  'estado_devolucion':'devuelto',
+};
+
 const WorkbookWriter = (() => {
   const SCOPES = ['User.Read', 'Files.ReadWrite.All'];
 
@@ -545,8 +555,10 @@ const WorkbookWriter = (() => {
 
       // Campos del usuario
       Object.entries(safeChanges).forEach(([field, value]) => {
-        const colIdx = headers.findIndex(h => String(h).trim().toLowerCase() === field.toLowerCase());
-        if (colIdx < 0) { console.warn('[WorkbookWriter] columna no encontrada:', field); return; }
+        // GH3.31 BLOQUE 1: traducir nombre_campo → nombre_columna_excel si existe alias
+        const excelFieldName = (typeof FIELD_COLUMN_ALIASES !== 'undefined' && FIELD_COLUMN_ALIASES[field]) || field;
+        const colIdx = headers.findIndex(h => String(h).trim().toLowerCase() === excelFieldName.toLowerCase());
+        if (colIdx < 0) { console.error('[WorkbookWriter] campo sin columna en Excel (descartado):', field, '| alias buscado:', excelFieldName); return; }
         cellUpdates.push({
           field:     field,  // GH3.24 logging
           address:   `${ExcelMapper.columnLetter(colIdx)}${rowNum}`,
@@ -581,8 +593,15 @@ const WorkbookWriter = (() => {
         }
       });
       if (_preIssues.length > 0) {
-        console.error('[PRE-PATCH] Campos sin columna en Excel:',
-          _preIssues.map(function(v){return v.campo+'→'+v.motivo;}).join(' | '));
+        // GH3.31: Los 5 campos aliased ya no generan esta advertencia
+        // Solo registrar los que realmente faltan (no son alias conocidos)
+        var _realIssues = _preIssues.filter(function(v){
+          return !(typeof FIELD_COLUMN_ALIASES !== 'undefined' && FIELD_COLUMN_ALIASES[v.campo]);
+        });
+        if (_realIssues.length > 0) {
+          console.error('[PRE-PATCH] Campos sin columna en Excel:',
+            _realIssues.map(function(v){return v.campo+'→'+v.motivo;}).join(' | '));
+        }
         if (window.HBT) window.HBT._lastValidation = { ts: new Date().toISOString(), issues: _preIssues };
       }
 
