@@ -296,14 +296,14 @@ const ExcelProvider = (() => {
       try {
         // Orden obligatorio: CONFIG → USUARIOS → INVENTARIO → RENOVACIONES
         const [
-          metaResult,
-          // GH3.22: configResult eliminado — coincide con los 5 promises del array
+          // GH3.36: metaResult eliminado — PMC_META no existe en el Excel y su resultado era descartado.
+          // La llamada generaba GET .../tables/PMC_META/range → 404 en cada loadData().
           usuariosResult,
           rolesResult,
           inventarioResult,
           renovacionesResult,
         ] = await Promise.allSettled([
-          WorkbookLoader.loadTable(TableRegistry.META).catch(() => ({ headers: [], rows: [] })),
+          // GH3.36: WorkbookLoader.loadTable(TableRegistry.META) eliminado — ver auditoría GH3.35/GH3.36
           // GH3.18: PMC_CONFIG eliminado — TableRegistry.CONFIG ya no existe
           WorkbookLoader.loadTable(TableRegistry.USUARIOS).catch(() => ({ headers: [], rows: [] })),
           WorkbookLoader.loadTable(TableRegistry.ROLES).catch(() => ({ headers: [], rows: [] })),

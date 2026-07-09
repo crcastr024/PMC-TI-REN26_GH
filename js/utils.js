@@ -583,6 +583,10 @@ function getAudioCtx() {
 }
 function playBeep(frequency, duration, type) {
   const ctx = getAudioCtx(); if (!ctx) return;
+  // GH3.36: Chrome autoplay policy — AudioContext require gesto del usuario.
+  // Si el contexto está suspendido (sin gesto aún), salir silenciosamente.
+  // El sonido funcionará correctamente después de la primera interacción.
+  if (ctx.state === 'suspended') { ctx.resume().catch(function(){ /* AudioContext resume ignorado — el sonido no se reproducirá hasta primer gesto */ }); return; }
   type = type || 'sine';
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
