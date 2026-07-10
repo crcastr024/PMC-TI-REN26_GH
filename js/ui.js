@@ -19,9 +19,18 @@ function renderResumen() {
   $('h-entregados').textContent = entregados;
   $('h-pct').textContent = pct + '%';
   
-  const hbtCount = DataService.getRenewals({empresa:'HBT'}).length;
-  const hgsCount = DataService.getRenewals({empresa:'HGS'}).length;
+  // GH3.37.1 Item 2: única fuente de verdad para empresas — KPIService.byEmpresa()
+  const _byEmp = (window.KPIService && KPIService.byEmpresa) ? KPIService.byEmpresa() : {};
+  const hbtCount = (_byEmp.HBT && _byEmp.HBT.total) || DataService.getRenewals({empresa:'HBT'}).length;
+  const hgsCount = (_byEmp.HGS && _byEmp.HGS.total) || DataService.getRenewals({empresa:'HGS'}).length;
   $('h-empresas').textContent = 'HBT ' + hbtCount + ' · HGS ' + hgsCount;
+  // GH3.38 FC-01/FC-05: actualizar landing KPIs (antes hardcodeados sin id)
+  var _lkpiC = document.getElementById('lkpi-colabs');
+  if (_lkpiC) _lkpiC.textContent = uniqueUsers();
+  var _lkpiCS = document.getElementById('lkpi-colabs-sub');
+  if (_lkpiCS) _lkpiCS.textContent = 'colaboradores activos';
+  var _lkpiE = document.getElementById('lkpi-empresas');
+  if (_lkpiE) _lkpiE.textContent = 'HBT ' + hbtCount + ' · HGS ' + hgsCount;
   
   $('k-total').textContent = total;
   const _allCount = DataService.count();
@@ -38,6 +47,22 @@ function renderResumen() {
   $('tb-sync').textContent = provName + ' · ' + new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
   $('footer-date').textContent = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   $('footer-stats').textContent = _allCount + ' equipos · ' + uniqueUsers() + ' usuarios';
+  // GH3.38 FC-07: actualizar identidad del usuario autenticado
+  if (window.state && state.user) {
+    var _role = state.user.role || state.user.rol || '';
+    var _roleLabel = {
+      super_admin:'Super Admin','gestor_activos':'Gestor Activos',
+      tecnico:'Técnico',consulta:'Consulta',visitante:'Visitante'
+    }[_role] || _role;
+    var _roleEl = document.getElementById('user-role');
+    if (_roleEl) _roleEl.textContent = _roleLabel + ' · TI';
+    var _avatarEl = document.getElementById('user-avatar');
+    var _nombre = state.user.nombre || state.user.name || state.user.email || '';
+    if (_avatarEl && _nombre) {
+      var parts = _nombre.trim().split(' ');
+      _avatarEl.textContent = ((parts[0]||'')[0]+(parts[1]||'')[0]).toUpperCase();
+    }
+  }
   
   renderEmpresaChart();
   renderTecnicoChart();
@@ -75,7 +100,7 @@ function renderEmpresaChart() {
       (d.backup ? '<div class="chart-bar-seg" style="width:' + (d.backup/d.total*100) + '%; background: #FCD34D"></div>' : '') +
       '</div><div class="chart-legend"><div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--green)"></span>Entregados ' + d.entregados + '</div><div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--amber)"></span>En proceso ' + d.proceso + '</div><div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--blue)"></span>Pendientes ' + d.pend + '</div>' +
       (d.backup ? '<div class="chart-legend-item"><span class="chart-legend-dot" style="background: #FCD34D"></span>Backup ' + d.backup + '</div>' : '') +
-      '</div></div>';
+      '</div></div></div>'; /* GH3.38 FC-03: cierre .modal-body-inner */
   }).join('');
 }
 
@@ -530,7 +555,7 @@ function openEditModal(id) {
   const dispFinalOpts_ = ConfigService.DISPOSICION_FINAL_OPTS;
   const dispFinalOpts = dispFinalOpts_.map(d => '<option value="' + d + '"' + (u.disposicion_final === d ? ' selected' : '') + '>' + (d || '—') + '</option>').join('');
   
-  $('modal-body').innerHTML = 
+  $('modal-body').innerHTML = '<div class="modal-body-inner">' +
 '<div class="form-section"><div class="form-section-head">1 · Datos del usuario</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Empresa</label><select class="form-select" id="m-empresa"><option' + (u.empresa === 'HBT' ? ' selected' : '') + '>HBT</option><option' + (u.empresa === 'HGS' ? ' selected' : '') + '>HGS</option></select></div>' +
       '<div class="form-group full"><label class="form-label">Nombre completo</label><input type="text" class="form-input" id="m-nombre" value="' + esc(u.nombre) + '"></div>' +
@@ -628,7 +653,7 @@ function openEditModal(id) {
     '</div>' +
     '<div id="m-recomendacion-display" style="margin-top:8px;padding:8px 14px;border-radius:var(--r-sm);background:#E8F5E9;color:#2E7D32;font-size:12px;font-weight:700;display:none"></div>' +
     '<div id="m-motivo-raee-display" style="margin-top:4px;padding:4px 14px;font-size:11px;color:#777;display:none"></div>' +
-    '</div></div>';
+    '</div></div></div>'; /* GH3.38 FC-03 */
   
 // Inicializar estrellas
   const fbWidget = $('m-feedback-stars');
@@ -667,6 +692,8 @@ function openEditModal(id) {
       for (var k in u) tempU[k] = u[k];
       tempU.estado = _estadoEl.value;
       _tlContainer.innerHTML = renderTimelineHTML(tempU);
+      // GH3.37.1 Item 8: actualizar KPIs y Panel Ejecutivo sin cerrar el modal
+      if (window.renderResumen) setTimeout(renderResumen, 0);
     });
   })();
 
@@ -700,6 +727,30 @@ window.actualizarRecomendacion = function() {
 
   $('modal-bg').classList.add('active');
 }
+
+// GH3.37.1 Item 11 — Indicador visual de sincronización con Excel
+function _showSyncStatus(status) {
+  var indicator = document.getElementById('sync-status-indicator');
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.id = 'sync-status-indicator';
+    indicator.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;z-index:9999;transition:opacity 0.4s;opacity:0';
+    document.body.appendChild(indicator);
+  }
+  if (status === 'ok') {
+    indicator.textContent = '✓ Sincronizado con Excel';
+    indicator.style.background = '#2E7D32';
+    indicator.style.color = '#fff';
+  } else if (status === 'conflict') {
+    indicator.textContent = '⚠ Conflicto · Recargando...';
+    indicator.style.background = '#F57F17';
+    indicator.style.color = '#fff';
+  }
+  indicator.style.opacity = '1';
+  setTimeout(function(){ indicator.style.opacity = '0'; }, 3000);
+}
+window._showSyncStatus = _showSyncStatus;
+
 window.openEditModal = openEditModal;
 
 function setStarRating(value) {
@@ -801,14 +852,18 @@ function saveRecord() {
                 if (state.view === 'usuarios') renderUsuarios();
                 else if (state.view === 'reportes') renderReportes();
                 else renderResumen();
-                toast('Excel sincronizado', 'success');
+                // GH3.37.1 Item 11: confirmación visual
+                toast('✓ Guardado · Sincronizado con Excel', 'success');
+                if (window._showSyncStatus) _showSyncStatus('ok');
               }
             });
           }
         })
         .catch(function(err) {
           if (err && err.graphCode === 'CONFLICT') {
-            toast('Conflicto de versión — otro usuario modificó este registro', 'warning');
+            // GH3.37.1 Item 11: recargar automáticamente en conflicto
+            DataService.reloadFromProvider && DataService.reloadFromProvider();
+            toast('Conflicto detectado. Recargando datos...', 'warning');
           } else {
             console.error('[SYNC ERROR]', err && err.message);
           }

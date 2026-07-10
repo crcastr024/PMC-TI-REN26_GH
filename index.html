@@ -38,8 +38,8 @@
     <p class="landing-sub">Plataforma operativa para gestión y trazabilidad del proyecto de renovación tecnológica 2026 en HBT y HGS. Coordinación centralizada · trazabilidad serial por serial · auditoría completa.</p>
 
     <div class="landing-kpis">
-      <div class="lkpi"><span class="lkpi-label">Total equipos</span><span class="lkpi-val accent">146</span><span class="lkpi-sub">HBT 88 · HGS 58</span></div>
-      <div class="lkpi"><span class="lkpi-label">Colaboradores</span><span class="lkpi-val">132</span><span class="lkpi-sub">Únicos por cédula</span></div>
+      <div class="lkpi"><span class="lkpi-label">Total equipos</span><span class="lkpi-val accent">146</span><span class="lkpi-sub" id="lkpi-empresas">HBT · HGS</span></div>
+      <div class="lkpi"><span class="lkpi-label">Colaboradores</span><span class="lkpi-val" id="lkpi-colabs">—</span><span class="lkpi-sub" id="lkpi-colabs-sub">activos</span></div>
       <div class="lkpi"><span class="lkpi-label">Empresas</span><span class="lkpi-val">2</span><span class="lkpi-sub">HBT + HGS</span></div>
       <div class="lkpi"><span class="lkpi-label">Cobertura</span><span class="lkpi-val">23</span><span class="lkpi-sub">Ciudades</span></div>
     </div>
@@ -999,7 +999,7 @@
     </div>
     <!-- Footer -->
     <p style="color:rgba(255,255,255,0.3);font-size:11px;margin-top:24px;">
-      Heinsohn Business Technology · Coordinación TI
+      Heinsohn Business Technology 
     </p>
   </div>
 </div>
@@ -1046,7 +1046,7 @@
 <script src="js/app.js"></script>
 
 <!-- GH3.27 CAMBIO 6: Diálogo de confirmación de guardado -->
-<div id="confirm-dialog" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center">
+<div id="confirm-dialog" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)">
     <div style="font-size:16px;font-weight:700;color:var(--k);margin-bottom:16px">Confirmar guardado</div>
     <div id="confirm-summary" style="font-size:13px;color:#555;line-height:1.6;margin-bottom:20px"></div>

@@ -616,6 +616,13 @@ function toggleRoleSwitcher() {
 window.toggleRoleSwitcher = toggleRoleSwitcher;
 
 function switchRole(role, event) {
+  // GH3.38 FC-06: solo Super Admin puede cambiar de rol
+  var _currentRole = (window.state && state.user && (state.user.role || state.user.rol)) || '';
+  if (_currentRole !== 'super_admin') {
+    console.error('[RBAC] switchRole() denegado — rol:', _currentRole);
+    if (event) event.stopPropagation();
+    return;
+  }
   if (event) { event.stopPropagation(); }
   state.user.role = role;
   $('role-switcher-menu') && $('role-switcher-menu').classList.remove('open');

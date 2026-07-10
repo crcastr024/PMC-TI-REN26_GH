@@ -4,6 +4,76 @@
 // Requisito: config.js + msal-browser.min.js deben cargarse antes.
 // ════════════════════════════════════════════════════════════════════
 
+
+// ════════════════════════════════════════════════════════════════════
+// GH3.37 — _applyRBAC: Control de acceso basado en roles
+// ════════════════════════════════════════════════════════════════════
+function _applyRBAC(role, userEmail) {
+  // ── RBAC-01/02: Resolver nombre real del usuario desde PMC_USUARIOS ──────
+  var sysUsers = window.SYSTEM_USERS || [];
+  var lower    = (userEmail || '').toLowerCase().trim();
+  // GH3.37.1 Item 5: prioridad Azure OID → email exacto → prefijo → UPN → fallback
+  var account  = (window.state && state.user && state.user._msalAccount) || {};
+  var oid      = account.localAccountId || account.homeAccountId || '';
+  var sysUser  = (oid ? sysUsers.find(function(u){ return u.oid && u.oid === oid; }) : null)
+              || sysUsers.find(function(u){ return u.correo && u.correo.toLowerCase() === lower; })
+              || sysUsers.find(function(u) {
+                   var pre = (u.correo || '').toLowerCase().split('@')[0];
+                   return pre === lower.split('@')[0];
+                 })
+              || sysUsers.find(function(u){
+                   return u.upn && u.upn.toLowerCase() === lower;
+                 });
+
+  // ── RBAC-05: Mostrar nombre real en el sidebar ────────────────────────────
+  var displayName = (sysUser && (sysUser.nombre || sysUser.name)) || (userEmail || 'Usuario');
+  var nameEl = document.getElementById('user-name');
+  if (nameEl) nameEl.textContent = displayName;
+  // Actualizar state.user si no tiene nombre
+  if (window.state && state.user && !state.user.nombre) state.user.nombre = displayName;
+
+  // ── RBAC-02: Asignar técnico desde el Excel si está definido ──────────────
+  if (sysUser && sysUser.tecnico) {
+    if (window.state && state.user) state.user.esTecnico = sysUser.tecnico;
+  }
+
+  // ── RBAC-03: Ocultar vistas por rol ──────────────────────────────────────
+  // roles técnico / consulta / visitante no acceden a vistas ejecutivas
+  var RESTRICTED_VIEWS = ['panel-ejecutivo', 'aprobaciones', 'roles', 'configuracion', 'reportes-ejecutivos'];
+  var isTecnico  = (role === 'tecnico');
+  var isConsulta = (role === 'consulta' || role === 'visitante');
+  var isRestricted = isTecnico || isConsulta;
+
+  if (isRestricted) {
+    // Ocultar items del nav para roles restringidos
+    document.querySelectorAll('.sb-item').forEach(function(item) {
+      var view = item.dataset && item.dataset.view;
+      if (view && RESTRICTED_VIEWS.some(function(rv) { return view.indexOf(rv) >= 0; })) {
+        item.style.display = 'none';
+      }
+    });
+  }
+
+  // ── RBAC-04: Ocultar el role-switcher para todos excepto Super Admin ──────
+  var isSuperAdmin = (role === 'super_admin');
+  var switcher = document.querySelector('[onclick*="switchRole"], #role-switcher-btn, .role-switcher-btn');
+  var switcherMenu = document.getElementById('role-switcher-menu');
+  var tbRoleLabel  = document.getElementById('tb-role-label');
+
+  if (!isSuperAdmin) {
+    // Ocultar completamente el role switcher (no solo deshabilitar)
+    if (switcher)     switcher.style.display = 'none';
+    if (switcherMenu) switcherMenu.style.display = 'none';
+    // Ocultar el contenedor del switcher en el topbar
+    var tbRoleContainer = tbRoleLabel && tbRoleLabel.parentElement;
+    if (tbRoleContainer && tbRoleContainer.querySelector('[onclick*="switchRole"]')) {
+      tbRoleContainer.style.display = 'none';
+    }
+    // Ocultar también el label de rol en el topbar si el toggle no existe
+    if (tbRoleLabel && !isSuperAdmin) tbRoleLabel.style.display = 'none';
+  }
+}
+
 const BootstrapManager = (() => {
 
   let _completed = false;
@@ -189,7 +259,8 @@ async function boot() {
   const loginEl   = document.getElementById('rc2-login-screen');
 
   // ── RC2.6: Cuando Bootstrap completa → cargar datos de negocio ──────────
-  EventBus.subscribe('bootstrap.completed', async ({ role }) => {
+  EventBus.subscribe('bootstrap.completed', async ({ role, user: _authUser }) => {
+  const payload = { role, user: _authUser };
 
     if (loadingEl) loadingEl.style.display = 'flex';
     try {
@@ -212,6 +283,14 @@ async function boot() {
       if (loadingEl) loadingEl.style.display = 'none';
     }
     _bootCore();
+
+    // GH3.37 RBAC-01/02/03/04/05: Aplicar RBAC después de cargar datos
+    _applyRBAC(role, payload && payload.user);
+
+    // GH3.37.1 Item 12: Verificación de integridad post-boot (no bloquea)
+    setTimeout(function() {
+      if (window.IntegrityService) IntegrityService.verify();
+    }, 500);
   });
 
   // ── Bootstrap fallido → error visible ────────────────────────────────────
@@ -221,7 +300,8 @@ async function boot() {
   });
 
   // ── Modo de autenticación ─────────────────────────────────────────────────
-  const authMode = (window.APP_CONFIG && window.APP_CONFIG.authenticationMode) || 'mock';
+  // GH3.37.4 BR-08: sin fallback a mock — MSAL siempre si APP_CONFIG no está listo
+  const authMode = (window.APP_CONFIG && window.APP_CONFIG.authenticationMode) || 'msal';
 
   if (authMode === 'msal') {
     // ── PRODUCCIÓN: flujo MSAL completo ─────────────────────────────────────
@@ -258,32 +338,14 @@ async function boot() {
     }
 
   } else {
-    // ── DESARROLLO: modo mock — Bootstrap inmediato sin MSAL ────────────────
-
-    if (loadingEl) loadingEl.style.display = 'flex';
-
-    const mockAccount = { username: state.user.email, name: state.user.name, tenantId: '' };
-
-    // En modo mock, Bootstrap carga tablas vacías (no hay Excel) y usa los
-    // PERMISSIONS hardcodeados como fallback
-    try {
-      const restored = SessionManager.restore();
-      if (!restored) {
-        // Crear sesión mock directamente
-        SessionManager.create(mockAccount);
-        SessionManager.applyToState();
-      } else {
-        SessionManager.applyToState();
-      }
-      // En mock, emitir bootstrap.completed directamente con rol del estado
-      EventBus.publish('bootstrap.completed', {
-        role: state.user.role,
-        user: state.user.email,
-      });
-    } catch(err) {
-      console.error('[BOOT] mock bootstrap error:', err.message);
-      if (loadingEl) loadingEl.style.display = 'none';
-    }
+    // GH3.37.4 BR-05: modo mock eliminado — no se permite iniciar sin autenticación
+    console.error('[BOOT] authenticationMode no reconocido:', authMode, '— se requiere MSAL');
+    _showBootError(
+      'Modo de autenticación no válido. Se requiere Azure AD. Verifica la configuración.',
+      'AUTH_MODE_INVALID',
+      true
+    );
+    if (loadingEl) loadingEl.style.display = 'none';
   }
 }
 
@@ -376,6 +438,119 @@ function _bootCore() {
 // Soporta: Intel Core (i3/i5/i7/i9), Intel Core Ultra, Apple Silicon, AMD Ryzen
 // ═══════════════════════════════════════════════════════════════════
 
+
+// ════════════════════════════════════════════════════════════════════
+// GH3.37.1 Item 7 — CPUFamilyParser
+// Motor modular de identificación de arquitecturas de procesador.
+// Extensible: agregar nuevas familias sin tocar el resto del código.
+// ════════════════════════════════════════════════════════════════════
+const CPUFamilyParser = {
+
+  // Tabla de familias — orden importa (más específico primero)
+  families: [
+    {
+      id: 'snapdragon_x',
+      test: function(c) { return /snapdragon\s*x/i.test(c); },
+      parse: function(c) {
+        var elite = /elite/i.test(c);
+        return { vendor:'Qualcomm', family: elite?'Snapdragon X Elite':'Snapdragon X Plus',
+                 gen: elite?17:16, npu:true };
+      },
+    },
+    {
+      id: 'apple_silicon',
+      test: function(c) { return /apple|\bm[1-9]\b/i.test(c) && !/intel|amd|ryzen/i.test(c); },
+      parse: function(c) {
+        var m = c.match(/\bM(\d+)\b/i);
+        var n = m ? parseInt(m[1]) : 1;
+        return { vendor:'Apple', family:'Apple M'+n, gen:10+n, npu:n>=3 };
+      },
+    },
+    {
+      id: 'intel_core_ultra_200',  // Lunar Lake / Arrow Lake — serie 200+
+      test: function(c) {
+        var m = c.match(/(?:ciu|core\s*ultra)\s*(?:\d\s*)?([2-9]\d{2})\b/i);
+        return !!m;
+      },
+      parse: function(c) {
+        var m = c.match(/(?:ciu|core\s*ultra)\s*(?:\d\s*)?([2-9]\d{2})/i);
+        return { vendor:'Intel', family:'Core Ultra 200', gen:15, npu:true };
+      },
+    },
+    {
+      id: 'intel_core_ultra_100',  // Meteor Lake — serie 100
+      test: function(c) { return /(?:ciu|core\s*ultra)/i.test(c); },
+      parse: function(c) {
+        return { vendor:'Intel', family:'Core Ultra 100', gen:14, npu:true };
+      },
+    },
+    {
+      id: 'amd_ryzen_ai',
+      test: function(c) { return /ryzen\s*ai|amd\s*ai/i.test(c); },
+      parse: function(c) {
+        return { vendor:'AMD', family:'Ryzen AI', gen:15, npu:true };
+      },
+    },
+    {
+      id: 'amd_ryzen',
+      test: function(c) { return /amd\s*r(yzen|i)|amdr/i.test(c); },
+      parse: function(c) {
+        var m = c.match(/ryzen\s*\d?\s*(\d{4})/i);
+        if (m) {
+          var rgen = Math.floor(parseInt(m[1]) / 1000);
+          return { vendor:'AMD', family:'Ryzen', gen: 12 + Math.min(rgen-5, 4), npu:false };
+        }
+        return { vendor:'AMD', family:'Ryzen', gen:12, npu:false };
+      },
+    },
+    {
+      id: 'intel_nth_gen',
+      test: function(c) { return /\d{1,2}(?:st|nd|rd|th)\s*gen/i.test(c); },
+      parse: function(c) {
+        var m = c.match(/(\d{1,2})(?:st|nd|rd|th)\s*gen/i);
+        return { vendor:'Intel', family:'Core', gen: parseInt(m[1]), npu:false };
+      },
+    },
+    {
+      id: 'intel_core_classic',    // iX-YZZZZ modelo 4-5 dígitos
+      test: function(c) { return /i[3579][- ]?\d{4,5}/i.test(c); },
+      parse: function(c) {
+        var m = c.match(/i[3579][- ]?(\d{4,5})/i);
+        var num = m[1];
+        var gen;
+        if (num.length === 4) {
+          var td = parseInt(num.substring(0,2));
+          gen = (td >= 10 && td <= 19) ? td : parseInt(num[0]);
+        } else {
+          gen = parseInt(num.substring(0,2));
+        }
+        return { vendor:'Intel', family:'Core', gen:gen, npu:false };
+      },
+    },
+  ],
+
+  parse: function(processor) {
+    if (!processor || typeof processor !== 'string') return null;
+    // Normalizar: quitar marcas (R)/(TM) de Windows
+    var clean = processor.replace(/\(R\)|\(TM\)|\(tm\)|\(r\)/gi, '')
+                          .replace(/\s+/g, ' ').trim();
+    for (var i=0; i<this.families.length; i++) {
+      if (this.families[i].test(clean)) {
+        var result = this.families[i].parse(clean);
+        result.parsed = true;
+        return result;
+      }
+    }
+    return { vendor:null, family:null, gen:null, npu:false, parsed:false };
+  },
+
+  // Añadir una familia nueva en tiempo de ejecución (extensibilidad)
+  register: function(familyDef) {
+    this.families.unshift(familyDef);
+  },
+};
+window.CPUFamilyParser = CPUFamilyParser;
+
 const ObsolescenceService = {
   
   config: {
@@ -403,100 +578,128 @@ const ObsolescenceService = {
     if (!processor || typeof processor !== 'string') {
       return { generacion: null, vendor: null, family: null, parsed: false };
     }
+    // GH3.37.1 Item 7: delegar al CPUFamilyParser modular
+    if (window.CPUFamilyParser) {
+      var r = CPUFamilyParser.parse(processor);
+      if (r && r.parsed) {
+        return { generacion: r.gen, vendor: r.vendor, family: r.family, npu: r.npu, parsed: true };
+      }
+      return { generacion: null, vendor: null, family: null, parsed: false };
+    }
     
     const text = String(processor).trim();
     const lower = text.toLowerCase();
-    
-    // ── Apple Silicon (M1, M2, M3, M4, M5, etc.)
-    // Apple M1 = equiv ~11, M2 = ~12, todos son modernos
-    const apple = text.match(/(?:chip\s+)?M(\d+)\b/i);
+    // GH3.37 RAEE-05: Normalizar marcas registradas de Windows
+    // "Intel(R) Core(TM) Ultra 7 155H" → "Intel Core Ultra 7 155H"
+    const clean = text.replace(/\(R\)|\(TM\)|\(tm\)|\(r\)/gi, '').replace(/\s+/g, ' ').trim();
+    const cleanLower = clean.toLowerCase();
+
+    // ── GH3.37 RAEE-03: Snapdragon X (Qualcomm) ────────────────────────────
+    // Snapdragon X Elite / Snapdragon X Plus → muy moderno 2024+
+    if (/snapdragon\s*x/i.test(text)) {
+      const isElite = /elite/i.test(text);
+      return {
+        generacion: isElite ? 17 : 16, // equivalente gen 16-17 (ARM, NPU integrada)
+        vendor: 'Qualcomm',
+        family: 'Snapdragon X' + (isElite ? ' Elite' : ' Plus'),
+        npu: true,
+        parsed: true,
+      };
+    }
+
+    // ── Apple Silicon (M1, M2, M3, M4, M5, etc.) ────────────────────────────
+    const apple = clean.match(/(?:chip\s+)?M(\d+)(?:\s+(?:Pro|Max|Ultra|Nano))?\b/i);
     if (apple) {
       const m = parseInt(apple[1]);
       return {
-        generacion: 10 + m, // M1 = 11, M2 = 12, M3 = 13...
+        generacion: 10 + m, // M1 = 11, M2 = 12, M3 = 13, M4 = 14
         vendor: 'Apple',
-        family: 'M' + m,
+        family: 'Apple M' + m,
+        npu: m >= 3, // M3+ tienen NPU integrada
         parsed: true,
       };
     }
-    
-    // ── Intel Core Ultra (CiU, CIU, Core Ultra)
-    // Modelo serie 100/200 = Meteor Lake/Arrow Lake (gen 14+)
-    const coreUltra = text.match(/(?:ciu|core\s*ultra)\s*\d?[-\s]*(\d{3})/i);
+
+    // ── GH3.37 RAEE-01: Intel Core Ultra (Meteor Lake / Lunar Lake / Arrow Lake)
+    // GH3.37 RAEE-05: Soporta "(TM)" mediante clean
+    const coreUltra = clean.match(/(?:ciu|core\s*ultra)\s*(\d)\s*(\d{3})/i);
     if (coreUltra) {
+      const modelNum = parseInt(coreUltra[2]);
+      // Serie 100 = Meteor Lake (2024), Serie 200 = Lunar/Arrow Lake (2024-2025)
+      const series = modelNum < 200 ? 100 : 200;
+      const gen    = series === 200 ? 15 : 14;
       return {
-        generacion: 14, // Core Ultra series 1 = gen 14 equiv
+        generacion: gen,
         vendor: 'Intel',
-        family: 'Core Ultra',
+        family: 'Core Ultra ' + (series === 200 ? '200' : '100'),
+        npu: true, // Core Ultra tiene NPU integrada
         parsed: true,
       };
     }
-    
-    // ── AMD Ryzen (cualquier Ryzen es moderno)
-    if (/amd\s*r(yzen|i)|amdr/i.test(text)) {
+    // Variante sin número de tier: "Core Ultra 155H", "Core Ultra 258V"
+    const coreUltra2 = clean.match(/(?:ciu|core\s*ultra)\s*(\d{3})/i);
+    if (coreUltra2) {
+      const modelNum = parseInt(coreUltra2[1]);
+      const gen = modelNum >= 200 ? 15 : 14;
+      return { generacion: gen, vendor: 'Intel', family: 'Core Ultra', npu: true, parsed: true };
+    }
+
+    // ── GH3.37 RAEE-02: AMD Ryzen AI (Strix Point, Krackan, etc.) ───────────
+    if (/ryzen\s*ai/i.test(clean) || /amd\s*ai/i.test(clean)) {
       return {
-        generacion: 12, // equivalencia conservadora con Intel gen 12+
+        generacion: 15, // Ryzen AI 300/400 = 2024-2025, equivalente Lunar Lake
         vendor: 'AMD',
-        family: 'Ryzen',
+        family: 'Ryzen AI',
+        npu: true,
         parsed: true,
       };
     }
     
-    // ── "Nth Gen Intel" → ej: "11th Gen Intel(R) Core(TM)"
-    const nthGen = text.match(/(\d{1,2})(?:st|nd|rd|th)\s*gen/i);
+    // ── GH3.37 RAEE-02: AMD Ryzen (gen estándar) ────────────────────────────
+    if (/amd\s*r(yzen|i)|amdr/i.test(clean)) {
+      // Intentar extraer número de serie: Ryzen 7 7840U → 7840 → gen 7xxx → gen 2024
+      const ryzenModel = clean.match(/ryzen\s*\d?\s*(\d{4})/i);
+      if (ryzenModel) {
+        const num = parseInt(ryzenModel[1]);
+        const ryzenGen = Math.floor(num / 1000); // 7840 → 7
+        return {
+          generacion: 12 + Math.min(ryzenGen - 5, 4), // Ryzen 5xxx=gen12, 7xxx=gen13, 8xxx=gen14
+          vendor: 'AMD',
+          family: 'Ryzen',
+          parsed: true,
+        };
+      }
+      return { generacion: 12, vendor: 'AMD', family: 'Ryzen', parsed: true };
+    }
+    
+    // ── "Nth Gen Intel" → ej: "11th Gen Intel Core" ─────────────────────────
+    const nthGen = clean.match(/(\d{1,2})(?:st|nd|rd|th)\s*gen/i);
     if (nthGen) {
-      return {
-        generacion: parseInt(nthGen[1]),
-        vendor: 'Intel',
-        family: 'Core',
-        parsed: true,
-      };
+      return { generacion: parseInt(nthGen[1]), vendor: 'Intel', family: 'Core', parsed: true };
     }
     
-    // ── "Intel Core iX Gen N" explícito
-    const explicitGen = text.match(/i[3579]\s*gen\s*(\d{1,2})/i);
+    // ── "Intel Core iX Gen N" explícito ──────────────────────────────────────
+    const explicitGen = clean.match(/i[3579]\s*gen\s*(\d{1,2})/i);
     if (explicitGen) {
-      return {
-        generacion: parseInt(explicitGen[1]),
-        vendor: 'Intel',
-        family: 'Core',
-        parsed: true,
-      };
+      return { generacion: parseInt(explicitGen[1]), vendor: 'Intel', family: 'Core', parsed: true };
     }
     
-    // ── Intel Core con modelo: iX-YZZZZ (4-5 dígitos)
-    // i7-1165G7 → 1165 → gen 11 (primer 1-2 dígitos)
-    // i7-10510U → 10510 → gen 10
-    // i5-8250U → 8250 → gen 8
-    // i9-13900K → 13900 → gen 13
-    const intelModel = text.match(/i[3579][- ]?(\d{4,5})/i);
+    // ── Intel Core clásico con modelo: iX-YZZZZ (4-5 dígitos) ───────────────
+    const intelModel = clean.match(/i[3579][- ]?(\d{4,5})/i);
     if (intelModel) {
       const num = intelModel[1];
       let gen;
       if (num.length === 4) {
-        // GH3.22 P10: gen 11-13 tienen modelos 4-digit (1165→gen 11, 1240→gen 12, 1340→gen 13)
-        // 1165G7→'1165'→substring(0,2)='11'→gen 11 ✓ | 8250U→'8250'→'82'>19→parseInt('8')=8 ✓
         const twoDigit = parseInt(num.substring(0, 2));
         gen = (twoDigit >= 10 && twoDigit <= 19) ? twoDigit : parseInt(num[0]);
       } else {
-        // 5 dígitos: los primeros 2 son la generación (10510 = gen 10)
         gen = parseInt(num.substring(0, 2));
       }
-      return {
-        generacion: gen,
-        vendor: 'Intel',
-        family: 'Core',
-        parsed: true,
-      };
+      return { generacion: gen, vendor: 'Intel', family: 'Core', parsed: true };
     }
     
-    // ── Sin reconocimiento
-    return {
-      generacion: null,
-      vendor: null,
-      family: null,
-      parsed: false,
-    };
+    // ── Sin reconocimiento ────────────────────────────────────────────────────
+    return { generacion: null, vendor: null, family: null, parsed: false };
   },
   
   /**
@@ -616,6 +819,69 @@ const ObsolescenceService = {
 };
 
 window.ObsolescenceService = ObsolescenceService;
+
+// ════════════════════════════════════════════════════════════════════
+// GH3.37.1 Item 12 — Extender IntegrityService existente de dashboard.js
+// NO redeclarar con const — causa SyntaxError en el browser (GH3.37.2)
+// ════════════════════════════════════════════════════════════════════
+(function() {
+  // Esperar a que dashboard.js exponga window.IntegrityService
+  // y agregar el método verify() si no existe
+  function _extendIntegrityService() {
+    var svc = window.IntegrityService;
+    if (!svc) return;
+    if (svc.verify) return; // ya extendido
+
+    svc.verify = function() {
+      var issues = [];
+
+      try {
+        if (!Array.isArray(window.USERS)) issues.push({ module:'USERS', msg:'window.USERS no es array' });
+        else if (window.USERS.length === 0) issues.push({ module:'USERS', msg:'window.USERS vacío' });
+      } catch(e) { issues.push({ module:'USERS', msg: e.message }); }
+
+      try {
+        if (!Array.isArray(window.SYSTEM_USERS)) issues.push({ module:'SYSTEM_USERS', msg:'no es array' });
+      } catch(e) { issues.push({ module:'SYSTEM_USERS', msg: e.message }); }
+
+      try {
+        if (window.KPIService) {
+          var kt = KPIService.totalRenewals();
+          var manual = (window.USERS || []).filter(function(u){ return !u.es_backup; }).length;
+          if (kt !== manual) issues.push({ module:'KPIs', msg:'totalRenewals mismatch: '+kt+' vs '+manual });
+        }
+      } catch(e) { issues.push({ module:'KPIs', msg: e.message }); }
+
+      try {
+        if (window.state && state.user) {
+          var role = state.user.role || state.user.rol;
+          if (!role) issues.push({ module:'RBAC', msg:'state.user sin rol' });
+        }
+      } catch(e) { issues.push({ module:'RBAC', msg: e.message }); }
+
+      try {
+        var hdrs = window._EXCEL_HEADERS;
+        if (!hdrs || !hdrs.RENOVACIONES || hdrs.RENOVACIONES.length === 0) {
+          issues.push({ module:'ExcelMapper', msg:'headers RENOVACIONES no cargados' });
+        }
+      } catch(e) { issues.push({ module:'ExcelMapper', msg: e.message }); }
+
+      issues.forEach(function(issue) {
+        console.error('[IntegrityService.verify]', issue.module + ':', issue.msg);
+      });
+      return { ok: issues.length === 0, issues: issues };
+    };
+  }
+
+  // Extender inmediatamente si ya existe, o esperar al DOMContentLoaded
+  if (window.IntegrityService) {
+    _extendIntegrityService();
+  } else {
+    document.addEventListener('DOMContentLoaded', _extendIntegrityService);
+  }
+})();
+
+
 
 
 // ── 02_approval.js ──
