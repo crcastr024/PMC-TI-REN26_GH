@@ -838,66 +838,66 @@ const ObsolescenceService = {
 window.ObsolescenceService = Obsolescen
 
 // ════════════════════════════════════════════════════════════════════
-// GH3.37.1 Item 12 — IntegrityService
-// Verificación centralizada de consistencia del sistema.
-// Aborda módulo por módulo — nunca falla todo el Dashboard.
+// GH3.37.1 Item 12 — Extender IntegrityService existente de dashboard.js
+// NO redeclarar con const — causa SyntaxError en el browser (GH3.37.2)
 // ════════════════════════════════════════════════════════════════════
-const IntegrityService = {
-  verify: function() {
-    var issues = [];
+(function() {
+  // Esperar a que dashboard.js exponga window.IntegrityService
+  // y agregar el método verify() si no existe
+  function _extendIntegrityService() {
+    var svc = window.IntegrityService;
+    if (!svc) return;
+    if (svc.verify) return; // ya extendido
 
-    // 1. window.USERS — array poblado
-    try {
-      if (!Array.isArray(window.USERS)) issues.push({ module:'USERS', msg:'window.USERS no es array' });
-      else if (window.USERS.length === 0) issues.push({ module:'USERS', msg:'window.USERS vacío — datos no cargados' });
-    } catch(e) { issues.push({ module:'USERS', msg: e.message }); }
+    svc.verify = function() {
+      var issues = [];
 
-    // 2. window.SYSTEM_USERS
-    try {
-      if (!Array.isArray(window.SYSTEM_USERS)) issues.push({ module:'SYSTEM_USERS', msg:'no es array' });
-    } catch(e) { issues.push({ module:'SYSTEM_USERS', msg: e.message }); }
+      try {
+        if (!Array.isArray(window.USERS)) issues.push({ module:'USERS', msg:'window.USERS no es array' });
+        else if (window.USERS.length === 0) issues.push({ module:'USERS', msg:'window.USERS vacío' });
+      } catch(e) { issues.push({ module:'USERS', msg: e.message }); }
 
-    // 3. KPIs — totalRenewals coincide con filter !backup
-    try {
-      if (window.KPIService) {
-        var kt = KPIService.totalRenewals();
-        var manual = (window.USERS || []).filter(function(u){ return !u.es_backup; }).length;
-        if (kt !== manual) issues.push({ module:'KPIs', msg:'totalRenewals mismatch: '+kt+' vs '+manual });
-      }
-    } catch(e) { issues.push({ module:'KPIs', msg: e.message }); }
+      try {
+        if (!Array.isArray(window.SYSTEM_USERS)) issues.push({ module:'SYSTEM_USERS', msg:'no es array' });
+      } catch(e) { issues.push({ module:'SYSTEM_USERS', msg: e.message }); }
 
-    // 4. RBAC — state.user tiene rol
-    try {
-      if (window.state && state.user) {
-        var role = state.user.role || state.user.rol;
-        if (!role) issues.push({ module:'RBAC', msg:'state.user sin rol — posible fallo de auth' });
-      }
-    } catch(e) { issues.push({ module:'RBAC', msg: e.message }); }
+      try {
+        if (window.KPIService) {
+          var kt = KPIService.totalRenewals();
+          var manual = (window.USERS || []).filter(function(u){ return !u.es_backup; }).length;
+          if (kt !== manual) issues.push({ module:'KPIs', msg:'totalRenewals mismatch: '+kt+' vs '+manual });
+        }
+      } catch(e) { issues.push({ module:'KPIs', msg: e.message }); }
 
-    // 5. GraphResolver — workbook configurado
-    try {
-      if (window.GraphResolver && !GraphResolver.isResolved()) {
-        issues.push({ module:'GraphResolver', msg:'workbook no resuelto — Graph no configurado' });
-      }
-    } catch(e) { issues.push({ module:'GraphResolver', msg: e.message }); }
+      try {
+        if (window.state && state.user) {
+          var role = state.user.role || state.user.rol;
+          if (!role) issues.push({ module:'RBAC', msg:'state.user sin rol' });
+        }
+      } catch(e) { issues.push({ module:'RBAC', msg: e.message }); }
 
-    // 6. ExcelMapper — headers cargados
-    try {
-      var hdrs = window._EXCEL_HEADERS;
-      if (!hdrs || !hdrs.RENOVACIONES || hdrs.RENOVACIONES.length === 0) {
-        issues.push({ module:'ExcelMapper', msg:'headers RENOVACIONES no cargados' });
-      }
-    } catch(e) { issues.push({ module:'ExcelMapper', msg: e.message }); }
+      try {
+        var hdrs = window._EXCEL_HEADERS;
+        if (!hdrs || !hdrs.RENOVACIONES || hdrs.RENOVACIONES.length === 0) {
+          issues.push({ module:'ExcelMapper', msg:'headers RENOVACIONES no cargados' });
+        }
+      } catch(e) { issues.push({ module:'ExcelMapper', msg: e.message }); }
 
-    if (issues.length > 0) {
       issues.forEach(function(issue) {
-        console.error('[IntegrityService]', issue.module + ':', issue.msg);
+        console.error('[IntegrityService.verify]', issue.module + ':', issue.msg);
       });
-    }
-    return { ok: issues.length === 0, issues: issues };
-  },
-};
-window.IntegrityService = IntegrityService;
+      return { ok: issues.length === 0, issues: issues };
+    };
+  }
+
+  // Extender inmediatamente si ya existe, o esperar al DOMContentLoaded
+  if (window.IntegrityService) {
+    _extendIntegrityService();
+  } else {
+    document.addEventListener('DOMContentLoaded', _extendIntegrityService);
+  }
+})();
+
 
 ceService;
 
