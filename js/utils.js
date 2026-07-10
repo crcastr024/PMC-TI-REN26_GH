@@ -842,12 +842,13 @@ const VIEW_TITLES = {
 // ════════════════════════════════════════════════════════════════════
 const AuthorizationService = {
   // Vistas accesibles por rol (incluye substrings del view id)
+  // GH3.39.1 FC-11: permisos actualizados — Técnico puede ver Panel Ejecutivo, Ciudades, Técnicos, Devoluciones
   _PERMISSIONS: {
     super_admin:    ['*'],
-    gestor_activos: ['usuarios','reportes','actividad','configuracion','aprobaciones','panel-ejecutivo'],
-    tecnico:        ['usuarios','actividad'],
-    consulta:       ['usuarios'],
-    visitante:      [],
+    gestor_activos: ['usuarios','reportes','actividad','configuracion','aprobaciones','panel-ejecutivo','ciudades','tecnico','devoluciones'],
+    tecnico:        ['usuarios','actividad','panel-ejecutivo','ciudades','tecnico','devoluciones','mi-cola','resumen'],
+    consulta:       ['usuarios','resumen'],
+    visitante:      ['resumen'],
   },
   canAccess(viewId) {
     const role = (window.state && state.user && (state.user.role || state.user.rol)) || 'visitante';
@@ -899,9 +900,10 @@ function scrollMainTop() {
 window.scrollMainTop = scrollMainTop;
 
 function uniqueUsers() {
-  // GH3.37.1 Item 1: delega a KPIService.totalRenewals() — única fuente de verdad
+  // GH3.39.1 FC-10: delega a totalColaboradores() — fuente canónica de colaboradores (141)
+  if (window.KPIService && KPIService.totalColaboradores) return KPIService.totalColaboradores();
   if (window.KPIService && KPIService.totalRenewals) return KPIService.totalRenewals();
-  return window.USERS.filter(function(u){ return !u.es_backup; }).length;
+  return (window.USERS||[]).filter(function(u){ return !u.es_backup; }).length;
 }
 
 // ═══ RESUMEN ═══

@@ -39,7 +39,8 @@ function _applyRBAC(role, userEmail) {
 
   // ── RBAC-03: Ocultar vistas por rol ──────────────────────────────────────
   // roles técnico / consulta / visitante no acceden a vistas ejecutivas
-  var RESTRICTED_VIEWS = ['panel-ejecutivo', 'aprobaciones', 'roles', 'configuracion', 'reportes-ejecutivos'];
+  // GH3.39.1 FC-11: Técnico puede ver panel-ejecutivo — solo se restringe admin/permisos
+  var RESTRICTED_VIEWS = ['aprobaciones', 'roles', 'configuracion', 'reportes-ejecutivos', 'administracion', 'permisos'];
   var isTecnico  = (role === 'tecnico');
   var isConsulta = (role === 'consulta' || role === 'visitante');
   var isRestricted = isTecnico || isConsulta;

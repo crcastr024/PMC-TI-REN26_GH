@@ -13,6 +13,7 @@ function renderResumen() {
   const actas = real.filter(u => u.acta_firmada).length;
   const pct = total > 0 ? Math.round(entregados / total * 100) : 0;
   
+  // GH3.39.1 FC-10: h-users = 141 colaboradores activos
   $('h-users').textContent = uniqueUsers();
   $('h-pendientes').textContent = pendientes;
   $('h-proceso').textContent = proceso;
@@ -23,6 +24,8 @@ function renderResumen() {
   const _byEmp = (window.KPIService && KPIService.byEmpresa) ? KPIService.byEmpresa() : {};
   const hbtCount = (_byEmp.HBT && _byEmp.HBT.total) || DataService.getRenewals({empresa:'HBT'}).length;
   const hgsCount = (_byEmp.HGS && _byEmp.HGS.total) || DataService.getRenewals({empresa:'HGS'}).length;
+  // GH3.39.1 FC-10: totalEquipos = 146, totalColaboradores = 141
+  var _totalEq = (window.KPIService && KPIService.totalEquipos) ? KPIService.totalEquipos() : (window.USERS||[]).length;
   $('h-empresas').textContent = 'HBT ' + hbtCount + ' · HGS ' + hgsCount;
   // GH3.38 FC-01/FC-05: actualizar landing KPIs (antes hardcodeados sin id)
   var _lkpiC = document.getElementById('lkpi-colabs');
@@ -100,7 +103,7 @@ function renderEmpresaChart() {
       (d.backup ? '<div class="chart-bar-seg" style="width:' + (d.backup/d.total*100) + '%; background: #FCD34D"></div>' : '') +
       '</div><div class="chart-legend"><div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--green)"></span>Entregados ' + d.entregados + '</div><div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--amber)"></span>En proceso ' + d.proceso + '</div><div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--blue)"></span>Pendientes ' + d.pend + '</div>' +
       (d.backup ? '<div class="chart-legend-item"><span class="chart-legend-dot" style="background: #FCD34D"></span>Backup ' + d.backup + '</div>' : '') +
-      '</div></div></div>'; /* GH3.38 FC-03: cierre .modal-body-inner */
+      '</div></div>';
   }).join('');
 }
 
@@ -555,7 +558,7 @@ function openEditModal(id) {
   const dispFinalOpts_ = ConfigService.DISPOSICION_FINAL_OPTS;
   const dispFinalOpts = dispFinalOpts_.map(d => '<option value="' + d + '"' + (u.disposicion_final === d ? ' selected' : '') + '>' + (d || '—') + '</option>').join('');
   
-  $('modal-body').innerHTML = '<div class="modal-body-inner">' +
+  $('modal-body').innerHTML = 
 '<div class="form-section"><div class="form-section-head">1 · Datos del usuario</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Empresa</label><select class="form-select" id="m-empresa"><option' + (u.empresa === 'HBT' ? ' selected' : '') + '>HBT</option><option' + (u.empresa === 'HGS' ? ' selected' : '') + '>HGS</option></select></div>' +
       '<div class="form-group full"><label class="form-label">Nombre completo</label><input type="text" class="form-input" id="m-nombre" value="' + esc(u.nombre) + '"></div>' +
@@ -653,7 +656,7 @@ function openEditModal(id) {
     '</div>' +
     '<div id="m-recomendacion-display" style="margin-top:8px;padding:8px 14px;border-radius:var(--r-sm);background:#E8F5E9;color:#2E7D32;font-size:12px;font-weight:700;display:none"></div>' +
     '<div id="m-motivo-raee-display" style="margin-top:4px;padding:4px 14px;font-size:11px;color:#777;display:none"></div>' +
-    '</div></div></div>'; /* GH3.38 FC-03 */
+    '</div></div>';
   
 // Inicializar estrellas
   const fbWidget = $('m-feedback-stars');

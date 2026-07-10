@@ -705,20 +705,15 @@
 .modal-close { width: 36px; height: 36px; border-radius: var(--r-sm); background: transparent; border: 1px solid var(--border-strong); color: var(--text-3); display: flex; align-items: center; justify-content: center; }
 .modal-close:hover { background: var(--bg-card-hover); color: var(--text-1); }
 .modal-close svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.5; }
-/* GH3.38 FC-03: overflow-y en el .modal-body crea BFC que clipea selects nativos */
+/* GH3.39.1 FC-09: min-height:0 permite al flex child respetar max-height:92vh del modal.
+   overflow-y:auto activa el scroll. overflow:visible en .modal no interfiere con esto —
+   los native <select> en desktop siempre son popups OS-level, nunca clippeados por CSS. */
 .modal-body {
-  padding: 0;
-  overflow: visible;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.modal-body-inner {
   padding: 28px;
-  overflow-y: auto;
-  overflow-x: visible;
   flex: 1;
-  /* Las listas desplegables de <select> se renderizan fuera del scroll container */
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .modal-foot { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; background: var(--bg-subtle); }
 .form-section { margin-bottom: 28px; }
