@@ -300,7 +300,8 @@ async function boot() {
   });
 
   // ── Modo de autenticación ─────────────────────────────────────────────────
-  const authMode = (window.APP_CONFIG && window.APP_CONFIG.authenticationMode) || 'mock';
+  // GH3.37.4 BR-08: sin fallback a mock — MSAL siempre si APP_CONFIG no está listo
+  const authMode = (window.APP_CONFIG && window.APP_CONFIG.authenticationMode) || 'msal';
 
   if (authMode === 'msal') {
     // ── PRODUCCIÓN: flujo MSAL completo ─────────────────────────────────────
@@ -337,32 +338,14 @@ async function boot() {
     }
 
   } else {
-    // ── DESARROLLO: modo mock — Bootstrap inmediato sin MSAL ────────────────
-
-    if (loadingEl) loadingEl.style.display = 'flex';
-
-    const mockAccount = { username: state.user.email, name: state.user.name, tenantId: '' };
-
-    // En modo mock, Bootstrap carga tablas vacías (no hay Excel) y usa los
-    // PERMISSIONS hardcodeados como fallback
-    try {
-      const restored = SessionManager.restore();
-      if (!restored) {
-        // Crear sesión mock directamente
-        SessionManager.create(mockAccount);
-        SessionManager.applyToState();
-      } else {
-        SessionManager.applyToState();
-      }
-      // En mock, emitir bootstrap.completed directamente con rol del estado
-      EventBus.publish('bootstrap.completed', {
-        role: state.user.role,
-        user: state.user.email,
-      });
-    } catch(err) {
-      console.error('[BOOT] mock bootstrap error:', err.message);
-      if (loadingEl) loadingEl.style.display = 'none';
-    }
+    // GH3.37.4 BR-05: modo mock eliminado — no se permite iniciar sin autenticación
+    console.error('[BOOT] authenticationMode no reconocido:', authMode, '— se requiere MSAL');
+    _showBootError(
+      'Modo de autenticación no válido. Se requiere Azure AD. Verifica la configuración.',
+      'AUTH_MODE_INVALID',
+      true
+    );
+    if (loadingEl) loadingEl.style.display = 'none';
   }
 }
 
@@ -835,7 +818,7 @@ const ObsolescenceService = {
   },
 };
 
-window.ObsolescenceService = Obsolescen
+window.ObsolescenceService = ObsolescenceService;
 
 // ════════════════════════════════════════════════════════════════════
 // GH3.37.1 Item 12 — Extender IntegrityService existente de dashboard.js
@@ -899,7 +882,6 @@ window.ObsolescenceService = Obsolescen
 })();
 
 
-ceService;
 
 
 // ── 02_approval.js ──
