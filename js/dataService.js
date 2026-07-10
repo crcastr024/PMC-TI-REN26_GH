@@ -34,10 +34,25 @@ function normalizeRecord_F3(r) {
   if (r.placa == null && r.eq_nvo_placa) r.placa = r.eq_nvo_placa;
   if (r.hostname == null && r.eq_nvo_hostname) r.hostname = r.eq_nvo_hostname;
   if (r.procesador == null && r.eq_nvo_procesador) r.procesador = r.eq_nvo_procesador;
-  if (r.ram == null && (r.eq_nvo_ram || r.eq_nvo_memoria)) r.ram = r.eq_nvo_ram || r.eq_nvo_memoria;
+  if (r.ram == null && r.eq_nvo_ram) r.ram = r.eq_nvo_ram;  // GH3.26: eq_nvo_memoria eliminado del Excel
   if (r.disco == null && r.eq_nvo_disco) r.disco = r.eq_nvo_disco;
   
   // ── Garantizar campos F3 nuevos
+  if (r.eq_ant_disco == null) r.eq_ant_disco = '';  // GH3.26: EQ_ANT_DISCO — col U
+  // GH3.28/GH3.29: campos Motor RAEE — solo inicializar, NUNCA recalcular
+  // (GH3.29: RAEEEngine.calcular() PROHIBIDO fuera de saveRecord)
+  if (r.lista_recoleccion   == null) r.lista_recoleccion   = false;
+  if (r.eval_bateria        == null) r.eval_bateria        = '';
+  if (r.eval_teclado        == null) r.eval_teclado        = '';
+  if (r.eval_touchpad       == null) r.eval_touchpad       = '';
+  if (r.eval_estetico       == null) r.eval_estetico       = '';
+  if (r.recomendacion_raee  == null) r.recomendacion_raee  = '';
+  if (r.motivo_raee         == null) r.motivo_raee         = '';
+  if (r.motor_raee_version  == null) r.motor_raee_version  = '';
+  if (r.fecha_evaluacion_raee    == null) r.fecha_evaluacion_raee    = '';
+  if (r.usuario_evaluacion_raee  == null) r.usuario_evaluacion_raee  = '';  // GH3.29
+  // lista_recoleccion boolean cast
+  if (typeof r.lista_recoleccion === 'string') r.lista_recoleccion = r.lista_recoleccion.toUpperCase() === 'SI';
   if (r.eq_ant_af == null) r.eq_ant_af = '';
   if (r.eq_ant_placa == null) r.eq_ant_placa = '';
   if (r.eq_ant_clasif == null) r.eq_ant_clasif = '';
@@ -55,11 +70,31 @@ function normalizeRecord_F3(r) {
   // (antes el registro quedaba sin clasificar en absoluto, no "Revisión manual").
   if (!r.estado_eq_ant) {
     Object.assign(r, ObsolescenceService.classifyRecord(r));
+    // GH3.24: log diagnóstico cuando debug=true
+    if (window.PRODUCTION_CONFIG && window.PRODUCTION_CONFIG.debug) {
+      console.error('[RAEE DIAG] ID:', r.id,
+        '| Procesador:', r.eq_ant_procesador || '(vacío)',
+        '| Clasificación:', r.clasificacion_obsolescencia,
+        '| Generación:', r.generacion_cpu);
+    }
   }
   
+  // GH3.31 BLOQUE 1: Aliases de lectura — campo_interno ← columna_excel
+  // Estos 5 campos tienen nombre distinto entre el código JS y la columna Excel.
+  // ExcelMapper genera el nombre en minúsculas desde el header, pero el código
+  // y el modal usan un nombre alternativo establecido históricamente.
+  if (!r.alistamiento     && r.fecha_alistamiento)   r.alistamiento     = r.fecha_alistamiento;
+  if (!r.fecha_envio_acta && r.fecha_acta_enviada)   r.fecha_envio_acta = r.fecha_acta_enviada;
+  if (!r.fecha_firma_acta && r.fecha_acta_firmada)   r.fecha_firma_acta = r.fecha_acta_firmada;
+  if (!r.observaciones    && r.observacion != null)  r.observaciones    = r.observacion;
+  // estado_devolucion ← DEVUELTO (boolean): 'NO'→false→'' / 'SI'→true→'SI'
+  if (r.estado_devolucion == null || r.estado_devolucion === '')
+    r.estado_devolucion = r.devuelto ? 'SI' : 'NO';
+
   // ── Mapear "ciudad" lowercase amigable
   if (r.ciudad) r.ciudad = String(r.ciudad).toUpperCase().replace(/\s+/g, ' ').trim()
-    .toLowerCase().replace(/(^|[\s\-\.\/])([\p{L}])/gu, (_, sp, c) => sp + c.toUpperCase());
+    .toLowerCase().replace(/(^|[\s\-\.\/])([\p{L}])/gu, (_, sp, c) => sp + c.toUpperCase())
+    .replace(/\.\s*$/, '').trim();  // GH3.30: eliminar punto final ('Bogotá D.C.' → 'Bogotá D.C')
   
   // ── Audit y timeline si no existen (compat v8.1)
   if (!r.audit) r.audit = [];
@@ -176,7 +211,45 @@ function renderTimelineHTML(record) {
   }
   historyHTML += '</div>';
   
-  return progressHTML + historyHTML;
+  // GH3.28: Panel de disposición RAEE cuando la recomendación es RAEE
+  var raeePanel = '';
+  if (record.recomendacion_raee) {
+    var raeeColor = {
+      'RAEE': '#C00000', 'Donacion': '#E65100',
+      'Venta interna': '#2E7D32', 'Reasignacion': '#1565C0'
+    }[record.recomendacion_raee] || '#555';
+    raeePanel = (
+      '<div style="margin-top:12px;padding:10px 14px;border-radius:var(--r-sm);' +
+      'border-left:4px solid ' + raeeColor + ';background:#F9F9F9">' +
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;' +
+        'color:' + raeeColor + ';letter-spacing:.5px">Destino final recomendado</div>' +
+        '<div style="font-size:15px;font-weight:900;color:' + raeeColor + ';margin-top:4px">' +
+          (record.recomendacion_raee === 'RAEE' ? '⚠ ' : '') + esc(record.recomendacion_raee) +
+        '</div>' +
+        (record.motivo_raee ? '<div style="font-size:11px;color:#777;margin-top:3px">' + esc(record.motivo_raee) + '</div>' : '') +
+      '</div>'
+    );
+    // Flujo RAEE especial cuando la recomendación es RAEE
+    if (record.recomendacion_raee === 'RAEE') {
+      var raeeSteps = [
+        'Pendiente evaluacion RAEE',
+        'Clasificacion RAEE',
+        'Aprobacion RAEE',
+        'Entrega RAEE',
+        'Cierre',
+      ];
+      var raeeHtml = '<div style="margin-top:10px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#C00000;padding-bottom:6px">Flujo RAEE</div><div class="tl-progress" style="flex-wrap:wrap;gap:4px">';
+      raeeSteps.forEach(function(st) {
+        raeeHtml += '<div class="tl-step tl-step-pending" title="' + st + '">' +
+          '<div class="tl-step-icon">○</div>' +
+          '<div class="tl-step-label" style="font-size:9px">' + st + '</div>' +
+          '</div>';
+      });
+      raeeHtml += '</div></div>';
+      raeePanel += raeeHtml;
+    }
+  }
+  return progressHTML + historyHTML + raeePanel;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -746,6 +819,16 @@ function renderPanelEjecutivo() {
   setText('pe-aprobaciones', kpi.pendientesAprobacion);
   setText('pe-correccion', kpi.correccion);
   setText('pe-bloqueados', kpi.bloqueados);
+
+  // GH3.28: Tarjeta Destino Final
+  if (typeof kpi.destinoRAEE !== 'undefined') {
+    setText('pe-destino-raee',    kpi.destinoRAEE);
+    setText('pe-destino-donacion', kpi.destinoDonacion);
+    setText('pe-destino-venta',    kpi.destinoVenta);
+    setText('pe-destino-reasign',  kpi.destinoReasign);
+    var destTotal = $('pe-destino-total');
+    if (destTotal) destTotal.textContent = kpi.conEvaluacion + ' con evaluacion';
+  }
 }
 window.renderPanelEjecutivo = renderPanelEjecutivo;
 

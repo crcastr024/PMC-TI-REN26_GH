@@ -692,6 +692,27 @@
               <span class="panel-stat-val" id="pe-bloqueados">—</span>
             </div>
           </div>
+          <!-- GH3.28: Tarjeta Destino Final -->
+          <div class="panel-card" style="border-left:4px solid #2E7D32">
+            <div class="panel-card-title">Destino final</div>
+            <div id="pe-destino-total" style="font-size:11px;color:#888;text-align:center;padding:4px 0">0 con evaluacion</div>
+            <div class="panel-stat-row">
+              <span class="panel-stat-label" style="color:#2E7D32">Venta interna</span>
+              <span class="panel-stat-val" id="pe-destino-venta">0</span>
+            </div>
+            <div class="panel-stat-row">
+              <span class="panel-stat-label" style="color:#1565C0">Reasignacion</span>
+              <span class="panel-stat-val" id="pe-destino-reasign">0</span>
+            </div>
+            <div class="panel-stat-row">
+              <span class="panel-stat-label" style="color:#E65100">Donacion</span>
+              <span class="panel-stat-val" id="pe-destino-donacion">0</span>
+            </div>
+            <div class="panel-stat-row">
+              <span class="panel-stat-label" style="color:#C00000">RAEE</span>
+              <span class="panel-stat-val" id="pe-destino-raee" style="color:#C00000">0</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -936,7 +957,7 @@
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn" id="modal-block-btn" onclick="openBlockModal()">🚧 Bloquear</button>
       <button class="btn" id="modal-validate-btn" onclick="openValidationModal()" style="background:var(--amber-l);color:var(--amber);border-color:var(--amber)">Solicitar validación de cierre</button>
-      <button class="btn btn-primary" onclick="saveRecord()">Guardar cambios</button>
+      <button class="btn btn-primary" onclick="confirmarGuardado()">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -1023,5 +1044,17 @@
 <script src="js/boot.js"></script>
 <!-- 14. Entry point: DOMContentLoaded → boot() -->
 <script src="js/app.js"></script>
+
+<!-- GH3.27 CAMBIO 6: Diálogo de confirmación de guardado -->
+<div id="confirm-dialog" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div style="font-size:16px;font-weight:700;color:var(--k);margin-bottom:16px">Confirmar guardado</div>
+    <div id="confirm-summary" style="font-size:13px;color:#555;line-height:1.6;margin-bottom:20px"></div>
+    <div style="display:flex;gap:12px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="cancelarGuardado()" style="padding:8px 18px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer">Cancelar</button>
+      <button class="btn btn-primary" onclick="ejecutarGuardado()" id="confirm-execute-btn" style="padding:8px 18px;border:none;border-radius:6px;background:var(--r);color:#fff;font-weight:700;cursor:pointer">Confirmar guardado</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

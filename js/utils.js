@@ -197,6 +197,7 @@ const TRANSITIONS = {
 const StateMachine = {
   states: STATES,
   flow: STATE_FLOW,
+  TRANSITIONS: TRANSITIONS,  // GH3.30: exportado para GraphWriteValidator y UI
   
   isValidTransition(from, to) {
     if (!from || !to) return false;
@@ -218,13 +219,25 @@ const StateMachine = {
   isPendingApproval(state) { return state === STATES.PENDIENTE_APROBACION; },
   
   // Backward compat: estados v8 legacy se mapean
+  // GH3.22 P4/P9: normalize() — aliases legacy + lookup insensible a mayúsculas
+  // Permite que valores del Excel en MAYÚSCULAS (PENDIENTE, BACKUP) se normalicen
+  // al valor canónico equivalente del modelo (Pendiente, BACKUP).
   normalize(legacyState) {
+    if (!legacyState) return legacyState;
+    // 1. Alias legacy explícitos (v8 → nombres completos actuales)
     const map = {
       'En tránsito':  STATES.TRANSITO_NUEVO,
       'Entregado':    STATES.ENTREGADO_NUEVO,
       'Completado':   STATES.CERRADO,
     };
-    return map[legacyState] || legacyState;
+    if (map[legacyState]) return map[legacyState];
+    // 2. Exacto ya normalizado
+    const canonical = Object.values(STATES);
+    if (canonical.indexOf(legacyState) >= 0) return legacyState;
+    // 3. Lookup insensible a mayúsculas (PENDIENTE → Pendiente, BACKUP → BACKUP)
+    const lower = String(legacyState).toLowerCase();
+    const match = canonical.find(s => s.toLowerCase() === lower);
+    return match || legacyState;
   },
 };
 window.StateMachine = StateMachine;
@@ -279,6 +292,12 @@ const DataService = {
         if ((u.tecnico || '').toLowerCase() !== filter.assignedTo.toLowerCase()) return false;
       }
       if (filter.empresa && u.empresa !== filter.empresa) return false;
+      // GH3.37.1 Item 3: normalizar ciudades antes de comparar
+      if (filter.ciudad) {
+        var normCity = (window.CityNormalizer ? CityNormalizer.normalize(u.ciudad) : u.ciudad);
+        var normFilter = (window.CityNormalizer ? CityNormalizer.normalize(filter.ciudad) : filter.ciudad);
+        if (normCity !== normFilter) return false;
+      }
       if (filter.estado && u.estado !== filter.estado) return false;
       if (filter.blocked === true && !u.blocked) return false;
       if (filter.blocked === false && u.blocked) return false;
@@ -289,6 +308,17 @@ const DataService = {
   
   getRenewal(id) {
     return window.USERS.find(u => u.id === id) || null;
+  },
+
+  // GH3.37.1 Item 6: vista filtrada por rol — técnicos ven solo sus registros
+  getVisibleRenewals(filter) {
+    filter = filter || {};
+    const role = (window.state && state.user && (state.user.role || state.user.rol)) || '';
+    if (role === 'tecnico' && !filter._bypass_role_filter) {
+      const tecName = (window.state && state.user && (state.user.tecnico || state.user.nombre || state.user.name)) || '';
+      return this.getRenewals(Object.assign({}, filter, { role:'tecnico', assignedTo: tecName }));
+    }
+    return this.getRenewals(filter);
   },
   
   count(filter) { return this.getRenewals(filter).length; },
@@ -570,6 +600,10 @@ function getAudioCtx() {
 }
 function playBeep(frequency, duration, type) {
   const ctx = getAudioCtx(); if (!ctx) return;
+  // GH3.36: Chrome autoplay policy — AudioContext require gesto del usuario.
+  // Si el contexto está suspendido (sin gesto aún), salir silenciosamente.
+  // El sonido funcionará correctamente después de la primera interacción.
+  if (ctx.state === 'suspended') { ctx.resume().catch(function(){ /* AudioContext resume ignorado — el sonido no se reproducirá hasta primer gesto */ }); return; }
   type = type || 'sine';
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -801,8 +835,36 @@ const VIEW_TITLES = {
   actividad: 'Actividad', ajustes: 'Ajustes'
 };
 
+
+// ════════════════════════════════════════════════════════════════════
+// GH3.37.1 Item 4 — AuthorizationService
+// Controla acceso por URL hash (#panel-ejecutivo, etc.) no solo por botones
+// ════════════════════════════════════════════════════════════════════
+const AuthorizationService = {
+  // Vistas accesibles por rol (incluye substrings del view id)
+  _PERMISSIONS: {
+    super_admin:    ['*'],
+    gestor_activos: ['usuarios','reportes','actividad','configuracion','aprobaciones','panel-ejecutivo'],
+    tecnico:        ['usuarios','actividad'],
+    consulta:       ['usuarios'],
+    visitante:      [],
+  },
+  canAccess(viewId) {
+    const role = (window.state && state.user && (state.user.role || state.user.rol)) || 'visitante';
+    const perms = this._PERMISSIONS[role] || this._PERMISSIONS['visitante'];
+    if (perms.includes('*')) return true;
+    return perms.some(function(p){ return viewId === p || viewId.indexOf(p) >= 0; });
+  },
+};
+window.AuthorizationService = AuthorizationService;
+
 function goView(id) {
   if (!VIEW_TITLES[id]) return;
+  // GH3.37.1 Item 4: bloquear navegación a vistas no autorizadas (no solo ocultar botones)
+  if (window.AuthorizationService && !AuthorizationService.canAccess(id)) {
+    console.error('[RBAC] Acceso denegado a vista:', id);
+    return;
+  }
   state.view = id;
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + id));
   $$('.sb-item').forEach(t => t.classList.toggle('active', t.dataset.view === id));
@@ -837,9 +899,9 @@ function scrollMainTop() {
 window.scrollMainTop = scrollMainTop;
 
 function uniqueUsers() {
-  const set = new Set();
-  window.USERS.forEach(u => { if (!u.es_backup && u.cedula) set.add(String(u.cedula).trim()); });
-  return set.size;
+  // GH3.37.1 Item 1: delega a KPIService.totalRenewals() — única fuente de verdad
+  if (window.KPIService && KPIService.totalRenewals) return KPIService.totalRenewals();
+  return window.USERS.filter(function(u){ return !u.es_backup; }).length;
 }
 
 // ═══ RESUMEN ═══

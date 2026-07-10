@@ -296,14 +296,14 @@ const ExcelProvider = (() => {
       try {
         // Orden obligatorio: CONFIG → USUARIOS → INVENTARIO → RENOVACIONES
         const [
-          metaResult,
-          // GH3.22: configResult eliminado — coincide con los 5 promises del array
+          // GH3.36: metaResult eliminado — PMC_META no existe en el Excel y su resultado era descartado.
+          // La llamada generaba GET .../tables/PMC_META/range → 404 en cada loadData().
           usuariosResult,
           rolesResult,
           inventarioResult,
           renovacionesResult,
         ] = await Promise.allSettled([
-          WorkbookLoader.loadTable(TableRegistry.META).catch(() => ({ headers: [], rows: [] })),
+          // GH3.36: WorkbookLoader.loadTable(TableRegistry.META) eliminado — ver auditoría GH3.35/GH3.36
           // GH3.18: PMC_CONFIG eliminado — TableRegistry.CONFIG ya no existe
           WorkbookLoader.loadTable(TableRegistry.USUARIOS).catch(() => ({ headers: [], rows: [] })),
           WorkbookLoader.loadTable(TableRegistry.ROLES).catch(() => ({ headers: [], rows: [] })),
@@ -331,7 +331,26 @@ const ExcelProvider = (() => {
         // Cachear headers para WorkbookWriter
         window._EXCEL_HEADERS = { RENOVACIONES: ren.headers, INVENTARIO: inv.headers };
 
-
+      // GH3.25 P4: Detección automática de datos corruptos entre campos
+      if (window.HBT) window.HBT._corruptData = [];
+      (function detectCorruption(rows) {
+        const _SO    = /windows\s|macos|linux|sonoma|ventura|monterey|catalina|ios\s|android/i;
+        const _PROC  = /intel|amd|ryzen|\bcore\s+i[3579]\b|celeron|xeon|apple\s+m\d/i;
+        rows.forEach(function(r) {
+          var proc = String(r.eq_ant_procesador || '');
+          var so   = String(r.eq_ant_so || '');
+          if (proc && _SO.test(proc)) {
+            var msg = 'Registro ' + r.id + ' — EQ_ANT_PROCESADOR contiene SO: ' + proc;
+            console.error('[DATA CORRUPT]', msg + ' — corregir en Excel Maestro');
+            if (window.HBT) window.HBT._corruptData.push({ id: r.id, campo: 'eq_ant_procesador', valor: proc, motivo: 'Procesador contiene Sistema Operativo' });
+          }
+          if (so && _PROC.test(so)) {
+            var msg = 'Registro ' + r.id + ' — EQ_ANT_SO contiene Procesador: ' + so;
+            console.error('[DATA CORRUPT]', msg + ' — corregir en Excel Maestro');
+            if (window.HBT) window.HBT._corruptData.push({ id: r.id, campo: 'eq_ant_so', valor: so, motivo: 'SO contiene Procesador' });
+          }
+        });
+      })(renovaciones);
 
         return {
           renovaciones,
@@ -452,6 +471,16 @@ window.WriteQueue = WriteQueue;
 // Stage 1: Validación → 2: OptimisticUpdate → 3: Lock → 4: VersionCheck
 // → 5: Session → 6: PATCH → 7: CloseSession → 8: PostCommit
 // ────────────────────────────────────────────────────────────────────
+// GH3.31 BLOQUE 1: Mapa de aliases campo_interno → columna_excel
+// Permite que campos con nombre histórico distinto lleguen correctamente al Excel.
+const FIELD_COLUMN_ALIASES = {
+  'alistamiento':     'fecha_alistamiento',
+  'fecha_envio_acta': 'fecha_acta_enviada',
+  'fecha_firma_acta': 'fecha_acta_firmada',
+  'observaciones':    'observacion',
+  'estado_devolucion':'devuelto',
+};
+
 const WorkbookWriter = (() => {
   const SCOPES = ['User.Read', 'Files.ReadWrite.All'];
 
@@ -482,7 +511,7 @@ const WorkbookWriter = (() => {
     // Stage 1: Filtrar y validar (SIEMPRE — incluso en mock)
     const safeChanges = WriteContract.filterWritable(changes);
     if (Object.keys(safeChanges).length === 0) {
-      return { ok: true, noChanges: true };
+      { console.error('[WRITE ABORT] noChanges | id:', id); if(window.HBT)window.HBT._lastAbort={reason:'noChanges',id,t:Date.now()}; return { ok:true, noChanges:true, reason:'noChanges' }; }
     }
 
     // Stage 2 (siempre, incluso en mock): validar RBAC y reglas de negocio
@@ -496,11 +525,11 @@ const WorkbookWriter = (() => {
     if (!workbookBase()) {
       // Modo mock: solo en memoria, sin escritura real
 
-      return { ok: true, mock: true };
+      { console.error('[WRITE ABORT] mock — GraphResolver no resuelto | id:', id); if(window.HBT)window.HBT._lastAbort={reason:'mock',id,t:Date.now()}; return { ok:true, mock:true, reason:'mock' }; }
     }
     if (Object.keys(safeChanges).length === 0) {
 
-      return { ok: true, noChanges: true };
+      { console.error('[WRITE ABORT] noChanges | id:', id); if(window.HBT)window.HBT._lastAbort={reason:'noChanges',id,t:Date.now()}; return { ok:true, noChanges:true, reason:'noChanges' }; }
     }
 
     // validation ya ejecutado en Stage 2
@@ -508,7 +537,7 @@ const WorkbookWriter = (() => {
     const locked = await WriteLock.acquire(id);
     if (!locked) throw new Error('[WorkbookWriter] timeout esperando lock para id=' + id);
 
-    let sessionId = null;
+    // GH3.26: sessionId eliminado — modo stateless
     const t0 = Date.now();
 
     try {
@@ -526,11 +555,15 @@ const WorkbookWriter = (() => {
 
       // Campos del usuario
       Object.entries(safeChanges).forEach(([field, value]) => {
-        const colIdx = headers.findIndex(h => String(h).trim().toLowerCase() === field.toLowerCase());
-        if (colIdx < 0) { console.warn('[WorkbookWriter] columna no encontrada:', field); return; }
+        // GH3.31 BLOQUE 1: traducir nombre_campo → nombre_columna_excel si existe alias
+        const excelFieldName = (typeof FIELD_COLUMN_ALIASES !== 'undefined' && FIELD_COLUMN_ALIASES[field]) || field;
+        const colIdx = headers.findIndex(h => String(h).trim().toLowerCase() === excelFieldName.toLowerCase());
+        if (colIdx < 0) { console.error('[WorkbookWriter] campo sin columna en Excel (descartado):', field, '| alias buscado:', excelFieldName); return; }
         cellUpdates.push({
-          address: `${ExcelMapper.columnLetter(colIdx)}${rowNum}`,
-          value: value === null || value === undefined || value === '' ? null : value,
+          field:     field,  // GH3.24 logging
+          address:   `${ExcelMapper.columnLetter(colIdx)}${rowNum}`,
+          prevValue: record[field],  // GH3.24 logging: valor anterior
+          value:     value === null || value === undefined || value === '' ? null : value,
         });
       });
 
@@ -549,25 +582,108 @@ const WorkbookWriter = (() => {
       if (updAtIdx >= 0) cellUpdates.push({ address: `${ExcelMapper.columnLetter(updAtIdx)}${rowNum}`, value: now });
       if (updByIdx >= 0) cellUpdates.push({ address: `${ExcelMapper.columnLetter(updByIdx)}${rowNum}`, value: user.email || user.name });
 
-      if (cellUpdates.length === 0) return { ok: true, noChanges: true };
+      if (cellUpdates.length === 0) { console.error('[WRITE ABORT] noColumns | id:', id, '| campos:', Object.keys(safeChanges)); if(window.HBT)window.HBT._lastAbort={reason:'noColumns',id,t:Date.now()}; return {ok:true,noChanges:true,reason:'noColumns'}; }
 
-      // Stage 4: Adquirir sesión
-      sessionId = await acquireSession();
-      const sessionHeaders = { 'workbook-session-id': sessionId };
+      // GH3.25 P5: Pre-PATCH validation — campos descartados (sin columna en Excel)
+      var _preIssues = [];
+      Object.keys(safeChanges).forEach(function(f) {
+        if (!cellUpdates.some(function(u){return u.field===f;})) {
+          _preIssues.push({ campo: f, columna: '???', valor: safeChanges[f],
+            motivo: 'Columna no existe en Excel Maestro — campo descartado' });
+        }
+      });
+      if (_preIssues.length > 0) {
+        // GH3.31: Los 5 campos aliased ya no generan esta advertencia
+        // Solo registrar los que realmente faltan (no son alias conocidos)
+        var _realIssues = _preIssues.filter(function(v){
+          return !(typeof FIELD_COLUMN_ALIASES !== 'undefined' && FIELD_COLUMN_ALIASES[v.campo]);
+        });
+        if (_realIssues.length > 0) {
+          console.error('[PRE-PATCH] Campos sin columna en Excel:',
+            _realIssues.map(function(v){return v.campo+'→'+v.motivo;}).join(' | '));
+        }
+        if (window.HBT) window.HBT._lastValidation = { ts: new Date().toISOString(), issues: _preIssues };
+      }
 
-      // Stage 5: PATCH cada celda (con workbook-session-id)
+      // GH3.26: Modo STATELESS — sin sesión.
+      // PATCHes directos commitean inmediatamente al archivo Excel en SharePoint.
+      // El modo de sesión con persistChanges:true solo persiste al hacer DELETE /sessions/,
+      // y si ese DELETE falla silenciosamente (como ocurría), los cambios se pierden.
+      // Stateless es la solución correcta para actualizaciones simples de registro.
+      const sessionHeaders = {};  // vacío — stateless
+
+      // Stage 5: PATCH + verificación post-PATCH (GH3.25 P1)
       const base = workbookBase();
       const sheetName = 'RENOVACIONES';
+      const _debug = window.PRODUCTION_CONFIG && window.PRODUCTION_CONFIG.debug;
+      const _writeResults = [];
+
       for (const upd of cellUpdates) {
+        const patchUrl = `${base}/worksheets/${sheetName}/range(address='${upd.address}')`;
+        if (_debug) {
+          console.error('[WRITE DIAG] Campo:', upd.field,
+            '| Col:', upd.address.replace(/\d+/g,''),
+            '| Fila:', (upd.address.match(/\d+/) || ['?'])[0],
+            '| Anterior:', upd.prevValue, '| Nuevo:', upd.value);
+        }
+
+        // PATCH
         await GraphClient.patch(
-          `${base}/worksheets/${sheetName}/range(address='${upd.address}')`,
+          patchUrl,
           { values: [[upd.value]] },
-          SCOPES
+          SCOPES,
+          sessionHeaders
         );
+
+        // P1: GET de verificación post-PATCH (activo cuando debug:true o HBT.verifyWrites)
+        const _shouldVerify = _debug || (window.HBT && window.HBT.verifyWrites);
+        if (_shouldVerify) {
+          try {
+            const getResp = await GraphClient.get(
+              `${base}/worksheets/${sheetName}/range(address='${upd.address}')`,
+              SCOPES, sessionHeaders
+            );
+            const readBack = getResp && getResp.values && getResp.values[0]
+              ? String(getResp.values[0][0] ?? '')
+              : null;
+            const expected = upd.value === null ? '' : String(upd.value);
+            const ok = readBack === expected || readBack === null;
+            if (ok) {
+              console.error('[WRITE VERIFY] OK —', upd.field, ':', expected);
+            } else {
+              console.error('[WRITE VERIFY] MISMATCH', upd.field,
+                '| Esperado:', expected, '| Encontrado:', readBack);
+            }
+            _writeResults.push({ field: upd.field, address: upd.address, expected, readBack, ok });
+            if (window.HBT) {
+              window.HBT._lastWrite = {
+                sessionId: sessionId,
+                field: upd.field,
+                address: upd.address,
+                patchUrl,
+                patchValue: upd.value,
+                getReadback: readBack,
+                verifyOk: ok,
+                time: new Date().toISOString(),
+              };
+            }
+          } catch(e) {
+            console.error('[WRITE VERIFY] GET falló:', upd.field, e.message);
+            _writeResults.push({ field: upd.field, address: upd.address, ok: false, error: e.message });
+          }
+        } else {
+          // Sin verificación: registrar solo el PATCH
+          if (window.HBT) {
+            window.HBT._lastWrite = {
+              sessionId, field: upd.field, address: upd.address,
+              patchUrl, patchValue: upd.value, time: new Date().toISOString(),
+            };
+          }
+        }
       }
 
       // Stage 6: Cerrar sesión
-      await closeSession(sessionId);
+      // GH3.26: closeSession eliminado — stateless mode
       sessionId = null;
 
       // Stage 7: Post-commit
@@ -583,7 +699,7 @@ const WorkbookWriter = (() => {
 
     } catch(err) {
       // Rollback: limpiar sesión y lock
-      if (sessionId) await closeSession(sessionId).catch(() => {});
+      // GH3.26: closeSession eliminado — stateless mode
       WriteLock.forceRelease(id);
       EventBus.publish('provider.write.failed', { id, error: err.graphCode || err.message, retryable: err.retryable !== false });
       throw err;

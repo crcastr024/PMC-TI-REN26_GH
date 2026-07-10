@@ -215,9 +215,7 @@ const MSAL_CONFIG = {
         return false;
       }
       try {
-        // GH3.16 · DIAGNÓSTICO (temporal — solo para verificar valores exactos en consola)
-        console.error('[MSAL DIAG] redirectUri:', MSAL_CONFIG.auth.redirectUri);
-        console.error('[MSAL DIAG] postLogoutRedirectUri:', MSAL_CONFIG.auth.postLogoutRedirectUri);
+        // GH3.34: logs de diagnóstico GH3.16 eliminados
         _app = new msal.PublicClientApplication(MSAL_CONFIG);
         await _app.initialize();
         _initialized = true;

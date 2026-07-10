@@ -4,6 +4,55 @@
 // Requisito: config.js + msal-browser.min.js deben cargarse antes.
 // ════════════════════════════════════════════════════════════════════
 
+
+// ════════════════════════════════════════════════════════════════════
+// GH3.37.1 Item 3 — CityNormalizer: fuente única de normalización de ciudades
+// Convierte todas las variantes de una ciudad a una sola representación
+// ════════════════════════════════════════════════════════════════════
+const CityNormalizer = {
+  _TABLE: {
+    'bogota':        'Bogotá D.C.',
+    'bogotá':        'Bogotá D.C.',
+    'bogota dc':     'Bogotá D.C.',
+    'bogotá dc':     'Bogotá D.C.',
+    'bogota d.c':    'Bogotá D.C.',
+    'bogotá d.c':    'Bogotá D.C.',
+    'bogota d.c.':   'Bogotá D.C.',
+    'bogotá d.c.':   'Bogotá D.C.',
+    'medellin':      'Medellín',
+    'medellín':      'Medellín',
+    'barranquilla':  'Barranquilla',
+    'cali':          'Cali',
+    'bucaramanga':   'Bucaramanga',
+    'pereira':       'Pereira',
+    'manizales':     'Manizales',
+    'ibague':        'Ibagué',
+    'ibagué':        'Ibagué',
+    'cucuta':        'Cúcuta',
+    'cúcuta':        'Cúcuta',
+    'santa marta':   'Santa Marta',
+    'cartagena':     'Cartagena',
+    'itagui':        'Itagüí',
+    'itagüí':        'Itagüí',
+    'envigado':      'Envigado',
+    'bello':         'Bello',
+    'mosquera':      'Mosquera',
+  },
+  normalize(city) {
+    if (!city) return '';
+    const key = String(city).trim()
+                  .toLowerCase()
+                  .replace(/\s+/g, ' ')
+                  .replace(/\.\s*$/,'');  // quitar punto final
+    return this._TABLE[key] || city.trim().replace(/\.\s*$/,'');
+  },
+  // Verifica si dos ciudades son la misma (normalizadas)
+  equals(a, b) {
+    return this.normalize(a) === this.normalize(b);
+  },
+};
+window.CityNormalizer = CityNormalizer;
+
 const KPIService = {
   
   calculate(records) {
@@ -32,7 +81,13 @@ const KPIService = {
     const correccion = records.filter(r => r.estado === 'Corrección requerida').length;
     const actasFirmadas = records.filter(r => r.acta_firmada === true).length;
     
-    return {
+      // GH3.28: KPIs Motor RAEE
+    const destinoRAEE        = records.filter(r => r.recomendacion_raee === 'RAEE').length;
+    const destinoDonacion    = records.filter(r => r.recomendacion_raee === 'Donacion').length;
+    const destinoVenta       = records.filter(r => r.recomendacion_raee === 'Venta interna').length;
+    const destinoReasign     = records.filter(r => r.recomendacion_raee === 'Reasignacion').length;
+    const conEvaluacion      = records.filter(r => r.recomendacion_raee).length;
+  return {
       total,
       entregados,
       enProceso,
@@ -44,13 +99,20 @@ const KPIService = {
       actasFirmadas,
       porcentajeAvance: total ? Math.round((entregados / total) * 100) : 0,
       porcentajeCierre: total ? Math.round((cerrados / total) * 100) : 0,
+      // GH3.28: destinos RAEE
+      destinoRAEE, destinoDonacion, destinoVenta, destinoReasign, conEvaluacion,
     };
   },
   
+  // GH3.37.1 Item 1: única fuente de verdad para conteo de colaboradores
+  totalRenewals() {
+    return window.USERS.filter(function(u){ return !u.es_backup; }).length;
+  },
+
   byEmpresa() {
     const result = {};
     ['HBT', 'HGS'].forEach(emp => {
-      const set = window.USERS.filter(r => r.empresa === emp);
+      const set = window.USERS.filter(r => r.empresa === emp && !r.es_backup);
       result[emp] = this.calculate(set);
     });
     return result;
@@ -440,8 +502,17 @@ const DashboardFactory = {
   /** VISITANTE — lectura pública, sin datos sensibles de gestión */
   getVisitanteViewModel() {
     const all = DataService.getRenewals({});
-    return {
-      kpisPublicos:     KPIService.calculate(all),
+        // GH3.28: KPIs destino final
+    const kpiAll = KPIService.calculate(all);
+return {
+      kpisPublicos: kpiAll,
+      destinoFinal: {
+        RAEE:         kpiAll.destinoRAEE || 0,
+        Donacion:     kpiAll.destinoDonacion || 0,
+        VentaInterna: kpiAll.destinoVenta || 0,
+        Reasignacion: kpiAll.destinoReasign || 0,
+        total:        kpiAll.conEvaluacion || 0,
+      },
       reportes:         all,
       avanceGeneral: {
         total:          all.length,

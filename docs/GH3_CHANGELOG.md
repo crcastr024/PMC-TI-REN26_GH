@@ -26,3 +26,12 @@ BOOT_SEQUENCE.md, SecurityFreeze.md
 - Fetch directos fuera de GraphClient: 0
 - console.log en producción: 0
 - IDs hardcodeados sin guarda: 0
+
+## GH3.28
+- RAEEEngine: motor de clasificacion (RAEE/Donacion/Venta interna/Reasignacion)
+- 9 nuevas columnas en Excel Maestro
+- KPIs de destino final en Dashboard
+- Tarjeta Destino Final en Panel Ejecutivo
+- Timeline con panel RAEE y flujo especial
+- Validacion antes de guardar (evaluacion fisica completa)
+- Integracion completa Modal->Graph->Excel->Dashboard
