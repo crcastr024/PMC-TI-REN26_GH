@@ -592,11 +592,24 @@ window.USERS.forEach(migrateRecord);
 
 // ═══ AUDIO ═══
 function getAudioCtx() {
+  // GH3.39.1 P8: AudioContext solo se crea después del primer gesto del usuario
+  if (!state._userGestureOccurred) return null;
   if (!state.audioCtx) {
     try { state.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
     catch(e) { return null; }
   }
   return state.audioCtx;
+}
+// Marcar el primer gesto del usuario para habilitar AudioContext
+if (typeof window !== 'undefined') {
+  ['click','keydown','touchstart'].forEach(function(evt) {
+    window.addEventListener(evt, function _unlockAudio() {
+      if (window.state) state._userGestureOccurred = true;
+      ['click','keydown','touchstart'].forEach(function(e2) {
+        window.removeEventListener(e2, _unlockAudio);
+      });
+    }, { once: true });
+  });
 }
 function playBeep(frequency, duration, type) {
   const ctx = getAudioCtx(); if (!ctx) return;

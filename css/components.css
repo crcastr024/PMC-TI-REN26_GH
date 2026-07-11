@@ -694,11 +694,12 @@
   background: var(--bg-card); border-radius: var(--r-xl);
   width: 100%; max-width: 920px; max-height: 92vh;
   display: flex; flex-direction: column;
-  box-shadow: var(--shadow-xl); overflow: visible; /* GH3.37 FC-03: permite que selects se desplieguen */
+  box-shadow: var(--shadow-xl); overflow: hidden; /* GH3.39.1 P4: contener el modal — native selects no son clippeados */
   animation: modalIn 0.35s var(--ease);
 }
 @keyframes modalIn { from { transform: scale(0.96) translateY(12px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
-.modal-head { padding: 22px 28px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--bg-subtle); }
+.modal-head { padding: 22px 28px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--bg-subtle);   flex-shrink: 0; /* GH3.39.1 P4 */
+}
 .modal-title-block { flex: 1; min-width: 0; }
 .modal-eyebrow { font-size: 10.5px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; }
 .modal-title { font-family: 'Inter Tight'; font-size: 18px; font-weight: 800; letter-spacing: -0.3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -715,7 +716,8 @@
   overflow-y: auto;
   overflow-x: hidden;
 }
-.modal-foot { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; background: var(--bg-subtle); }
+.modal-foot { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; background: var(--bg-subtle);   flex-shrink: 0; /* GH3.39.1 P4 */
+}
 .form-section { margin-bottom: 28px; }
 .form-section:last-child { margin-bottom: 0; }
 .form-section-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }

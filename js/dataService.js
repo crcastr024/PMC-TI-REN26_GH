@@ -718,9 +718,15 @@ window.updateSidebarByRole = updateSidebarByRole;
 // ── 3. Redirección por rol ──────────────────────────────────────
 function goViewByRole() {
   const role = state.user.role || 'visitante';
-  if (role === 'visitante') { goView('panel'); }
-  else if (role === 'tecnico') { goView('home-tecnico'); }
-  else { goView('resumen'); }
+  // GH3.39.1 P7: cada rol va directamente a su vista permitida, sin pasar por vistas prohibidas
+  var homeMap = {
+    'super_admin':    'resumen',
+    'gestor_activos': 'resumen',
+    'tecnico':        'home-tecnico',
+    'consulta':       'resumen',
+    'visitante':      'resumen',
+  };
+  goView(homeMap[role] || 'resumen');
 }
 window.goViewByRole = goViewByRole;
 
@@ -942,7 +948,7 @@ window.previewVisitante = function() {
     toast('Sin permisos para el Panel Ejecutivo', 'warning');
     return;
   }
-  goView('panel');
+  goView('panel-ejecutivo'); // P7: id correcto para Panel Ejecutivo
 };
 
 

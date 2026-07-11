@@ -4,41 +4,39 @@
 // ════════════════════════════════════════════════════════════════════
 
 function renderResumen() {
-  const real = getReal();
-  const total = real.length;
-  const entregados = real.filter(u => u.estado === 'Entregado' || u.estado === 'Completado').length;
-  const alistamiento = real.filter(u => u.estado === 'Alistamiento').length;
-  const proceso = real.filter(u => u.estado === 'Alistamiento' || u.estado === 'En tránsito').length;
-  const pendientes = real.filter(u => u.estado === 'Pendiente').length;
+  // GH3.39.2 P2/P3: ÚNICA fuente de verdad — calculateProjectMetrics()
+  var m = window.calculateProjectMetrics ? calculateProjectMetrics() : {
+    totalEquipos: (window.USERS||[]).length,
+    totalColaboradores: (window.USERS||[]).filter(function(u){return !u.es_backup;}).length,
+    totalBackups: 0, hbt: 0, hgs: 0, pendientes: 0, entregados: 0, enProceso: 0, estados: {}
+  };
+
+  const real = getReal(); // para actas y compatibilidad
+  const total = m.totalColaboradores;
+  const entregados = (m.estados&&m.estados['Entregado'])||real.filter(u=>u.estado==='Entregado'||u.estado==='Completado').length;
+  const alistamiento = (m.estados&&m.estados['Alistamiento'])||real.filter(u=>u.estado==='Alistamiento').length;
+  const proceso = m.enProceso;
+  const pendientes = m.pendientes;
   const actas = real.filter(u => u.acta_firmada).length;
-  const pct = total > 0 ? Math.round(entregados / total * 100) : 0;
+  const pct = m.totalColaboradores > 0 ? Math.round(entregados / m.totalColaboradores * 100) : 0;
   
-  // GH3.39.1 FC-10: h-users = 141 colaboradores activos
-  $('h-users').textContent = uniqueUsers();
+  $('h-users').textContent = m.totalColaboradores;  // 141
   $('h-pendientes').textContent = pendientes;
   $('h-proceso').textContent = proceso;
   $('h-entregados').textContent = entregados;
   $('h-pct').textContent = pct + '%';
   
-  // GH3.37.1 Item 2: única fuente de verdad para empresas — KPIService.byEmpresa()
-  const _byEmp = (window.KPIService && KPIService.byEmpresa) ? KPIService.byEmpresa() : {};
-  const hbtCount = (_byEmp.HBT && _byEmp.HBT.total) || DataService.getRenewals({empresa:'HBT'}).length;
-  const hgsCount = (_byEmp.HGS && _byEmp.HGS.total) || DataService.getRenewals({empresa:'HGS'}).length;
-  // GH3.39.1 FC-10: totalEquipos = 146, totalColaboradores = 141
-  var _totalEq = (window.KPIService && KPIService.totalEquipos) ? KPIService.totalEquipos() : (window.USERS||[]).length;
-  $('h-empresas').textContent = 'HBT ' + hbtCount + ' · HGS ' + hgsCount;
-  // GH3.38 FC-01/FC-05: actualizar landing KPIs (antes hardcodeados sin id)
+  $('h-empresas').textContent = 'HBT ' + m.hbt + ' \u00b7 HGS ' + m.hgs;
   var _lkpiC = document.getElementById('lkpi-colabs');
-  if (_lkpiC) _lkpiC.textContent = uniqueUsers();
+  if (_lkpiC) _lkpiC.textContent = m.totalColaboradores;
   var _lkpiCS = document.getElementById('lkpi-colabs-sub');
   if (_lkpiCS) _lkpiCS.textContent = 'colaboradores activos';
   var _lkpiE = document.getElementById('lkpi-empresas');
-  if (_lkpiE) _lkpiE.textContent = 'HBT ' + hbtCount + ' · HGS ' + hgsCount;
+  if (_lkpiE) _lkpiE.textContent = 'HBT ' + m.hbt + ' \u00b7 HGS ' + m.hgs;
   
-  $('k-total').textContent = total;
-  const _allCount = DataService.count();
-  const _backupCount = _allCount - total;
-  $('k-total-sub').innerHTML = '<strong>' + _allCount + '</strong> totales · ' + _backupCount + ' backup';
+  $('k-total').textContent = m.totalEquipos;        // P3: SIEMPRE 146
+  const _allCount = m.totalEquipos;                 // P3: 146
+  const _backupCount = m.totalBackups;
   $('k-entregados').textContent = entregados;
   $('k-pct').textContent = pct + '%';
   $('k-alistamiento').textContent = alistamiento;
@@ -49,7 +47,7 @@ function renderResumen() {
   const provName = (DataService.providerName ? DataService.providerName() : 'Mock');
   $('tb-sync').textContent = provName + ' · ' + new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
   $('footer-date').textContent = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  $('footer-stats').textContent = _allCount + ' equipos · ' + uniqueUsers() + ' usuarios';
+  $('footer-stats').textContent = _allCount + ' equipos · ' + (window.calculateProjectMetrics ? calculateProjectMetrics().totalColaboradores : uniqueUsers()) + ' usuarios';
   // GH3.38 FC-07: actualizar identidad del usuario autenticado
   if (window.state && state.user) {
     var _role = state.user.role || state.user.rol || '';
@@ -212,7 +210,7 @@ function getFiltered() {
 function renderUsuarios() {
   populateProjectFilter('filter-proyecto');
   const data = getFiltered();
-  $('tbl-count').textContent = data.length + ' de ' + DataService.count() + ' registros';
+  $('tbl-count').textContent = data.length + ' de ' + (window.calculateProjectMetrics ? calculateProjectMetrics().totalEquipos : DataService.count()) + ' registros';
   if (data.length === 0) {
     $('tbl-body').innerHTML = '<tr><td colspan="13"><div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><div class="empty-title">Sin resultados</div><div class="empty-msg">Ajusta los filtros o búsqueda</div></div></td></tr>';
     return;
@@ -453,7 +451,7 @@ function renderReportes() {
     tecnico: $('rep-filter-tecnico').value || '',
   };
   const base = getReportBase();
-  $('rep-base-count').textContent = base.length + ' de ' + getReal().length + ' base';
+  $('rep-base-count').textContent = base.length + ' de ' + (window.calculateProjectMetrics ? calculateProjectMetrics().totalColaboradores : getReal().length) + ' base';
   $('r-alistamiento').textContent = base.filter(u => u.estado === 'Alistamiento').length;
   $('r-entregados').textContent = base.filter(u => u.estado === 'Entregado' || u.estado === 'Completado').length;
   $('r-actas').textContent = base.filter(u => u.acta_firmada).length;
@@ -842,19 +840,27 @@ function saveRecord() {
       }
     }
     DataService.updateRenewal(id, changes, state.user);
+    // GH3.39.1 P1: validar que el registro fue actualizado correctamente en memoria
+    var updatedRecord = DataService.getRenewal(id);
+    if (!updatedRecord) {
+      console.error('[saveRecord] updatedRecord not found for id:', id);
+      return;
+    }
     // MVP P5 · Escribir al Excel Maestro (async, no bloquea la UI)
     if (DataService.syncToProvider) {
+      // GH3.39.3 Fase 4: flag para suprimir renders del subscriber durante el sync
+      if (window.state) state._syncInProgress = true;
       // GH3.25 P2: Después de escribir → recargar desde Excel → re-render
       DataService.syncToProvider(id, changes)
         .then(function() {
           // Recarga desde el workbook real (no reutilizar objeto local)
           if (DataService.reloadFromProvider) {
             return DataService.reloadFromProvider().then(function(ok) {
+              if (window.state) state._syncInProgress = false; // Fase 4
               if (ok) {
-                // Re-render vista actual desde datos frescos
-                if (state.view === 'usuarios') renderUsuarios();
-                else if (state.view === 'reportes') renderReportes();
-                else renderResumen();
+                // Fase 4: UN ÚNICO render post-sync — datos frescos del Excel
+                renderResumen();
+                renderView(window.state ? state.view : 'resumen');
                 // GH3.37.1 Item 11: confirmación visual
                 toast('✓ Guardado · Sincronizado con Excel', 'success');
                 if (window._showSyncStatus) _showSyncStatus('ok');
@@ -863,6 +869,7 @@ function saveRecord() {
           }
         })
         .catch(function(err) {
+          if (window.state) state._syncInProgress = false; // Fase 4
           if (err && err.graphCode === 'CONFLICT') {
             // GH3.37.1 Item 11: recargar automáticamente en conflicto
             DataService.reloadFromProvider && DataService.reloadFromProvider();
@@ -922,8 +929,11 @@ function saveRecord() {
     });
   }
   
-  renderView(state.view);
-  if (state.view !== 'resumen') renderResumen();
+  // GH3.39.3 Fase 4: render único post-sync — el subscriber 'record.updated' y
+  // reloadFromProvider.then() manejan el render cuando corresponde
+  if (window.EventBus) {
+    EventBus.publish('record.updated', { id: id, changes: changes, record: updatedRecord });
+  }
 }
 window.saveRecord = saveRecord;
 
@@ -1052,3 +1062,56 @@ window.F7_resolveRole = F7_resolveRole;
 // con qué rol y permisos. Completamente independiente de Graph.
 // ═══════════════════════════════════════════════════════════════════
 
+// ════════════════════════════════════════════════════════════════════
+// GH3.39.2 P9/P10 — Subscriber global de 'record.updated'
+// Actualiza automáticamente TODOS los dashboards sin recargar la página
+// ════════════════════════════════════════════════════════════════════
+(function() {
+  if (!window.EventBus) return;
+
+  EventBus.subscribe('record.updated', function(payload) {
+    // Fase 4: no renderizar si un sync está en curso — el .then() lo hará
+    if (window.state && state._syncInProgress) return;
+    var view = window.state && state.view;
+
+    // Refrescar KPIs (resumen principal)
+    if (window.renderResumen) renderResumen();
+
+    // Refrescar la vista actual si es diferente al resumen
+    if (view && view !== 'resumen' && window.renderView) {
+      renderView(view);
+    }
+
+    // Módulos específicos que requieren actualización
+    var viewRenderers = {
+      'panel-ejecutivo': window.renderPanelEjecutivo,
+      'home-tecnico':    window.renderHomeTecnico,
+      'por-ciudad':      window.renderPorCiudad,
+      'por-tecnico':     window.renderPorTecnico,
+      'actividad':       window.renderActividad,
+      'estados':         window.renderEstados,
+    };
+
+    Object.keys(viewRenderers).forEach(function(v) {
+      if (viewRenderers[v] && v !== view) {
+        // Los paneles no visibles se marcan como stale — se recargarán al navegar
+        // Solo re-renderizar los que están activos
+      }
+    });
+
+    // Si el Timeline del modal está abierto, actualizarlo
+    var tlContainer = document.getElementById('m-timeline-container');
+    var editingId = window.state && state.editingId;
+    if (tlContainer && editingId && payload && payload.id === editingId) {
+      var rec = DataService.getRenewal(editingId);
+      if (rec && window.renderTimelineHTML) {
+        tlContainer.innerHTML = renderTimelineHTML(rec);
+      }
+    }
+  });
+
+  // También suscribirse al evento de provider para actualizar después de PATCH exitoso
+  EventBus.subscribe('provider.write.success', function(payload) {
+    if (window.renderResumen) renderResumen();
+  });
+})();

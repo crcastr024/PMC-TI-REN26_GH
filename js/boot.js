@@ -1283,6 +1283,129 @@ window.ConfigService = ConfigService;
 // PRODUCTION_CONFIG cargado desde js/config.js (RC3.3)
 // Toda la app lee desde window.PRODUCTION_CONFIG
 
+// ════════════════════════════════════════════════════════════════════
+// GH3.39.3 Fase 3 — Panel de Diagnóstico (Ctrl+Shift+D)
+// Panel oculto de soporte técnico — no visible para usuarios finales
+// ════════════════════════════════════════════════════════════════════
+(function() {
+  var _diagOpen = false;
+
+  function _formatMs(ms) {
+    return ms == null ? '—' : ms < 1000 ? ms + 'ms' : (ms/1000).toFixed(2) + 's';
+  }
+
+  function _buildDiagHTML() {
+    var m = window.calculateProjectMetrics ? calculateProjectMetrics() : null;
+    var users = window.USERS || [];
+    var sysU  = window.SYSTEM_USERS || [];
+    var cfg   = window.PRODUCTION_CONFIG || window.APP_CONFIG || {};
+    var hbt   = window.HBT || {};
+    var st    = window.state || {};
+    var now   = new Date().toLocaleTimeString('es-CO');
+
+    var lastSync   = hbt._lastWrite   ? hbt._lastWrite.time   : '—';
+    var lastValid  = hbt._lastValidation ? hbt._lastValidation.ts : '—';
+    var writeOk    = hbt._lastWrite   ? (hbt._lastWrite.verifyOk !== false ? '✓' : '✗') : '—';
+    var provName   = window.DataService && DataService.providerName ? DataService.providerName() : 'desconocido';
+
+    var eventLog = [];
+    if (window.EventBus && EventBus._log) {
+      eventLog = EventBus._log.slice(-10).reverse();
+    }
+
+    return [
+      '<div id="__diag-panel__" style="position:fixed;top:0;right:0;width:380px;max-height:100vh;',
+      'overflow-y:auto;background:#0f1117;color:#e0e0e0;font-family:monospace;font-size:11px;',
+      'z-index:99999;padding:16px;box-shadow:-4px 0 24px rgba(0,0,0,.6);border-left:3px solid #C00000;">',
+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">',
+      '<b style="color:#C00000;font-size:13px">⚙ Panel de Diagnóstico</b>',
+      '<span style="color:#888;font-size:10px">Ctrl+Shift+D para cerrar</span>',
+      '</div>',
+
+      '<div style="color:#888;margin-bottom:8px">',
+      now + ' · v' + (cfg.version || cfg.appVersion || 'GH3.39.3'),
+      '</div>',
+
+      '<div style="background:#1a1e2e;padding:8px;border-radius:4px;margin-bottom:8px">',
+      '<b style="color:#7ec8e3">DATOS</b><br>',
+      'Equipos totales: <b style="color:#fff">' + (m ? m.totalEquipos : users.length) + '</b><br>',
+      'Colaboradores: <b style="color:#fff">' + (m ? m.totalColaboradores : '—') + '</b><br>',
+      'Backups: <b style="color:#fff">' + (m ? m.totalBackups : '—') + '</b><br>',
+      'HBT: <b style="color:#fff">' + (m ? m.hbt : '—') + '</b> · ',
+      'HGS: <b style="color:#fff">' + (m ? m.hgs : '—') + '</b><br>',
+      'window.USERS.length: <b style="color:#fff">' + users.length + '</b><br>',
+      'window.SYSTEM_USERS.length: <b style="color:#fff">' + sysU.length + '</b>',
+      '</div>',
+
+      '<div style="background:#1a1e2e;padding:8px;border-radius:4px;margin-bottom:8px">',
+      '<b style="color:#7ec8e3">SESIÓN</b><br>',
+      'Usuario: <b style="color:#fff">' + (st.user && st.user.email || '—') + '</b><br>',
+      'Rol: <b style="color:#fff">' + (st.user && (st.user.role||st.user.rol) || '—') + '</b><br>',
+      'Vista: <b style="color:#fff">' + (st.view || '—') + '</b><br>',
+      'SyncInProgress: <b style="color:' + (st._syncInProgress ? '#f90' : '#0f0') + '">' + (st._syncInProgress ? 'SÍ' : 'NO') + '</b>',
+      '</div>',
+
+      '<div style="background:#1a1e2e;padding:8px;border-radius:4px;margin-bottom:8px">',
+      '<b style="color:#7ec8e3">PROVEEDOR</b><br>',
+      'Provider: <b style="color:#fff">' + provName + '</b><br>',
+      'authMode: <b style="color:#fff">' + (cfg.authenticationMode || '—') + '</b><br>',
+      'dataSource: <b style="color:#fff">' + (cfg.dataSource || '—') + '</b><br>',
+      'debug: <b style="color:#fff">' + (cfg.debug === true ? 'ON' : 'OFF') + '</b>',
+      '</div>',
+
+      '<div style="background:#1a1e2e;padding:8px;border-radius:4px;margin-bottom:8px">',
+      '<b style="color:#7ec8e3">ÚLTIMA SINCRONIZACIÓN</b><br>',
+      'Tiempo: <b style="color:#fff">' + lastSync + '</b><br>',
+      'Verificación: <b style="color:#fff">' + writeOk + '</b><br>',
+      'Última validación: <b style="color:#fff">' + lastValid + '</b>',
+      '</div>',
+
+      '<div style="background:#1a1e2e;padding:8px;border-radius:4px;margin-bottom:8px">',
+      '<b style="color:#7ec8e3">EXCEL / HEADERS</b><br>',
+      'RENOVACIONES cols: <b style="color:#fff">' +
+        (window._EXCEL_HEADERS && _EXCEL_HEADERS.RENOVACIONES ? _EXCEL_HEADERS.RENOVACIONES.length : '—') + '</b><br>',
+      'WorkbookBase: <b style="color:#fff">' + (window.workbookBase && workbookBase() ? '✓ resuelto' : '✗ no disponible') + '</b>',
+      '</div>',
+
+      '<div style="background:#1a1e2e;padding:8px;border-radius:4px;margin-bottom:8px">',
+      '<b style="color:#7ec8e3">INTEGRIDAD</b><br>',
+      (function() {
+        try {
+          var v = window.IntegrityService ? IntegrityService.verify() : null;
+          if (!v) return 'IntegrityService: no disponible';
+          return 'ok: <b style="color:' + (v.ok ? '#0f0' : '#f00') + '">' + (v.ok ? 'PASS' : 'FAIL') + '</b>' +
+            (v.issues && v.issues.length ? '<br>Errores: ' + v.issues.map(function(i){return i.module;}).join(', ') : '');
+        } catch(e) { return 'IntegrityService: ' + e.message; }
+      })(),
+      '</div>',
+
+      '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #333;color:#555;font-size:9px">',
+      'PMC-TI-REN26 · GH3.39.3 · Heinsohn Business Technology',
+      '</div>',
+      '</div>'
+    ].join('');
+  }
+
+  function _openDiag() {
+    var existing = document.getElementById('__diag-panel__');
+    if (existing) { existing.remove(); _diagOpen = false; return; }
+    document.body.insertAdjacentHTML('beforeend', _buildDiagHTML());
+    _diagOpen = true;
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      e.preventDefault();
+      _openDiag();
+    }
+  });
+
+  // Exponer para diagnóstico desde consola
+  window._diagPanel = { open: _openDiag, build: _buildDiagHTML };
+})();
+
+
 window.APP_CONFIG = (() => {
   // RC1: APP_CONFIG se construye desde PRODUCTION_CONFIG (fuente única de verdad)
   const PC = window.PRODUCTION_CONFIG || {};

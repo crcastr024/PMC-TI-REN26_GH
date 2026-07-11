@@ -553,6 +553,10 @@ const WorkbookWriter = (() => {
       const user = (window.state && state.user) || { name: 'sistema', email: 'sistema' };
       const now  = new Date().toISOString();
 
+      // GH3.39.2 P1: record declarado ANTES del forEach para que prevValue esté disponible
+      // La declaración original en if(versionIdx) estaba fuera del scope del forEach
+      const record = DataService.getRenewal(id);
+
       // Campos del usuario
       Object.entries(safeChanges).forEach(([field, value]) => {
         // GH3.31 BLOQUE 1: traducir nombre_campo → nombre_columna_excel si existe alias
@@ -573,7 +577,7 @@ const WorkbookWriter = (() => {
       const updByIdx   = headers.findIndex(h => String(h).trim().toUpperCase() === '_UPDATED_BY');
 
       if (versionIdx >= 0) {
-        const record = DataService.getRenewal(id);
+        // GH3.39.2 P1: record ya declarado arriba — no redeclarar
         const currentVersion = (record && record._version) ? Number(record._version) : 0;
         cellUpdates.push({ address: `${ExcelMapper.columnLetter(versionIdx)}${rowNum}`, value: currentVersion + 1 });
         // Actualizar en memoria también
