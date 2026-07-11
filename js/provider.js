@@ -661,7 +661,7 @@ const WorkbookWriter = (() => {
             _writeResults.push({ field: upd.field, address: upd.address, expected, readBack, ok });
             if (window.HBT) {
               window.HBT._lastWrite = {
-                sessionId: sessionId,
+                // GH3.39.4: sessionId eliminado — modo stateless
                 field: upd.field,
                 address: upd.address,
                 patchUrl,
@@ -679,16 +679,16 @@ const WorkbookWriter = (() => {
           // Sin verificación: registrar solo el PATCH
           if (window.HBT) {
             window.HBT._lastWrite = {
-              sessionId, field: upd.field, address: upd.address,
+              // GH3.39.4: sessionId eliminado — modo stateless
+              field: upd.field, address: upd.address,
               patchUrl, patchValue: upd.value, time: new Date().toISOString(),
             };
           }
         }
       }
 
-      // Stage 6: Cerrar sesión
-      // GH3.26: closeSession eliminado — stateless mode
-      sessionId = null;
+      // Stage 6: Cerrar sesión — eliminado en GH3.26 (stateless mode)
+      // GH3.39.4: sessionId = null eliminado — variable residual del modelo con sesión
 
       // Stage 7: Post-commit
       WriteLock.release(id);
