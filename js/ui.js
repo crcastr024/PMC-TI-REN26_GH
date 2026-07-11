@@ -13,6 +13,7 @@ function renderResumen() {
   const actas = real.filter(u => u.acta_firmada).length;
   const pct = total > 0 ? Math.round(entregados / total * 100) : 0;
   
+  // GH3.39.1 FC-10: h-users = 141 colaboradores activos
   $('h-users').textContent = uniqueUsers();
   $('h-pendientes').textContent = pendientes;
   $('h-proceso').textContent = proceso;
@@ -23,7 +24,16 @@ function renderResumen() {
   const _byEmp = (window.KPIService && KPIService.byEmpresa) ? KPIService.byEmpresa() : {};
   const hbtCount = (_byEmp.HBT && _byEmp.HBT.total) || DataService.getRenewals({empresa:'HBT'}).length;
   const hgsCount = (_byEmp.HGS && _byEmp.HGS.total) || DataService.getRenewals({empresa:'HGS'}).length;
+  // GH3.39.1 FC-10: totalEquipos = 146, totalColaboradores = 141
+  var _totalEq = (window.KPIService && KPIService.totalEquipos) ? KPIService.totalEquipos() : (window.USERS||[]).length;
   $('h-empresas').textContent = 'HBT ' + hbtCount + ' · HGS ' + hgsCount;
+  // GH3.38 FC-01/FC-05: actualizar landing KPIs (antes hardcodeados sin id)
+  var _lkpiC = document.getElementById('lkpi-colabs');
+  if (_lkpiC) _lkpiC.textContent = uniqueUsers();
+  var _lkpiCS = document.getElementById('lkpi-colabs-sub');
+  if (_lkpiCS) _lkpiCS.textContent = 'colaboradores activos';
+  var _lkpiE = document.getElementById('lkpi-empresas');
+  if (_lkpiE) _lkpiE.textContent = 'HBT ' + hbtCount + ' · HGS ' + hgsCount;
   
   $('k-total').textContent = total;
   const _allCount = DataService.count();
@@ -40,6 +50,22 @@ function renderResumen() {
   $('tb-sync').textContent = provName + ' · ' + new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
   $('footer-date').textContent = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   $('footer-stats').textContent = _allCount + ' equipos · ' + uniqueUsers() + ' usuarios';
+  // GH3.38 FC-07: actualizar identidad del usuario autenticado
+  if (window.state && state.user) {
+    var _role = state.user.role || state.user.rol || '';
+    var _roleLabel = {
+      super_admin:'Super Admin','gestor_activos':'Gestor Activos',
+      tecnico:'Técnico',consulta:'Consulta',visitante:'Visitante'
+    }[_role] || _role;
+    var _roleEl = document.getElementById('user-role');
+    if (_roleEl) _roleEl.textContent = _roleLabel + ' · TI';
+    var _avatarEl = document.getElementById('user-avatar');
+    var _nombre = state.user.nombre || state.user.name || state.user.email || '';
+    if (_avatarEl && _nombre) {
+      var parts = _nombre.trim().split(' ');
+      _avatarEl.textContent = ((parts[0]||'')[0]+(parts[1]||'')[0]).toUpperCase();
+    }
+  }
   
   renderEmpresaChart();
   renderTecnicoChart();

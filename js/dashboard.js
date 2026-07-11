@@ -104,15 +104,29 @@ const KPIService = {
     };
   },
   
-  // GH3.37.1 Item 1: única fuente de verdad para conteo de colaboradores
+  // GH3.39.1 FC-10: tres fuentes independientes para conceptos distintos
+
+  // Número total de equipos en el ciclo de renovación (incluyendo backups/repuestos)
+  totalEquipos() {
+    return (window.USERS || []).length;
+  },
+
+  // Número de colaboradores activos con equipo asignado (excluye backups)
+  totalColaboradores() {
+    return (window.USERS || []).filter(function(u){ return !u.es_backup; }).length;
+  },
+
+  // Alias de compatibilidad — delega a totalColaboradores()
   totalRenewals() {
-    return window.USERS.filter(function(u){ return !u.es_backup; }).length;
+    return this.totalColaboradores();
   },
 
   byEmpresa() {
     const result = {};
     ['HBT', 'HGS'].forEach(emp => {
-      const set = window.USERS.filter(r => r.empresa === emp && !r.es_backup);
+      // GH3.39.1 FC-10: byEmpresa cuenta TODOS los equipos por empresa (incluyendo backups)
+      // HBT=88, HGS=58 → total=146 (equipos, no colaboradores)
+      const set = window.USERS.filter(r => r.empresa === emp);
       result[emp] = this.calculate(set);
     });
     return result;

@@ -20,11 +20,14 @@
   background: var(--bg-elev);
   border-right: 1px solid var(--border);
   position: sticky; top: 0; left: 0;
-  height: 100vh; max-height: 100vh;
+  /* GH3.38 FC-08: height auto elimina el desbordamiento visual sobre el footer.
+   Causa raíz: height:100vh pintaba el sidebar sobre el footer al hacer scroll. */
+  height: auto;
+  min-height: calc(100vh - var(--topbar-h, 56px));
   align-self: start;
   display: flex; flex-direction: column;
   z-index: 20;
-  overflow: hidden;
+  overflow-y: auto; /* scroll interno del sidebar */
   overflow-y: auto; /* GH3.37 FC-05 */
 }
 .sb-head {
@@ -702,7 +705,16 @@
 .modal-close { width: 36px; height: 36px; border-radius: var(--r-sm); background: transparent; border: 1px solid var(--border-strong); color: var(--text-3); display: flex; align-items: center; justify-content: center; }
 .modal-close:hover { background: var(--bg-card-hover); color: var(--text-1); }
 .modal-close svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.5; }
-.modal-body { padding: 28px; overflow-y: auto; overflow-x: hidden; flex: 1; } /* GH3.37 FC-03/04 */
+/* GH3.39.1 FC-09: min-height:0 permite al flex child respetar max-height:92vh del modal.
+   overflow-y:auto activa el scroll. overflow:visible en .modal no interfiere con esto —
+   los native <select> en desktop siempre son popups OS-level, nunca clippeados por CSS. */
+.modal-body {
+  padding: 28px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 .modal-foot { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; background: var(--bg-subtle); }
 .form-section { margin-bottom: 28px; }
 .form-section:last-child { margin-bottom: 0; }
@@ -741,7 +753,7 @@
   padding: 28px 56px 18px;
   color: rgba(255,255,255,0.55);
   position: relative; overflow: hidden;
-  z-index: 5; /* GH3.37 FC-05: sobre el sidebar sticky */
+  z-index: 10; /* GH3.38 FC-08: backup — la corrección principal es sidebar height:auto */
 }
 .footer::before {
   content: ''; position: absolute; inset: 0;
