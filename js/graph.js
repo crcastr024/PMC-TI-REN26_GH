@@ -535,14 +535,14 @@ window.RAEEEngine = RAEEEngine;
 
 const WriteContract = (() => {
   // Campos que NUNCA deben ir a SharePoint
+  // GH A1: es_backup y clasificacion_obsolescencia movidos a ALLOWED — deben persistir en Excel
   const PROTECTED_FIELDS = new Set([
     'audit', 'timeline', 'approval',
-    'clasificacion_obsolescencia', 'generacion_cpu', 'accion_requerida', 'accion_detalle',
+    'generacion_cpu', 'accion_requerida', 'accion_detalle',
     'estado_eq_ant', 'clasificacion_raee', '_obsolescence_meta',
     'equipoAnterior', 'equipoNuevo',
-    'es_backup',                       // derivado — no se gestiona en SP
     'sp_item_id',                      // meta SP — no se escribe al campo real
-    'recibido_bodega', 'equipo_reasignable', 'equipo_devuelto', // derivados calculados
+    'recibido_bodega', 'equipo_reasignable', 'equipo_devuelto', // derivados de formulario
   ]);
 
   // Campos de solo lectura (vienen del Excel/SAP — no se editan en el Dashboard)
@@ -591,6 +591,9 @@ const WriteContract = (() => {
     // Motor RAEE — columnas en Excel Maestro
     'recomendacion_raee', 'motivo_raee', 'motor_raee_version', 'fecha_evaluacion_raee',
     'usuario_evaluacion_raee',
+    // GH A1: campos calculados que deben persistir en Excel
+    'es_backup',                   // derivado de estado==='BACKUP'
+    'clasificacion_obsolescencia', // calculado por ObsolescenceService desde eq_ant_procesador
   ];
 
   // Campos requeridos (no pueden ser null/vacío al escribir)
@@ -602,6 +605,8 @@ const WriteContract = (() => {
     estado_entrega_equipo_nuevo: 'choice',
     disposicion_final:           'choice',
     tecnico:                     'choice',
+    es_backup:                   'boolean', // GH A1: persistido en ES_BACKUP
+    clasificacion_obsolescencia: 'string',  // GH A1: calculado, persistido en CLASIFICACION_OBSOLESCENCIA
     acta_enviada:                'boolean',
     acta_firmada:                'boolean',
     acta_entrega_url:            'string',
