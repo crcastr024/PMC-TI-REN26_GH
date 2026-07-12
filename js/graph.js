@@ -698,7 +698,16 @@ const GraphWriteValidator = (() => {
       }
 
       const type = WriteContract.FIELD_TYPES[field];
-      const choices = WriteContract.VALID_CHOICES[field];
+      // GH3.41.1: resolver choices en tiempo de validación, no en tiempo de carga
+      // ConfigService no existe cuando graph.js inicializa su IIFE (#6 en carga)
+      // pero sí existe cuando validateField() se ejecuta (boot.js carga en #13)
+      const choices = (function() {
+        if (field === 'disposicion_final' && typeof ConfigService !== 'undefined')
+          return ConfigService.DISPOSICION_FINAL_OPTS.filter(Boolean);
+        if (field === 'estado_entrega_equipo_nuevo' && typeof ConfigService !== 'undefined')
+          return ConfigService.ESTADO_ENTREGA_EQ_NVO.filter(Boolean);
+        return WriteContract.VALID_CHOICES[field];
+      })();
 
       // 4. Validación de tipo
       if (type === 'boolean') {

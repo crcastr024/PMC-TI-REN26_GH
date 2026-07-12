@@ -79,8 +79,8 @@ function renderEmpresaChart() {
       // GH3.22 P8: estados canónicos + aliases legacy para consistencia
       entregados: all.filter(u => {
         const s = u.estado || '';
-        return s === 'Entregado equipo nuevo' || s === 'Pendiente recoger equipo anterior' ||
-               s === 'En tránsito equipo anterior' || s === 'Equipo antiguo recibido' ||
+        return s === 'Entregado equipo nuevo' || s === 'Pendiente devolución equipo anterior' ||
+               s === 'En tránsito equipo anterior' || s === 'Equipo anterior recibido' ||
                s === 'Renovación completada' || s === 'Pendiente aprobación' ||
                s === 'Cerrado' || s === 'Entregado' || s === 'Completado';
       }).length,
@@ -531,8 +531,8 @@ function openEditModal(id) {
   var _allEstados = ConfigService.getFlow
     ? ConfigService.getFlow().concat([StateMachine.states.BACKUP])
     : ['Pendiente','Alistamiento','Programado','En tránsito equipo nuevo',
-       'Entregado equipo nuevo','Pendiente recoger equipo anterior',
-       'En tránsito equipo anterior','Equipo antiguo recibido',
+       'Entregado equipo nuevo','Pendiente devolución equipo anterior',
+       'En tránsito equipo anterior','Equipo anterior recibido',
        'Renovación completada','Pendiente aprobación','Cerrado','BACKUP'];
   var _validNext = (typeof StateMachine !== 'undefined' && u.estado)
     ? (StateMachine.TRANSITIONS[u.estado] || []).concat([u.estado])
@@ -547,7 +547,7 @@ function openEditModal(id) {
   // F3.6 · Estado de entrega del equipo nuevo desde ConfigService
   const entregaEqNvoOpts = ConfigService.ESTADO_ENTREGA_EQ_NVO
     .map(v => '<option value="' + v + '"' + (u.estado_entrega_equipo_nuevo === v ? ' selected' : '') + '>' + (v || '—') + '</option>').join('');
-  const devEstados = ['Pendiente', 'Solicitada', 'En tránsito', 'Recibida en Bodega', 'Reasignado'];
+  const devEstados = ['No aplica', 'Pendiente', 'Solicitada', 'En tránsito', 'Recibida en bodega'];
   const devEstadoOpts = '<option value="">—</option>' + devEstados.map(e => '<option' + (u.estado_devolucion === e ? ' selected' : '') + '>' + e + '</option>').join('');
   // F3.2 · Disposición final del equipo anterior — entidad independiente de estado_devolucion
   // (logística de retorno) y de clasificacion_obsolescencia (motor RAEE). Decide el destino
@@ -645,10 +645,10 @@ function openEditModal(id) {
     '</div>' +
     '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);padding:8px 0 4px">Evaluacion fisica del equipo</div>' +
     '<div class="form-grid">' +
-      '<div class="form-group"><label class="form-label">Bateria</label><select class="form-select" id="m-eval_bateria" onchange="actualizarRecomendacion()"><option value="">--</option><option value="Excelente"' + (u.eval_bateria==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_bateria==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_bateria==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_bateria==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Teclado</label><select class="form-select" id="m-eval_teclado" onchange="actualizarRecomendacion()"><option value="">--</option><option value="Excelente"' + (u.eval_teclado==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_teclado==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_teclado==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_teclado==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Touchpad</label><select class="form-select" id="m-eval_touchpad" onchange="actualizarRecomendacion()"><option value="">--</option><option value="Excelente"' + (u.eval_touchpad==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_touchpad==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_touchpad==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_touchpad==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Estetico</label><select class="form-select" id="m-eval_estetico" onchange="actualizarRecomendacion()"><option value="">--</option><option value="Excelente"' + (u.eval_estetico==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_estetico==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_estetico==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_estetico==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Bateria</label><select class="form-select" id="m-eval_bateria" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_bateria==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_bateria==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_bateria==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_bateria==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Teclado</label><select class="form-select" id="m-eval_teclado" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_teclado==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_teclado==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_teclado==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_teclado==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Touchpad</label><select class="form-select" id="m-eval_touchpad" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_touchpad==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_touchpad==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_touchpad==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_touchpad==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Estetico</label><select class="form-select" id="m-eval_estetico" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_estetico==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_estetico==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_estetico==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_estetico==='Malo'?' selected':'') + '>Malo</option></select></div>' +
     '</div>' +
     '<div id="m-recomendacion-display" style="margin-top:8px;padding:8px 14px;border-radius:var(--r-sm);background:#E8F5E9;color:#2E7D32;font-size:12px;font-weight:700;display:none"></div>' +
     '<div id="m-motivo-raee-display" style="margin-top:4px;padding:4px 14px;font-size:11px;color:#777;display:none"></div>' +

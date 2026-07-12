@@ -1198,16 +1198,20 @@ const ConfigService = (() => {
   const getFlow   = () => STATE_FLOW.slice();
 
   // ── 3. Clasificaciones RAEE — valores permitidos como enum
-  const CLASIFICACIONES_RAEE = ['RAEE', 'Reasignable', 'Revisión manual'];
+  // GH3.40.2 Task 4: catálogo oficial RAEE — 4 valores (el motor se actualiza en sprint posterior)
+  const CLASIFICACIONES_RAEE = ['Reutilizar', 'Reasignar', 'RAEE', 'Revisión manual'];
 
   // ── 4. Disposición final del equipo anterior — valores permitidos
   // F3.6 · Disposición final — 4 valores del spec de negocio
+  // GH3.40.2 Task 3: catálogo oficial de disposición final
   const DISPOSICION_FINAL_OPTS = [
-    '',
-    'Venta interna empleado',
+    'Pendiente definir',
     'Reasignación interna',
-    'Baja RAEE',
-    'Pendiente evaluación',
+    'RAEE',
+    'Donación',
+    'Venta',
+    'Garantía',
+    'Otro',
   ];
 
   // F3.6 · Estado de entrega del equipo nuevo — entidad física independiente del proceso REN26
@@ -1239,6 +1243,16 @@ const ConfigService = (() => {
   };
 
   // ── 7. Registros de nivel de renovación (Registro/Nivel) — 5 valores reales
+  // GH3.40.2 Task 6: catálogo oficial de perfil de usuario
+  const PERFIL_OPTS = [
+    'Administrativo',
+    'Operativo',
+    'Comercial',
+    'Dirección',
+    'TI',
+    'Otro',
+  ];
+
   const NIVELES_REGISTRO = [
     'Nivel 1 - Analista / Operativo (Asistentes, recepción, apoyo administrativo y cargos operativos).',
     'Nivel 2 - Consultor / Profesional (Consultores, PMO, coordinadores y personal con contacto frecuente con clientes o gestión de proyectos).',
@@ -1259,6 +1273,7 @@ const ConfigService = (() => {
     DISPOSICION_FINAL_OPTS,
     ESTADO_ENTREGA_EQ_NVO,
     CATEGORIAS_BLOQUEO,
+    PERFIL_OPTS,
     NIVELES_REGISTRO,
 
     // Helpers UI
