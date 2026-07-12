@@ -546,54 +546,49 @@ const WriteContract = (() => {
   ]);
 
   // Campos de solo lectura (vienen del Excel/SAP — no se editan en el Dashboard)
-  // GH3.43: READONLY_FIELDS — contrato definitivo v1.0
+  // QA-02R: READONLY_FIELDS — solo campos sin control UI
+  // Principio: visible = editable. Solo se protegen datos sin control en el formulario.
   const READONLY_FIELDS = new Set([
-    // Identidad del colaborador (SAP)
-    'id', 'cedula', 'nombre', 'usuario', 'correo', 'empresa',
-    'ceco', 'cargo', 'gerente', 'registro',
-    'nombre_sap',
-    // Equipo nuevo (SAP / Bodega)
-    'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial',
-    'eq_nvo_placa','eq_nvo_hostname','eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco',
-    // Equipo anterior (SAP / Inventario)
-    'eq_ant_tipo', 'eq_ant_marca', 'eq_ant_modelo', 'eq_ant_serial',
-    'eq_ant_af', 'eq_ant_placa', 'eq_ant_hostname',
-    'eq_ant_procesador', 'eq_ant_so',
-    // Historial/auditoría Excel — sin edición en Dashboard
-    'fecha_devolucion', 'observaciones_devolucion', 'feedback_enviado',
+    'id',                      // clave interna — nunca editar
+    'nombre_sap',              // SAP — sin control en formulario
+    'fecha_devolucion',        // Bodega — sin control en formulario
+    'observaciones_devolucion',// notas devolución — sin control en formulario
+    'feedback_enviado',        // sistema externo — sin control
   ]);
 
   // Campos sincronizables → SharePoint (whitelist oficial)
-  // GH3.43: ALLOWED_FIELDS — contrato definitivo v1.0
-  // Todo campo aquí tiene columna en Excel Maestro o está explícitamente en F7.
+  // QA-02R: ALLOWED_FIELDS — todo campo visible del formulario
+  // Principio: visible = editable = persiste en Excel.
+  // Eliminados: observaciones (OBSERVACIONES_GENERALES), aun_trabaja (AUN_TRABAJA), evidencia_adjunta
   const ALLOWED_FIELDS = [
-    // Datos básicos editables
-    'ciudad', 'proyecto',
-    // Equipo anterior — operativos GH3.43
-    'eq_ant_memoria', 'eq_ant_disco',
-    // Proceso REN26
+    // Sección 1 — Colaborador
+    'empresa', 'nombre', 'cedula', 'usuario', 'correo', 'ciudad', 'ceco', 'proyecto',
+    'cargo', 'gerente', 'registro',
+    // Sección 2 — Equipo anterior
+    'eq_ant_tipo', 'eq_ant_marca', 'eq_ant_modelo', 'eq_ant_serial', 'eq_ant_af',
+    'eq_ant_placa', 'eq_ant_hostname', 'eq_ant_procesador',
+    'eq_ant_memoria', 'eq_ant_disco', 'eq_ant_so',
+    // Sección 4 — Equipo nuevo
+    'eq_nvo_tipo', 'eq_nvo_marca', 'eq_nvo_modelo', 'eq_nvo_serial', 'eq_nvo_af',
+    'eq_nvo_placa', 'eq_nvo_hostname', 'eq_nvo_procesador', 'eq_nvo_ram', 'eq_nvo_disco',
+    // Sección 5 — Proceso
     'tecnico', 'estado', 'estado_entrega_equipo_nuevo',
     'alistamiento', 'caso_envio',
     'fecha_asignacion', 'fecha_envio',
     'fecha_envio_acta', 'fecha_firma_acta',
-    // Devolución
+    'acta_enviada', 'acta_firmada', 'acta_entrega_url',
+    'nombre_archivo',
+    'feedback', 'feedback_recibido',
+    // Sección 7 — Devolución
     'estado_devolucion', 'disposicion_final',
     'fecha_solicitud_devolucion', 'fecha_transito', 'fecha_recepcion_bodega',
-    // Entrega y seguimiento
-    'acta_enviada', 'acta_firmada', 'acta_entrega_url',
-    'evidencia_adjunta', 'nombre_archivo',
-    // Feedback
-    'feedback', 'feedback_recibido',
-    // General
-    'observaciones', 'aun_trabaja',
-    // Evaluación física y motor RAEE
-    'lista_recoleccion', 'eval_bateria', 'eval_teclado', 'eval_touchpad', 'eval_estetico',
-    // Motor RAEE — columnas en Excel Maestro
+    'lista_recoleccion',
+    // Evaluación física y RAEE
+    'eval_bateria', 'eval_teclado', 'eval_touchpad', 'eval_estetico',
     'recomendacion_raee', 'motivo_raee', 'motor_raee_version', 'fecha_evaluacion_raee',
     'usuario_evaluacion_raee',
-    // GH A1: campos calculados que deben persistir en Excel
-    'es_backup',                   // derivado de estado==='BACKUP'
-    'clasificacion_obsolescencia', // calculado por ObsolescenceService desde eq_ant_procesador
+    // Calculados que persisten
+    'es_backup', 'clasificacion_obsolescencia',
   ];
 
   // Campos requeridos (no pueden ser null/vacío al escribir)

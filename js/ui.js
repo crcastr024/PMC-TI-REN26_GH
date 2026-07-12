@@ -614,7 +614,6 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Caso envío (mensajería)</label><input type="text" class="form-input" id="m-caso_envio" value="' + esc(u.caso_envio) + '" placeholder="Guía de mensajería"></div>' +
       '<div class="form-group"><label class="form-label">F. Asignación</label><input type="date" class="form-input" id="m-fecha_asignacion" value="' + esc(u.fecha_asignacion) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. Envío</label><input type="date" class="form-input" id="m-fecha_envio" value="' + esc(u.fecha_envio) + '"></div>' +
-      '<div class="form-group"><label class="form-label">F. Entrega</label><input type="date" class="form-input" id="m-fecha_entrega" value="' + esc(u.fecha_entrega) + '"></div>' +
       '<div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
         '<div><label class="form-check"><input type="checkbox" id="m-acta_enviada"' + (u.acta_enviada ? ' checked' : '') + '> Acta de entrega enviada</label></div>' +
         '<div class="form-group" style="margin:0"><label class="form-label">F. envío acta</label><input type="date" class="form-input" id="m-fecha_envio_acta" value="' + esc(u.fecha_envio_acta) + '"></div>' +
@@ -625,27 +624,16 @@ function openEditModal(id) {
       '</div>' +
       '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;font-size:12px">Acta de entrega</a>' : '') + '</div>' +
       '<hr style="border:none;border-top:1px dashed var(--border);margin:8px 0">' +
-'<div class="form-grid">' +
-        '<div class="form-group full" style="display:grid;grid-template-columns:auto 1fr;gap:14px;padding:14px;background:var(--bg-subtle);border-radius:var(--r-sm);align-items:center">' +
-          '<div><label class="form-check"><input type="checkbox" id="m-evidencia_adjunta"' + (u.evidencia_adjunta ? ' checked' : '') + '> Evidencia adjunta</label></div>' +
-          '<div class="form-group" style="margin:0"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo) + '" placeholder="Ej: Acta_Juan_Perez.pdf"></div>' +
-    
-  
-      '<p style="font-size:11.5px;color:var(--text-3);margin-top:8px">En F7 se conectará a SharePoint para upload real del archivo. Por ahora solo se registra el nombre.</p>' +
-          '</div></div>' +
+      '<div class="form-group"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo) + '" placeholder="Ej: Acta_Juan_Perez.pdf"></div>' +
 '<div class="form-section"><div class="form-section-head">7 · Devolución del equipo anterior</div>' +
       '<div class="form-group"><label class="form-label">Estado de devolución</label><select class="form-select" id="m-estado_devolucion">' + devEstadoOpts + '</select></div>' +
       '<div class="form-group"><label class="form-label">Disposición final del equipo</label><select class="form-select" id="m-disposicion_final">' + dispFinalOpts + '</select></div>' +
       '<div class="form-group"><label class="form-label">F. Solicitud devolución</label><input type="date" class="form-input" id="m-fecha_solicitud_devolucion" value="' + esc(u.fecha_solicitud_devolucion) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. en tránsito</label><input type="date" class="form-input" id="m-fecha_transito" value="' + esc(u.fecha_transito) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. Recepción en Bodega</label><input type="date" class="form-input" id="m-fecha_recepcion_bodega" value="' + esc(u.fecha_recepcion_bodega) + '"></div>' +
-      '<div class="form-group full"><label class="form-label">Observaciones generales</label><textarea class="form-textarea" id="m-observaciones" rows="3">' + esc(u.observaciones) + '</textarea></div>' +
       '<p class="full" style="font-size:11px;color:var(--text-3);margin:0">La disposición final queda registrada en auditoría (usuario, fecha, valor anterior/nuevo) al guardar.</p>' +
     '<div class="form-group full" style="margin-top:8px;padding:8px 12px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
       '<label class="form-check"><input type="checkbox" id="m-lista_recoleccion"' + (u.lista_recoleccion ? ' checked' : '') + '> Equipo agregado a lista de recoleccion</label>' +
-    '</div>' +
-    '<div class="form-group full" style="margin-top:4px;padding:8px 12px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
-      '<label class="form-check"><input type="checkbox" id="m-aun_trabaja"' + (u.aun_trabaja ? ' checked' : '') + '> Colaborador activo en la empresa (AUN_TRABAJA)</label>' +
     '</div>' +
     '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);padding:8px 0 4px">Evaluacion fisica del equipo</div>' +
     '<div class="form-grid">' +
@@ -791,8 +779,8 @@ function saveRecord() {
     'empresa','nombre','cedula','usuario','correo','ciudad','ceco','proyecto','cargo','gerente','registro',
     'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname','eq_ant_procesador','eq_ant_memoria','eq_ant_disco','eq_ant_so',
     'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname','eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco',
-    'tecnico','estado','estado_entrega_equipo_nuevo','alistamiento','caso_envio','fecha_asignacion','fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta',
-    'estado_devolucion','disposicion_final','fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega','observaciones',
+    'tecnico','estado','estado_entrega_equipo_nuevo','alistamiento','caso_envio','fecha_asignacion','fecha_envio','fecha_envio_acta','fecha_firma_acta',
+    'estado_devolucion','disposicion_final','fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega',
     // GH3.28: campos evaluación física y motor RAEE
     'lista_recoleccion','eval_bateria','eval_teclado','eval_touchpad','eval_estetico'
     // GH3.29: USUARIO_EVALUACION_RAEE se asigna automáticamente en el bloque RAEEEngine de saveRecord
@@ -827,7 +815,6 @@ function saveRecord() {
   changes.clasificacion_obsolescencia = u.clasificacion_obsolescencia || '';
   // GH3.45: campos sin control forEach — asignación explícita
   changes.nombre_archivo   = ($('m-nombre_archivo')   ? $('m-nombre_archivo').value.trim()   : '') || (u.nombre_archivo   || '');
-  changes.aun_trabaja      = $('m-aun_trabaja')      ? $('m-aun_trabaja').checked      : (u.aun_trabaja      || false);
   changes.feedback_recibido= $('m-feedback_recibido')? $('m-feedback_recibido').checked : (u.feedback_recibido|| false);
   
   // Persistir vía DataService (registra auditoría automáticamente)
@@ -859,12 +846,8 @@ function saveRecord() {
     // GH3.39.8 Task 3+4: campos F7 — existen en ALLOWED pero no tienen columna en Excel
     // Se excluyen del sync para evitar console.error('[WorkbookWriter] campo sin columna')
     // Permanecen en changes para que updateRenewal() los guarde en memoria
-    // GH3.45: _F7_FIELDS — solo campos sin columna en Excel o sin ALLOWED_FIELDS
-    // Activados: fecha_asignacion, fecha_transito, fecha_solicitud_devolucion,
-    //   fecha_recepcion_bodega, disposicion_final, acta_entrega_url, feedback, nombre_archivo
+    // QA-02R: _F7_FIELDS — único campo sin columna en Excel Maestro
     var _F7_FIELDS = new Set([
-      'eq_nvo_af',              // no en ALLOWED_FIELDS — SAP Bodega
-      'evidencia_adjunta',      // sin columna en Excel Maestro
       'estado_entrega_equipo_nuevo', // sin columna en Excel Maestro
     ]);
     var syncChanges = {};
