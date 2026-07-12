@@ -557,6 +557,9 @@ function openEditModal(id) {
   const dispFinalOpts = dispFinalOpts_.map(d => '<option value="' + d + '"' + (u.disposicion_final === d ? ' selected' : '') + '>' + (d || '—') + '</option>').join('');
   
   $('modal-body').innerHTML = 
+'<div class="form-section"><div class="form-section-head">6 · Timeline del proceso</div>' +
+      '<div id="m-timeline-container">' + renderTimelineHTML(u) + '</div>' +
+    '</div>' +
 '<div class="form-section"><div class="form-section-head">1 · Datos del usuario</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Empresa</label><select class="form-select" id="m-empresa"><option' + (u.empresa === 'HBT' ? ' selected' : '') + '>HBT</option><option' + (u.empresa === 'HGS' ? ' selected' : '') + '>HGS</option></select></div>' +
       '<div class="form-group full"><label class="form-label">Nombre completo</label><input type="text" class="form-input" id="m-nombre" value="' + esc(u.nombre) + '"></div>' +
@@ -568,7 +571,7 @@ function openEditModal(id) {
       '<div class="form-group full"><label class="form-label">Proyecto</label><select class="form-select" id="m-proyecto">' + projectOpts + '</select></div>' +
       '<div class="form-group"><label class="form-label">Cargo</label><input type="text" class="form-input" id="m-cargo" value="' + esc(u.cargo) + '"></div>' +
       '<div class="form-group"><label class="form-label">Gerente directo</label><input type="text" class="form-input" id="m-gerente" value="' + esc(u.gerente) + '"></div>' +
-      '<div class="form-group full"><label class="form-label">Registro / Nivel</label><select class="form-select" id="m-registro">' + nivelOpts + '</select></div>' +
+      '<div class="form-group full"><label class="form-label">Nivel del usuario</label><select class="form-select" id="m-registro">' + nivelOpts + '</select></div>' +
     '</div></div>' +
     
     '<div class="form-section"><div class="form-section-head">2 · Equipo anterior</div><div class="form-grid-3">' +
@@ -580,7 +583,7 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Placa</label><input type="text" class="form-input" id="m-eq_ant_placa" value="' + esc(u.eq_ant_placa) + '"></div>' +
       '<div class="form-group"><label class="form-label">Hostname</label><input type="text" class="form-input" id="m-eq_ant_hostname" value="' + esc(u.eq_ant_hostname) + '"></div>' +
       '<div class="form-group"><label class="form-label">Procesador</label><input type="text" class="form-input" id="m-eq_ant_procesador" value="' + esc(u.eq_ant_procesador) + '"></div>' +
-      '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" class="form-input" id="m-eq_ant_memoria" value="' + esc(u.eq_ant_memoria) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" class="form-input" id="m-eq_ant_memoria" readonly value="' + esc(u.eq_ant_memoria) + '"></div>' +
       '<div class="form-group"><label class="form-label">Disco duro (ant.)</label><input type="text" class="form-input" id="m-eq_ant_disco" value="' + esc(u.eq_ant_disco) + '"></div>' +
       '<div class="form-group"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_ant_so" value="' + esc(u.eq_ant_so) + '"></div>' +
     '</div></div>' +
@@ -599,24 +602,24 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Procesador</label><input type="text" class="form-input" id="m-eq_nvo_procesador" value="' + esc(eqNvo.procesador) + '"></div>' +
       '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" class="form-input" id="m-eq_nvo_ram" value="' + esc(eqNvo.ram) + '"></div>' +
       '<div class="form-group"><label class="form-label">Disco</label><input type="text" class="form-input" id="m-eq_nvo_disco" value="' + esc(eqNvo.disco) + '"></div>' +
-      '<div class="form-group full"><label class="form-label">Dato maestro SAP (AF)</label><input type="text" class="form-input" id="m-eq_nvo_af" value="' + esc(eqNvo.af) + '" placeholder="Código AF / dato maestro SAP"></div>' +
+      '<div class="form-group full"><label class="form-label">Dato maestro SAP (AF) <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="text" class="form-input" id="m-eq_nvo_af" value="' + esc(eqNvo.af) + '" placeholder="Código AF / dato maestro SAP"></div>' +
     '</div></div>' +
     
     '<div class="form-section"><div class="form-section-head">5 · Estado y seguimiento</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Técnico asignado</label><select class="form-select" id="m-tecnico">' + '<option value="">— Sin asignar —</option>' + (window.CONFIG.technicians || []).map(function(t){ return '<option value="' + esc(t) + '"' + ((u.tecnico||'').toLowerCase()===t.toLowerCase()?' selected':'') + '>' + esc(t) + '</option>'; }).join('') + '</select></div>' +
       '<div class="form-group"><label class="form-label">Estado proceso REN26</label><select class="form-select" id="m-estado">' + estadoOpts + '</select></div>' +
       // F3.6 · estado_entrega_equipo_nuevo: entidad física independiente del estado del proceso
-      '<div class="form-group"><label class="form-label">Estado entrega equipo nuevo</label><select class="form-select" id="m-estado_entrega_equipo_nuevo">' + entregaEqNvoOpts + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Estado entrega equipo nuevo <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><select class="form-select" id="m-estado_entrega_equipo_nuevo">' + entregaEqNvoOpts + '</select></div>' +
       '<div class="form-group"><label class="form-label">Alistamiento</label><input type="text" class="form-input" id="m-alistamiento" value="' + esc(u.alistamiento) + '" placeholder="Notas de alistamiento"></div>' +
       '<div class="form-group"><label class="form-label">Caso envío (mensajería)</label><input type="text" class="form-input" id="m-caso_envio" value="' + esc(u.caso_envio) + '" placeholder="Guía de mensajería"></div>' +
-      '<div class="form-group"><label class="form-label">F. Asignación</label><input type="date" class="form-input" id="m-fecha_asignacion" value="' + esc(u.fecha_asignacion) + '"></div>' +
+      '<div class="form-group"><label class="form-label">F. Asignación <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="date" class="form-input" id="m-fecha_asignacion" value="' + esc(u.fecha_asignacion) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. Envío</label><input type="date" class="form-input" id="m-fecha_envio" value="' + esc(u.fecha_envio) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. Entrega</label><input type="date" class="form-input" id="m-fecha_entrega" value="' + esc(u.fecha_entrega) + '"></div>' +
       '<div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
         '<div><label class="form-check"><input type="checkbox" id="m-acta_enviada"' + (u.acta_enviada ? ' checked' : '') + '> Acta de entrega enviada</label></div>' +
         '<div class="form-group" style="margin:0"><label class="form-label">F. envío acta</label><input type="date" class="form-input" id="m-fecha_envio_acta" value="' + esc(u.fecha_envio_acta) + '"></div>' +
         '<div><label class="form-check"><input type="checkbox" id="m-acta_firmada"' + (u.acta_firmada ? ' checked' : '') + '> Acta firmada</label></div>' +
-        '<div class="form-group"><label class="form-label">URL del acta (SharePoint)</label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url || '') + '" placeholder="https://app.pandadoc.com/..."></div>' +
+        '<div class="form-group"><label class="form-label">URL del acta (SharePoint) <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url || '') + '" placeholder="https://app.pandadoc.com/..."></div>' +
         '<div class="form-group" style="margin:0"><label class="form-label">F. firma acta</label><input type="date" class="form-input" id="m-fecha_firma_acta" value="' + esc(u.fecha_firma_acta) + '"></div>' +
       '</div>' +
       '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;font-size:12px">Acta de entrega</a>' : '') + '</div>' +
@@ -624,22 +627,17 @@ function openEditModal(id) {
 '<div class="form-grid">' +
         '<div class="form-group full" style="display:grid;grid-template-columns:auto 1fr;gap:14px;padding:14px;background:var(--bg-subtle);border-radius:var(--r-sm);align-items:center">' +
           '<div><label class="form-check"><input type="checkbox" id="m-evidencia_adjunta"' + (u.evidencia_adjunta ? ' checked' : '') + '> Evidencia adjunta</label></div>' +
-          '<div class="form-group" style="margin:0"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo) + '" placeholder="Ej: Acta_Juan_Perez.pdf"></div>' +
+          '<div class="form-group" style="margin:0"><label class="form-label">Nombre del archivo <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo) + '" placeholder="Ej: Acta_Juan_Perez.pdf"></div>' +
     
   
       '<p style="font-size:11.5px;color:var(--text-3);margin-top:8px">En F7 se conectará a SharePoint para upload real del archivo. Por ahora solo se registra el nombre.</p>' +
           '</div></div>' +
-'<div class="form-section"><div class="form-section-head">6 · Timeline del proceso</div>' +
-      '<div id="m-timeline-container">' + renderTimelineHTML(u) + '</div>' +
-    '</div>' +
-    
-    
-'<div class="form-section"><div class="form-section-head">7 · Devolución del equipo anterior</div><div class="form-grid">' +
+'<div class="form-section"><div class="form-section-head">7 · Devolución del equipo anterior</div>' +
       '<div class="form-group"><label class="form-label">Estado de devolución</label><select class="form-select" id="m-estado_devolucion">' + devEstadoOpts + '</select></div>' +
-      '<div class="form-group"><label class="form-label">Disposición final del equipo</label><select class="form-select" id="m-disposicion_final">' + dispFinalOpts + '</select></div>' +
-      '<div class="form-group"><label class="form-label">F. Solicitud devolución</label><input type="date" class="form-input" id="m-fecha_solicitud_devolucion" value="' + esc(u.fecha_solicitud_devolucion) + '"></div>' +
-      '<div class="form-group"><label class="form-label">F. en tránsito</label><input type="date" class="form-input" id="m-fecha_transito" value="' + esc(u.fecha_transito) + '"></div>' +
-      '<div class="form-group"><label class="form-label">F. Recepción en Bodega</label><input type="date" class="form-input" id="m-fecha_recepcion_bodega" value="' + esc(u.fecha_recepcion_bodega) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Disposición final del equipo <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><select class="form-select" id="m-disposicion_final">' + dispFinalOpts + '</select></div>' +
+      '<div class="form-group"><label class="form-label">F. Solicitud devolución <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="date" class="form-input" id="m-fecha_solicitud_devolucion" value="' + esc(u.fecha_solicitud_devolucion) + '"></div>' +
+      '<div class="form-group"><label class="form-label">F. en tránsito <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="date" class="form-input" id="m-fecha_transito" value="' + esc(u.fecha_transito) + '"></div>' +
+      '<div class="form-group"><label class="form-label">F. Recepción en Bodega <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="date" class="form-input" id="m-fecha_recepcion_bodega" value="' + esc(u.fecha_recepcion_bodega) + '"></div>' +
       '<div class="form-group full"><label class="form-label">Observaciones generales</label><textarea class="form-textarea" id="m-observaciones" rows="3">' + esc(u.observaciones) + '</textarea></div>' +
       '<p class="full" style="font-size:11px;color:var(--text-3);margin:0">La disposición final queda registrada en auditoría (usuario, fecha, valor anterior/nuevo) al guardar.</p>' +
     '<div class="form-group full" style="margin-top:8px;padding:8px 12px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
@@ -846,12 +844,24 @@ function saveRecord() {
       console.error('[saveRecord] updatedRecord not found for id:', id);
       return;
     }
+    // GH3.39.8 Task 3+4: campos F7 — existen en ALLOWED pero no tienen columna en Excel
+    // Se excluyen del sync para evitar console.error('[WorkbookWriter] campo sin columna')
+    // Permanecen en changes para que updateRenewal() los guarde en memoria
+    var _F7_FIELDS = new Set([
+      'estado_entrega_equipo_nuevo','fecha_asignacion','disposicion_final',
+      'fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega',
+      'acta_entrega_url','feedback','evidencia_adjunta','nombre_archivo','eq_nvo_af'
+    ]);
+    var syncChanges = {};
+    Object.keys(changes).forEach(function(k) {
+      if (!_F7_FIELDS.has(k)) syncChanges[k] = changes[k];
+    });
     // MVP P5 · Escribir al Excel Maestro (async, no bloquea la UI)
     if (DataService.syncToProvider) {
       // GH3.39.3 Fase 4: flag para suprimir renders del subscriber durante el sync
       if (window.state) state._syncInProgress = true;
       // GH3.25 P2: Después de escribir → recargar desde Excel → re-render
-      DataService.syncToProvider(id, changes)
+      DataService.syncToProvider(id, syncChanges)
         .then(function() {
           // Recarga desde el workbook real (no reutilizar objeto local)
           if (DataService.reloadFromProvider) {
