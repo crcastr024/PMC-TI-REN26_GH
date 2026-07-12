@@ -376,7 +376,6 @@ const SP_FIELD_MAP = {
   'CasoEnvio':                'caso_envio',
   'FechaAsignacion':          'fecha_asignacion',
   'FechaEnvio':               'fecha_envio',
-  'FechaEntrega':             'fecha_entrega',
   'FechaEnvioActa':           'fecha_envio_acta',
   'FechaFirmaActa':           'fecha_firma_acta',
   'FechaSolicitudDevolucion': 'fecha_solicitud_devolucion',
@@ -547,25 +546,35 @@ const WriteContract = (() => {
   ]);
 
   // Campos de solo lectura (vienen del Excel/SAP — no se editan en el Dashboard)
+  // GH3.43: READONLY_FIELDS — contrato definitivo v1.0
   const READONLY_FIELDS = new Set([
+    // Identidad del colaborador (SAP)
     'id', 'cedula', 'nombre', 'usuario', 'correo', 'empresa',
+    'ceco', 'cargo', 'gerente', 'registro',
+    'nombre_sap',
+    // Equipo nuevo (SAP / Bodega)
     'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial',
     'eq_nvo_placa','eq_nvo_hostname','eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco',
-    'dato_maestro', 'nombre_sap',
+    // Equipo anterior (SAP / Inventario)
     'eq_ant_tipo', 'eq_ant_marca', 'eq_ant_modelo', 'eq_ant_serial',
     'eq_ant_af', 'eq_ant_placa', 'eq_ant_hostname',
-    'eq_ant_procesador', 'eq_ant_ram', 'eq_ant_so',
-    'ceco', 'cargo', 'gerente', 'registro',
+    'eq_ant_procesador', 'eq_ant_so',
+    // Historial/auditoría Excel — sin edición en Dashboard
+    'fecha_devolucion', 'observaciones_devolucion', 'feedback_enviado',
   ]);
 
   // Campos sincronizables → SharePoint (whitelist oficial)
+  // GH3.43: ALLOWED_FIELDS — contrato definitivo v1.0
+  // Todo campo aquí tiene columna en Excel Maestro o está explícitamente en F7.
   const ALLOWED_FIELDS = [
     // Datos básicos editables
     'ciudad', 'proyecto',
+    // Equipo anterior — operativos GH3.43
+    'eq_ant_memoria', 'eq_ant_disco',
     // Proceso REN26
     'tecnico', 'estado', 'estado_entrega_equipo_nuevo',
     'alistamiento', 'caso_envio',
-    'fecha_asignacion', 'fecha_envio', 'fecha_entrega',
+    'fecha_asignacion', 'fecha_envio',
     'fecha_envio_acta', 'fecha_firma_acta',
     // Devolución
     'estado_devolucion', 'disposicion_final',
@@ -575,16 +584,13 @@ const WriteContract = (() => {
     'evidencia_adjunta', 'nombre_archivo',
     // Feedback
     'feedback', 'feedback_recibido',
-    // Bloqueo
-    'blocked', 'block_reason', 'block_category', 'block_previous_state',
     // General
     'observaciones', 'aun_trabaja',
-    // GH3.27 nuevos campos — requieren columnas en Excel: LISTA_RECOLECCION,
-    // EVAL_BATERIA, EVAL_TECLADO, EVAL_TOUCHPAD, EVAL_ESTETICO
+    // Evaluación física y motor RAEE
     'lista_recoleccion', 'eval_bateria', 'eval_teclado', 'eval_touchpad', 'eval_estetico',
-    // GH3.28: Motor RAEE — columnas creadas en Excel Maestro GH3.28
+    // Motor RAEE — columnas en Excel Maestro
     'recomendacion_raee', 'motivo_raee', 'motor_raee_version', 'fecha_evaluacion_raee',
-    'usuario_evaluacion_raee',  // GH3.29
+    'usuario_evaluacion_raee',
   ];
 
   // Campos requeridos (no pueden ser null/vacío al escribir)
@@ -600,11 +606,9 @@ const WriteContract = (() => {
     acta_firmada:                'boolean',
     acta_entrega_url:            'string',
     evidencia_adjunta:           'boolean',
-    blocked:                     'boolean',
     feedback:                    'number',
     fecha_asignacion:            'date',
     fecha_envio:                 'date',
-    fecha_entrega:               'date',
     fecha_envio_acta:            'date',
     fecha_firma_acta:            'date',
     fecha_solicitud_devolucion:  'date',

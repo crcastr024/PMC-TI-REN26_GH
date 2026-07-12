@@ -37,14 +37,14 @@ const ExcelMapper = (() => {
       // Sólo cast a false si la columna es conocidamente booleana
       const boolCols = ['ACTA_ENVIADA','ACTA_FIRMADA','ES_BACKUP','FEEDBACK_RECIBIDO',
         'EVIDENCIA_ADJUNTA','BLOCKED','AUNTRABAJA','AUN_TRABAJA',
-        '_DELETED','DEVUELTO','FEEDBACK_ENVIADO'];
+        '_DELETED','FEEDBACK_ENVIADO'];
       if (boolCols.some(b => colName && colName.toUpperCase().includes(b.replace('_','')))) return false;
     }
     // Número
     if (!isNaN(Number(s)) && s !== '') {
       const n = Number(s);
       // Solo cast numérico para columnas claramente numéricas
-      const numCols = ['ID','FEEDBACK','_VERSION'];
+      const numCols = ['ID','CALIFICACION_FEEDBACK','VERSION'];
       if (numCols.some(c => colName && colName.toUpperCase() === c)) return n;
     }
     return s;
@@ -473,12 +473,19 @@ window.WriteQueue = WriteQueue;
 // ────────────────────────────────────────────────────────────────────
 // GH3.31 BLOQUE 1: Mapa de aliases campo_interno → columna_excel
 // Permite que campos con nombre histórico distinto lleguen correctamente al Excel.
+// GH3.41.2: FIELD_COLUMN_ALIASES — contrato oficial de columnas Excel
+// Mapea: nombre_campo_js → nombre_columna_excel
 const FIELD_COLUMN_ALIASES = {
-  'alistamiento':     'fecha_alistamiento',
-  'fecha_envio_acta': 'fecha_acta_enviada',
-  'fecha_firma_acta': 'fecha_acta_firmada',
-  'observaciones':    'observacion',
-  'estado_devolucion':'devuelto',
+  // Fechas con nombre distinto
+  'alistamiento':      'fecha_alistamiento',
+  'fecha_envio_acta':  'fecha_acta_enviada',
+  'fecha_firma_acta':  'fecha_acta_firmada',
+  // GH3.41.2: actualizados al nuevo contrato Excel
+  'estado':            'estado_renovacion',
+  'registro':          'nivel_usuario',
+  'observaciones':     'observaciones_generales',
+  'feedback':          'calificacion_feedback',
+  'nombre_archivo':    'nombre_archivo_acta',
 };
 
 const WorkbookWriter = (() => {
@@ -572,9 +579,9 @@ const WorkbookWriter = (() => {
       });
 
       // Campos de control automáticos: _VERSION += 1, _UPDATED_AT, _UPDATED_BY
-      const versionIdx = headers.findIndex(h => String(h).trim().toUpperCase() === '_VERSION');
-      const updAtIdx   = headers.findIndex(h => String(h).trim().toUpperCase() === '_UPDATED_AT');
-      const updByIdx   = headers.findIndex(h => String(h).trim().toUpperCase() === '_UPDATED_BY');
+      const versionIdx = headers.findIndex(h => String(h).trim().toUpperCase() === 'VERSION');
+      const updAtIdx   = headers.findIndex(h => String(h).trim().toUpperCase() === 'UPDATED_AT');
+      const updByIdx   = headers.findIndex(h => String(h).trim().toUpperCase() === 'UPDATED_BY');
 
       if (versionIdx >= 0) {
         // GH3.39.2 P1: record ya declarado arriba — no redeclarar

@@ -1242,16 +1242,6 @@ const ConfigService = (() => {
     return prefix + String(estado).toLowerCase().replace(/[\s/]+/g, '-');
   };
 
-  // ── 7. Registros de nivel de renovación (Registro/Nivel) — 5 valores reales
-  // GH3.40.2 Task 6: catálogo oficial de perfil de usuario
-  const PERFIL_OPTS = [
-    'Administrativo',
-    'Operativo',
-    'Comercial',
-    'Dirección',
-    'TI',
-    'Otro',
-  ];
 
   const NIVELES_REGISTRO = [
     'Nivel 1 - Analista / Operativo (Asistentes, recepción, apoyo administrativo y cargos operativos).',
@@ -1273,7 +1263,6 @@ const ConfigService = (() => {
     DISPOSICION_FINAL_OPTS,
     ESTADO_ENTREGA_EQ_NVO,
     CATEGORIAS_BLOQUEO,
-    PERFIL_OPTS,
     NIVELES_REGISTRO,
 
     // Helpers UI
