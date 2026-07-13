@@ -602,6 +602,7 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Procesador</label><input type="text" class="form-input" id="m-eq_nvo_procesador" value="' + esc(eqNvo.procesador) + '"></div>' +
       '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" class="form-input" id="m-eq_nvo_ram" value="' + esc(eqNvo.ram) + '"></div>' +
       '<div class="form-group"><label class="form-label">Disco</label><input type="text" class="form-input" id="m-eq_nvo_disco" value="' + esc(eqNvo.disco) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_nvo_so" value="' + esc(u.eq_nvo_so) + '" placeholder="Ej: Windows 11 Pro"></div>' +
       '<div class="form-group full"><label class="form-label">Dato maestro SAP (AF) <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="text" class="form-input" id="m-eq_nvo_af" value="' + esc(eqNvo.af) + '" placeholder="Código AF / dato maestro SAP"></div>' +
     '</div></div>' +
     
@@ -610,14 +611,12 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Estado proceso REN26</label><select class="form-select" id="m-estado">' + estadoOpts + '</select></div>' +
       // F3.6 · estado_entrega_equipo_nuevo: entidad física independiente del estado del proceso
       '<div class="form-group"><label class="form-label">Estado entrega equipo nuevo <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><select class="form-select" id="m-estado_entrega_equipo_nuevo">' + entregaEqNvoOpts + '</select></div>' +
-      '<div class="form-group"><label class="form-label">Alistamiento</label><input type="text" class="form-input" id="m-alistamiento" value="' + esc(u.alistamiento) + '" placeholder="Notas de alistamiento"></div>' +
+      '<div class="form-group"><label class="form-label">Notas de alistamiento</label><input type="text" class="form-input" id="m-notas_alistamiento" value="' + esc(u.notas_alistamiento) + '" placeholder="Notas de alistamiento"></div>' +
       '<div class="form-group"><label class="form-label">Caso envío (mensajería)</label><input type="text" class="form-input" id="m-caso_envio" value="' + esc(u.caso_envio) + '" placeholder="Guía de mensajería"></div>' +
-      '<div class="form-group"><label class="form-label">F. Asignación</label><input type="date" class="form-input" id="m-fecha_asignacion" value="' + esc(u.fecha_asignacion) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. Envío</label><input type="date" class="form-input" id="m-fecha_envio" value="' + esc(u.fecha_envio) + '"></div>' +
+      '<div class="form-group"><label class="form-label">F. Entrega</label><input type="date" class="form-input" id="m-fecha_entrega" value="' + esc(u.fecha_entrega) + '"></div>' +
       '<div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
-        '<div><label class="form-check"><input type="checkbox" id="m-acta_enviada"' + (u.acta_enviada ? ' checked' : '') + '> Acta de entrega enviada</label></div>' +
         '<div class="form-group" style="margin:0"><label class="form-label">F. envío acta</label><input type="date" class="form-input" id="m-fecha_envio_acta" value="' + esc(u.fecha_envio_acta) + '"></div>' +
-        '<div><label class="form-check"><input type="checkbox" id="m-acta_firmada"' + (u.acta_firmada ? ' checked' : '') + '> Acta firmada</label></div>' +
         '<div><label class="form-check"><input type="checkbox" id="m-feedback_recibido"' + (u.feedback_recibido ? ' checked' : '') + '> Feedback recibido del usuario</label></div>' +
         '<div class="form-group"><label class="form-label">URL del acta (SharePoint)</label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url || '') + '" placeholder="https://app.pandadoc.com/..."></div>' +
         '<div class="form-group" style="margin:0"><label class="form-label">F. firma acta</label><input type="date" class="form-input" id="m-fecha_firma_acta" value="' + esc(u.fecha_firma_acta) + '"></div>' +
@@ -778,8 +777,8 @@ function saveRecord() {
   const fields = [
     'empresa','nombre','cedula','usuario','correo','ciudad','ceco','proyecto','cargo','gerente','registro',
     'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname','eq_ant_procesador','eq_ant_memoria','eq_ant_disco','eq_ant_so',
-    'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname','eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco',
-    'tecnico','estado','estado_entrega_equipo_nuevo','alistamiento','caso_envio','fecha_asignacion','fecha_envio','fecha_envio_acta','fecha_firma_acta',
+    'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname','eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco','eq_nvo_so',
+    'tecnico','estado','estado_entrega_equipo_nuevo','notas_alistamiento','caso_envio','fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta',
     'estado_devolucion','disposicion_final','fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega',
     // GH3.28: campos evaluación física y motor RAEE
     'lista_recoleccion','eval_bateria','eval_teclado','eval_touchpad','eval_estetico'
@@ -798,8 +797,6 @@ function saveRecord() {
       changes[f] = val;
     }
   });
-  changes.acta_enviada    = $('m-acta_enviada').checked;
-  changes.acta_firmada    = $('m-acta_firmada').checked;
   changes.acta_entrega_url = ($('m-acta_entrega_url') ? $('m-acta_entrega_url').value.trim() : '') || '';
   // F3.6 · recibido_bodega y equipo_reasignable se derivan de los selects
   // (única fuente de verdad — no son checkboxes manuales)
@@ -808,14 +805,8 @@ function saveRecord() {
   changes.equipo_devuelto    = changes.recibido_bodega;
   const fbStars = $('m-feedback-stars');
   changes.feedback = fbStars ? parseInt(fbStars.dataset.value || '0') : 0;
-  changes.es_backup = changes.estado === 'BACKUP';
-  // GH A1: clasificacion_obsolescencia — calculado por ObsolescenceService al cargar.
-  // El valor está en memoria (u.clasificacion_obsolescencia). Se envía a Excel en cada save
-  // para mantener CLASIFICACION_OBSOLESCENCIA sincronizado en el Excel Maestro.
-  changes.clasificacion_obsolescencia = u.clasificacion_obsolescencia || '';
   // GH3.45: campos sin control forEach — asignación explícita
   changes.nombre_archivo   = ($('m-nombre_archivo')   ? $('m-nombre_archivo').value.trim()   : '') || (u.nombre_archivo   || '');
-  changes.feedback_recibido= $('m-feedback_recibido')? $('m-feedback_recibido').checked : (u.feedback_recibido|| false);
   
   // Persistir vía DataService (registra auditoría automáticamente)
   try {

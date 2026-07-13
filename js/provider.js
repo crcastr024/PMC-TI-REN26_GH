@@ -477,7 +477,6 @@ window.WriteQueue = WriteQueue;
 // Mapea: nombre_campo_js → nombre_columna_excel
 const FIELD_COLUMN_ALIASES = {
   // Fechas con nombre distinto
-  'alistamiento':      'fecha_alistamiento',
   'fecha_envio_acta':  'fecha_acta_enviada',
   'fecha_firma_acta':  'fecha_acta_firmada',
   // GH3.41.2: actualizados al nuevo contrato Excel

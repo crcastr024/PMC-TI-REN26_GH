@@ -546,20 +546,18 @@ const WriteContract = (() => {
   ]);
 
   // Campos de solo lectura (vienen del Excel/SAP — no se editan en el Dashboard)
-  // QA-02R: READONLY_FIELDS — solo campos sin control UI
-  // Principio: visible = editable. Solo se protegen datos sin control en el formulario.
+  // QA-03: READONLY_FIELDS — columnas sin control UI en el nuevo Excel
   const READONLY_FIELDS = new Set([
     'id',                      // clave interna — nunca editar
-    'nombre_sap',              // SAP — sin control en formulario
     'fecha_devolucion',        // Bodega — sin control en formulario
     'observaciones_devolucion',// notas devolución — sin control en formulario
-    'feedback_enviado',        // sistema externo — sin control
   ]);
 
   // Campos sincronizables → SharePoint (whitelist oficial)
-  // QA-02R: ALLOWED_FIELDS — todo campo visible del formulario
-  // Principio: visible = editable = persiste en Excel.
-  // Eliminados: observaciones (OBSERVACIONES_GENERALES), aun_trabaja (AUN_TRABAJA), evidencia_adjunta
+  // QA-03: ALLOWED_FIELDS — alineado al Excel Maestro definitivo
+  // Columnas eliminadas del Excel: CLASIFICACION_OBSOLESCENCIA, ACTA_ENVIADA, ACTA_FIRMADA,
+  // FECHA_ALISTAMIENTO, FECHA_ASIGNACION, FEEDBACK_RECIBIDO, ES_BACKUP
+  // Columnas nuevas en Excel: EQ_NVO_SO, NOTAS_ALISTAMIENTO, FECHA_ENTREGA
   const ALLOWED_FIELDS = [
     // Sección 1 — Colaborador
     'empresa', 'nombre', 'cedula', 'usuario', 'correo', 'ciudad', 'ceco', 'proyecto',
@@ -568,17 +566,17 @@ const WriteContract = (() => {
     'eq_ant_tipo', 'eq_ant_marca', 'eq_ant_modelo', 'eq_ant_serial', 'eq_ant_af',
     'eq_ant_placa', 'eq_ant_hostname', 'eq_ant_procesador',
     'eq_ant_memoria', 'eq_ant_disco', 'eq_ant_so',
-    // Sección 4 — Equipo nuevo
+    // Sección 4 — Equipo nuevo (+ eq_nvo_so nuevo en este Excel)
     'eq_nvo_tipo', 'eq_nvo_marca', 'eq_nvo_modelo', 'eq_nvo_serial', 'eq_nvo_af',
     'eq_nvo_placa', 'eq_nvo_hostname', 'eq_nvo_procesador', 'eq_nvo_ram', 'eq_nvo_disco',
-    // Sección 5 — Proceso
+    'eq_nvo_so',
+    // Sección 5 — Proceso REN26
     'tecnico', 'estado', 'estado_entrega_equipo_nuevo',
-    'alistamiento', 'caso_envio',
-    'fecha_asignacion', 'fecha_envio',
+    'notas_alistamiento',
+    'caso_envio', 'fecha_envio', 'fecha_entrega',
     'fecha_envio_acta', 'fecha_firma_acta',
-    'acta_enviada', 'acta_firmada', 'acta_entrega_url',
-    'nombre_archivo',
-    'feedback', 'feedback_recibido',
+    'acta_entrega_url', 'nombre_archivo',
+    'feedback',
     // Sección 7 — Devolución
     'estado_devolucion', 'disposicion_final',
     'fecha_solicitud_devolucion', 'fecha_transito', 'fecha_recepcion_bodega',
@@ -587,33 +585,29 @@ const WriteContract = (() => {
     'eval_bateria', 'eval_teclado', 'eval_touchpad', 'eval_estetico',
     'recomendacion_raee', 'motivo_raee', 'motor_raee_version', 'fecha_evaluacion_raee',
     'usuario_evaluacion_raee',
-    // Calculados que persisten
-    'es_backup', 'clasificacion_obsolescencia',
   ];
 
   // Campos requeridos (no pueden ser null/vacío al escribir)
   const REQUIRED_FIELDS = new Set(['tecnico', 'estado', 'empresa', 'cedula', 'nombre']);
 
   // Tipos esperados por campo (para validación de tipo)
+  // QA-03: FIELD_TYPES — alineado al Excel Maestro definitivo
   const FIELD_TYPES = {
     estado:                      'choice',
     estado_entrega_equipo_nuevo: 'choice',
     disposicion_final:           'choice',
     tecnico:                     'choice',
-    es_backup:                   'boolean', // GH A1: persistido en ES_BACKUP
-    clasificacion_obsolescencia: 'string',  // GH A1: calculado, persistido en CLASIFICACION_OBSOLESCENCIA
-    acta_enviada:                'boolean',
-    acta_firmada:                'boolean',
     acta_entrega_url:            'string',
-    evidencia_adjunta:           'boolean',
     feedback:                    'number',
-    fecha_asignacion:            'date',
     fecha_envio:                 'date',
     fecha_envio_acta:            'date',
     fecha_firma_acta:            'date',
     fecha_solicitud_devolucion:  'date',
     fecha_transito:              'date',
     fecha_recepcion_bodega:      'date',
+    fecha_entrega:               'date',   // QA-03: restaurado en nuevo Excel
+    notas_alistamiento:          'string', // QA-03: reemplaza fecha_alistamiento
+    eq_nvo_so:                   'string', // QA-03: nuevo en Excel
   };
 
   // Choices válidos por campo
