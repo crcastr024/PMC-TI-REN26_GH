@@ -117,6 +117,14 @@
   padding: 6px 14px; border-radius: var(--r-pill);
   font-size: 11.5px; font-weight: 600; color: var(--text-2);
 }
+/* QA-04: LED de sincronización */
+.tb-status { gap: 6px; cursor: default; }
+.tb-led { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tb-led.led-ok   { background: var(--green, #22c55e); box-shadow: 0 0 0 2px rgba(34,197,94,.25); }
+.tb-led.led-warn { background: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,.25); }
+.tb-led.led-err  { background: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,.25); }
+.tb-led-time { font-size: 11px; font-weight: 600; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
 .tb-status-dot {
   width: 8px; height: 8px; border-radius: 50%;
   background: var(--green-bright); position: relative;
@@ -817,3 +825,49 @@
   position: relative;
   z-index: 10;
 }
+
+/* QA-04 Task 1 — Sidebar colapsable */
+.app.sb-collapsed { grid-template-columns: 60px 1fr; }
+.sidebar { transition: width 0.22s ease; overflow: hidden; }
+.sidebar.collapsed { width: 60px; min-width: 60px; }
+.sidebar.collapsed .sb-head { padding: 0; justify-content: center; }
+.sidebar.collapsed .sb-logo { display: none; }
+.sidebar.collapsed .sb-section-title { display: none; }
+.sidebar.collapsed .sb-item { padding: 10px 0; justify-content: center; gap: 0; }
+.sidebar.collapsed .sb-item > span:not(.sb-badge) { display: none; }
+.sidebar.collapsed .sb-item .sb-icon { margin: 0; }
+.sidebar.collapsed .sb-badge { position: absolute; top: 4px; right: 6px; min-width: 16px; height: 16px; font-size: 9px; }
+.sidebar.collapsed .sb-foot { padding: 10px 0; justify-content: center; }
+.sidebar.collapsed .sb-user-info { display: none; }
+.sidebar.collapsed .sb-avatar { margin: 0; }
+.sidebar.collapsed .sb-spacer { flex: 1; }
+/* Botón hamburguesa en topbar */
+.tb-toggle { display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+  color: var(--text-2); transition: background 0.15s, color 0.15s; background: transparent; border: none; }
+.tb-toggle:hover { background: var(--bg-card-hover); color: var(--text-1); }
+.tb-toggle svg { width: 20px; height: 20px; }
+
+/* QA-04 Task 5 — Filtros del panel ejecutivo */
+.panel-filter-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 12px 28px 10px; background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10;
+}
+.panel-filter-title { font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .8px; margin-right: 4px; }
+.panel-filter-sel {
+  padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg-card); color: var(--text-1);
+  font-size: 12px; cursor: pointer; outline: none;
+  transition: border-color 0.15s;
+}
+.panel-filter-sel:focus { border-color: var(--accent); }
+.panel-filter-clear {
+  padding: 5px 12px; background: transparent; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 12px; cursor: pointer; color: var(--text-2);
+  transition: all 0.15s;
+}
+.panel-filter-clear:hover { background: var(--bg-card-hover); border-color: var(--accent); color: var(--accent); }
+.panel-filter-count { font-size: 11px; color: var(--text-3); margin-left: 4px; }
+.panel-filter-bar.has-filters .panel-filter-clear { color: var(--accent); border-color: var(--accent); font-weight: 600; }

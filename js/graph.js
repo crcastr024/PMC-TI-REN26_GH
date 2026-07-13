@@ -380,7 +380,6 @@ const SP_FIELD_MAP = {
   'Bloqueado':                'blocked',
   'CategoriaBloqueo':         'block_category',
   'EstadoAnteriorBloqueo':    'block_previous_state',
-  'EsBackup':                 'es_backup',
   // ── Metadatos SP ─────────────────────────────────────────────
   'id':                       'sp_item_id',   // ID del ítem en SP (para PATCH en F7.4)
 };

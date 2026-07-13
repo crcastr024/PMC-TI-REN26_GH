@@ -7,7 +7,7 @@ function renderResumen() {
   // GH3.39.2 P2/P3: ÚNICA fuente de verdad — calculateProjectMetrics()
   var m = window.calculateProjectMetrics ? calculateProjectMetrics() : {
     totalEquipos: (window.USERS||[]).length,
-    totalColaboradores: (window.USERS||[]).filter(function(u){return !u.es_backup;}).length,
+    totalColaboradores: (window.USERS||[]).filter(function(u){return !isBackup(u);}).length,
     totalBackups: 0, hbt: 0, hgs: 0, pendientes: 0, entregados: 0, enProceso: 0, estados: {}
   };
 
@@ -45,7 +45,13 @@ function renderResumen() {
   
   $('b-usuarios').textContent = _allCount;
   const provName = (DataService.providerName ? DataService.providerName() : 'Mock');
-  $('tb-sync').textContent = provName + ' · ' + new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  // QA-04: LED + hora solamente
+  var _ledEl = document.getElementById('sync-led');
+  var _timeEl = document.getElementById('tb-sync');
+  if (_timeEl) _timeEl.textContent = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  if (_ledEl) { _ledEl.classList.remove('led-ok','led-warn','led-err'); _ledEl.classList.add('led-ok'); }
+  var _wrap = document.getElementById('tb-sync-wrap');
+  if (_wrap) _wrap.title = 'Última sincronización: ' + new Date().toLocaleTimeString('es-CO') + ' · ' + provName;
   $('footer-date').textContent = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   $('footer-stats').textContent = _allCount + ' equipos · ' + (window.calculateProjectMetrics ? calculateProjectMetrics().totalColaboradores : uniqueUsers()) + ' usuarios';
   // GH3.38 FC-07: actualizar identidad del usuario autenticado
@@ -75,7 +81,7 @@ function renderEmpresaChart() {
     const all = DataService.getRenewals({ empresa: emp });
     return {
       label: emp, total: all.length,
-      backup: all.filter(u => u.es_backup).length,
+      backup: all.filter(u => isBackup(u)).length,
       // GH3.22 P8: estados canónicos + aliases legacy para consistencia
       entregados: all.filter(u => {
         const s = u.estado || '';
@@ -216,14 +222,14 @@ function renderUsuarios() {
     return;
   }
   $('tbl-body').innerHTML = data.map(u => {
-    const estCls = u.es_backup ? 'badge-backup' : ConfigService.badgeClass(u.estado || 'pendiente');
+    const estCls = isBackup(u) ? 'badge-backup' : ConfigService.badgeClass(u.estado || 'pendiente');
     const tipoCls = (u.tipo || '').toUpperCase() === 'TORRE' ? 'badge-torre' : 'badge-portatil';
     const recentCls = (state.settings.highlight && state.recentlyUpdatedId === u.id) ? ' class="recently-updated"' : '';
     return '<tr' + recentCls + ' onclick="openEditModal(' + u.id + ')">' +
       '<td class="td-id">' + u.id + '</td>' +
       '<td><span class="badge badge-' + u.empresa.toLowerCase() + '">' + esc(u.empresa) + '</span></td>' +
       '<td><span class="badge ' + tipoCls + '">' + esc(u.tipo || '—') + '</span></td>' +
-      '<td class="td-strong">' + esc(u.nombre || (u.es_backup ? 'BACKUP ' + u.empresa : '—')) + '</td>' +
+      '<td class="td-strong">' + esc(u.nombre || (isBackup(u) ? 'BACKUP ' + u.empresa : '—')) + '</td>' +
       '<td class="td-soft">' + esc(u.ciudad || '—') + '</td>' +
       '<td class="td-soft" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(u.proyecto) + '">' + esc(u.proyecto || '—') + '</td>' +
       '<td class="td-soft">' + esc(formatEquipo(u.equipoNuevo)) + '</td>' +
@@ -397,7 +403,7 @@ function renderCiudades() {
     const c = u.ciudad ? u.ciudad : 'Sin ciudad';
     if (!cityMap[c]) cityMap[c] = { total: 0, entregados: 0, backup: 0 };
     cityMap[c].total++;
-    if (u.es_backup) cityMap[c].backup++;
+    if (isBackup(u)) cityMap[c].backup++;
     if (u.estado === 'Entregado' || u.estado === 'Completado') cityMap[c].entregados++;
   });
   const sorted = Object.entries(cityMap).sort((a,b) => b[1].total - a[1].total);
@@ -518,7 +524,7 @@ function openEditModal(id) {
   _currentRecord = u;  // GH3.28
   if (!u) return;
   state.editingId = id;
-  $('modal-eyebrow').textContent = u.es_backup ? 'BACKUP ' + u.empresa : (u.empresa + ' · ' + (u.tipo || 'EQUIPO') + ' · ID ' + u.id);
+  $('modal-eyebrow').textContent = isBackup(u) ? 'BACKUP ' + u.empresa : (u.empresa + ' · ' + (u.tipo || 'EQUIPO') + ' · ID ' + u.id);
   $('modal-title').textContent = (u.nombre || ('BACKUP ' + u.empresa)) + (u.serial ? ' · ' + u.serial : '');
   
   const projects = Array.from(new Set(DataService.getRenewals({}).map(x => x.proyecto).filter(p => p))).sort();
@@ -562,6 +568,7 @@ function openEditModal(id) {
     '</div>' +
 '<div class="form-section"><div class="form-section-head">1 · Datos del usuario</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Empresa</label><select class="form-select" id="m-empresa"><option' + (u.empresa === 'HBT' ? ' selected' : '') + '>HBT</option><option' + (u.empresa === 'HGS' ? ' selected' : '') + '>HGS</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Nivel del usuario</label><select class="form-select" id="m-registro">' + nivelOpts + '</select></div>' +
       '<div class="form-group full"><label class="form-label">Nombre completo</label><input type="text" class="form-input" id="m-nombre" value="' + esc(u.nombre) + '"></div>' +
       '<div class="form-group"><label class="form-label">Cédula</label><input type="text" class="form-input" id="m-cedula" value="' + esc(u.cedula) + '"></div>' +
       '<div class="form-group"><label class="form-label">Usuario (login)</label><input type="text" class="form-input" id="m-usuario" value="' + esc(u.usuario) + '"></div>' +
@@ -571,38 +578,26 @@ function openEditModal(id) {
       '<div class="form-group full"><label class="form-label">Proyecto</label><select class="form-select" id="m-proyecto">' + projectOpts + '</select></div>' +
       '<div class="form-group"><label class="form-label">Cargo</label><input type="text" class="form-input" id="m-cargo" value="' + esc(u.cargo) + '"></div>' +
       '<div class="form-group"><label class="form-label">Gerente directo</label><input type="text" class="form-input" id="m-gerente" value="' + esc(u.gerente) + '"></div>' +
-      '<div class="form-group full"><label class="form-label">Nivel del usuario</label><select class="form-select" id="m-registro">' + nivelOpts + '</select></div>' +
     '</div></div>' +
     
-    '<div class="form-section"><div class="form-section-head">2 · Equipo anterior</div><div class="form-grid-3">' +
+    '<div class="form-section"><div class="form-section-head">2 · Equipo anterior</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Tipo</label><input type="text" class="form-input" id="m-eq_ant_tipo" value="' + esc(u.eq_ant_tipo) + '" placeholder="PORTATIL / TORRE"></div>' +
       '<div class="form-group"><label class="form-label">Marca</label><input type="text" class="form-input" id="m-eq_ant_marca" value="' + esc(u.eq_ant_marca) + '"></div>' +
       '<div class="form-group"><label class="form-label">Modelo</label><input type="text" class="form-input" id="m-eq_ant_modelo" value="' + esc(u.eq_ant_modelo) + '"></div>' +
-      '<div class="form-group"><label class="form-label">Activo Fijo (AF)</label><input type="text" class="form-input" id="m-eq_ant_af" value="' + esc(u.eq_ant_af) + '" placeholder="Código AF"></div>' +
       '<div class="form-group"><label class="form-label">Serial</label><input type="text" class="form-input" id="m-eq_ant_serial" value="' + esc(u.eq_ant_serial) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Activo Fijo (AF)</label><input type="text" class="form-input" id="m-eq_ant_af" value="' + esc(u.eq_ant_af) + '" placeholder="Código AF"></div>' +
       '<div class="form-group"><label class="form-label">Placa</label><input type="text" class="form-input" id="m-eq_ant_placa" value="' + esc(u.eq_ant_placa) + '"></div>' +
       '<div class="form-group"><label class="form-label">Hostname</label><input type="text" class="form-input" id="m-eq_ant_hostname" value="' + esc(u.eq_ant_hostname) + '"></div>' +
       '<div class="form-group"><label class="form-label">Procesador</label><input type="text" class="form-input" id="m-eq_ant_procesador" value="' + esc(u.eq_ant_procesador) + '"></div>' +
       '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" list="ram-opts" class="form-input" id="m-eq_ant_memoria" value="' + esc(u.eq_ant_memoria) + '"></div>' +
       '<div class="form-group"><label class="form-label">Disco duro (ant.)</label><input type="text" class="form-input" id="m-eq_ant_disco" value="' + esc(u.eq_ant_disco) + '"></div>' +
-      '<div class="form-group"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_ant_so" value="' + esc(u.eq_ant_so) + '"></div>' +
+      '<div class="form-group full"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_ant_so" value="' + esc(u.eq_ant_so) + '"></div>' +
     '</div>' +
       renderObsolescencePanelHTML(u) +
     '</div>' +
     
-    '<div class="form-section"><div class="form-section-head">3 · Evaluación del equipo anterior</div>' +
-    '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);padding:8px 0 4px">Evaluacion fisica del equipo</div>' +
-    '<div class="form-grid">' +
-      '<div class="form-group"><label class="form-label">Bateria</label><select class="form-select" id="m-eval_bateria" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_bateria==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_bateria==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_bateria==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_bateria==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Teclado</label><select class="form-select" id="m-eval_teclado" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_teclado==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_teclado==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_teclado==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_teclado==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Touchpad</label><select class="form-select" id="m-eval_touchpad" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_touchpad==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_touchpad==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_touchpad==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_touchpad==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Estetico</label><select class="form-select" id="m-eval_estetico" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_estetico==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_estetico==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_estetico==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_estetico==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-    '</div>' +
-    '<div id="m-recomendacion-display" style="margin-top:8px;padding:8px 14px;border-radius:var(--r-sm);background:#E8F5E9;color:#2E7D32;font-size:12px;font-weight:700;display:none"></div>' +
-    '<div id="m-motivo-raee-display" style="margin-top:4px;padding:4px 14px;font-size:11px;color:#777;display:none"></div>' +
-    '</div>' +
     
-    '<div class="form-section"><div class="form-section-head">4 · Equipo nuevo asignado</div><div class="form-grid-3">' +
+    '<div class="form-section"><div class="form-section-head">3 · Equipo nuevo asignado</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="m-eq_nvo_tipo"><option value="">—</option><option' + ((eqNvo.tipo || '').toUpperCase() === 'PORTATIL' ? ' selected' : '') + '>PORTATIL</option><option' + ((eqNvo.tipo || '').toUpperCase() === 'TORRE' ? ' selected' : '') + '>TORRE</option></select></div>' +
       '<div class="form-group"><label class="form-label">Marca</label><input type="text" class="form-input" id="m-eq_nvo_marca" value="' + esc(eqNvo.marca) + '"></div>' +
       '<div class="form-group"><label class="form-label">Modelo</label><input type="text" class="form-input" id="m-eq_nvo_modelo" value="' + esc(eqNvo.modelo) + '"></div>' +
@@ -612,11 +607,10 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Procesador</label><input type="text" class="form-input" id="m-eq_nvo_procesador" value="' + esc(eqNvo.procesador) + '"></div>' +
       '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" list="ram-opts" class="form-input" id="m-eq_nvo_ram" value="' + esc(eqNvo.ram) + '"></div>' +
       '<div class="form-group"><label class="form-label">Disco</label><input type="text" class="form-input" id="m-eq_nvo_disco" value="' + esc(eqNvo.disco) + '"></div>' +
-      '<div class="form-group"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_nvo_so" value="' + esc(u.eq_nvo_so) + '" placeholder="Ej: Windows 11 Pro"></div>' +
+      '<div class="form-group full"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_nvo_so" value="' + esc(u.eq_nvo_so) + '" placeholder="Ej: Windows 11 Pro"></div>' +
       '<div class="form-group full"><label class="form-label">Dato maestro SAP (AF) <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="text" class="form-input" id="m-eq_nvo_af" value="' + esc(eqNvo.af) + '" placeholder="Código AF / dato maestro SAP"></div>' +
     '</div></div>' +
-    
-    '<div class="form-section"><div class="form-section-head">5 · Estado y seguimiento</div><div class="form-grid">' +
+    '<div class="form-section"><div class="form-section-head">4 · Estado y seguimiento</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Técnico asignado</label><select class="form-select" id="m-tecnico">' + '<option value="">— Sin asignar —</option>' + (window.CONFIG.technicians || []).map(function(t){ return '<option value="' + esc(t) + '"' + ((u.tecnico||'').toLowerCase()===t.toLowerCase()?' selected':'') + '>' + esc(t) + '</option>'; }).join('') + '</select></div>' +
       '<div class="form-group"><label class="form-label">Estado proceso REN26</label><select class="form-select" id="m-estado">' + estadoOpts + '</select></div>' +
       // F3.6 · estado_entrega_equipo_nuevo: entidad física independiente del estado del proceso
@@ -635,7 +629,8 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo) + '" placeholder="Ej: Acta_Juan_Perez.pdf"></div>' +
     '</div></div>' +
     
-'<div class="form-section" id="seccion-devolucion"><div class="form-section-head">6 · Devolución del equipo anterior</div>' +
+    
+'<div class="form-section" id="seccion-devolucion"><div class="form-section-head">5 · Devolución del equipo anterior</div>' +
     '<div style="padding:8px 0 10px;border-bottom:1px dashed var(--border);margin-bottom:10px">' +
             '<label class="form-check"><input type="checkbox" id="m-lista_recoleccion"' + (u.lista_recoleccion ? ' checked' : '') + '> Equipo agregado a lista de recoleccion</label>' +
     '</div>' +
@@ -648,6 +643,18 @@ function openEditModal(id) {
       '<p class="full" style="font-size:11px;color:var(--text-3);margin:0">La disposición final queda registrada en auditoría (usuario, fecha, valor anterior/nuevo) al guardar.</p>' +
     '</div>' +
   '</div>' +
+    
+    '<div class="form-section"><div class="form-section-head">6 · Evaluación del equipo anterior</div>' +
+    '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);padding:8px 0 4px">Evaluacion fisica del equipo</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-group"><label class="form-label">Bateria</label><select class="form-select" id="m-eval_bateria" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_bateria==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_bateria==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_bateria==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_bateria==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Teclado</label><select class="form-select" id="m-eval_teclado" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_teclado==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_teclado==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_teclado==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_teclado==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Touchpad</label><select class="form-select" id="m-eval_touchpad" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_touchpad==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_touchpad==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_touchpad==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_touchpad==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Estetico</label><select class="form-select" id="m-eval_estetico" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_estetico==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_estetico==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_estetico==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_estetico==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+    '</div>' +
+    '<div id="m-recomendacion-display" style="margin-top:8px;padding:8px 14px;border-radius:var(--r-sm);background:#E8F5E9;color:#2E7D32;font-size:12px;font-weight:700;display:none"></div>' +
+    '<div id="m-motivo-raee-display" style="margin-top:4px;padding:4px 14px;font-size:11px;color:#777;display:none"></div>' +
+    '</div>' +
     
 '<div class="form-section" id="seccion-feedback"><div class="form-section-head">7 · Calificación</div>' +
   '<div style="text-align:center;padding:16px 0 8px">' +
@@ -1131,40 +1138,58 @@ window.ejecutarGuardado = function() {
 };
 
 
-function openCreateModal() {
-  // F7.0.1 · DataService.createRenewal calcula maxId internamente — no leer window.USERS directo
-  const allForMax = DataService.getRenewals({});
-  const maxId = allForMax.length > 0 ? Math.max.apply(null, allForMax.map(u => u.id)) : 0;
-  const newRec = {
-    id: maxId + 1, es_backup: false,
-    empresa: 'HBT', nombre: '', cedula: '', usuario: '', correo: '',
-    ciudad: '', ceco: '', proyecto: '', cargo: '', gerente: '', nivel: '',
-    eq_ant_tipo: '', eq_ant_marca: '', eq_ant_modelo: '', eq_ant_serial: '',
-    eq_ant_placa: '', eq_ant_hostname: '', eq_ant_procesador: '', eq_ant_memoria: '',
-    eq_ant_so: '', eq_ant_clasificacion: '',
-    tipo: 'PORTATIL', marca: '', modelo: '', serial: '', placa: '', hostname: '',
-    procesador: '', ram: '', disco: '', dato_maestro: 'Pendiente',
-    tecnico: '', estado: 'Pendiente', alistamiento: '', caso_envio: '',
-    fecha_asignacion: '', fecha_envio: '', fecha_entrega: '',
-    fecha_envio_acta: '', fecha_firma_acta: '',
-    feedback: 0,
-    estado_devolucion: '', fecha_solicitud_devolucion: '', fecha_transito: '',
-    fecha_recepcion_bodega: '', recibido_bodega: false, equipo_reasignable: false,
-    equipo_devuelto: false, fecha_devolucion: '',
-    observaciones: '',
-  };
-  // Usar DataService.createRenewal (registra auditoría)
-  let created;
-  try {
-    created = DataService.createRenewal(newRec, state.user);
-  } catch(e) {
-    toast('Error al crear: ' + e.message, 'warning');
-    return;
-  }
-  notify({ level: 'info', category: 'create', title: 'Registro creado', message: 'Nuevo equipo agregado (ID ' + created.id + ')', recordId: created.id });
-  openEditModal(created.id);
+
+// QA-04 Task 1 — Sidebar colapsable
+function toggleSidebar() {
+  var app     = document.querySelector('.app');
+  var sidebar = document.querySelector('.sidebar');
+  if (!app || !sidebar) return;
+  var collapsed = sidebar.classList.toggle('collapsed');
+  app.classList.toggle('sb-collapsed', collapsed);
+  try { localStorage.setItem('sb_state', collapsed ? 'collapsed' : 'expanded'); } catch(e) { /* privado / sin Storage */ }
 }
-window.openCreateModal = openCreateModal;
+window.toggleSidebar = toggleSidebar;
+
+// Restaurar estado del sidebar al cargar
+(function initSidebarState() {
+  try {
+    var state = localStorage.getItem('sb_state');
+    if (state === 'collapsed') {
+      var app     = document.querySelector('.app');
+      var sidebar = document.querySelector('.sidebar');
+      if (app && sidebar) {
+        sidebar.classList.add('collapsed');
+        app.classList.add('sb-collapsed');
+      }
+    }
+  } catch(e) { /* privado / sin Storage */ }
+})();
+
+
+// QA-04 Task 5 — Filtros del panel ejecutivo
+window.PANEL_FILTERS = {};
+function applyPanelFilter(field, value) {
+  window.PANEL_FILTERS = window.PANEL_FILTERS || {};
+  if (value) {
+    window.PANEL_FILTERS[field] = value;
+  } else {
+    delete window.PANEL_FILTERS[field];
+  }
+  if (window.renderPanelEjecutivo) renderPanelEjecutivo();
+}
+window.applyPanelFilter = applyPanelFilter;
+
+function clearPanelFilters() {
+  window.PANEL_FILTERS = {};
+  ['empresa','ciudad','proyecto','tecnico','estado','feedback'].forEach(function(f) {
+    var sel = document.getElementById('pf-' + f);
+    if (sel) { sel.value = ''; sel._populated = false; }
+  });
+  if (window.renderPanelEjecutivo) renderPanelEjecutivo();
+}
+window.clearPanelFilters = clearPanelFilters;
+
+// QA-04: openCreateModal eliminado — REN26 no crea colaboradores
 
 // ═══ BOOT ═══
 // ═══════════════════════════════════════════════════════════════════

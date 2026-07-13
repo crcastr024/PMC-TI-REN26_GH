@@ -810,7 +810,7 @@ const ObsolescenceService = {
   getStats() {
     const stats = { RAEE: 0, Reasignable: 0, 'Revisión manual': 0, total: 0 };
     window.USERS.forEach(r => {
-      if (r.es_backup) return;
+      if (isBackup(r)) return;
       stats.total++;
       const cls = r.estado_eq_ant || 'Revisión manual';
       if (stats[cls] !== undefined) stats[cls]++;
@@ -848,7 +848,7 @@ window.ObsolescenceService = ObsolescenceService;
       try {
         if (window.KPIService) {
           var kt = KPIService.totalRenewals();
-          var manual = (window.USERS || []).filter(function(u){ return !u.es_backup; }).length;
+          var manual = (window.USERS || []).filter(function(u){ return !isBackup(u); }).length;
           if (kt !== manual) issues.push({ module:'KPIs', msg:'totalRenewals mismatch: '+kt+' vs '+manual });
         }
       } catch(e) { issues.push({ module:'KPIs', msg: e.message }); }
@@ -1145,7 +1145,7 @@ const ApprovalService = {
    */
   getQueue() {
     return window.USERS.filter(r =>
-      !r.es_backup &&
+      !isBackup(r) &&
       r.estado === StateMachine.states.PENDIENTE_APROBACION
     );
   },
@@ -1155,7 +1155,7 @@ const ApprovalService = {
    */
   getRejected() {
     return window.USERS.filter(r =>
-      !r.es_backup &&
+      !isBackup(r) &&
       r.estado === StateMachine.states.CORRECCION_REQUERIDA
     );
   },

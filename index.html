@@ -140,14 +140,17 @@
 
   <!-- ════════════════════════ TOPBAR ════════════════════════ -->
   <header class="topbar">
+    <button class="tb-toggle" id="tb-toggle" onclick="toggleSidebar()" title="Contraer/expandir menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="tb-crumb">
       <span class="tb-crumb-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
       <span class="tb-crumb-text">PMC-TI-REN26 · <strong id="crumb-view">Resumen</strong></span>
     </div>
 
-    <div class="tb-status">
-      <span class="tb-status-dot"></span>
-      <span id="tb-sync">Sincronizado</span>
+    <div class="tb-status" id="tb-sync-wrap" title="Última sincronización">
+      <span class="tb-led" id="sync-led"></span>
+      <span class="tb-led-time" id="tb-sync">--:--</span>
     </div>
 
     <!-- F4 · Selector de rol (dev tool) -->
@@ -188,10 +191,7 @@
       <span class="dot-badge" id="notif-dot" style="display:none"></span>
     </button>
 
-    <button class="tb-btn" onclick="openCreateModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Nuevo registro
-    </button>
+    
   </header>
 
   <!-- ════════════════════════ MAIN ════════════════════════ -->
@@ -598,6 +598,34 @@
 
     <!-- ═════ F4 · VISTA: PANEL EJECUTIVO (Visitante) ═════ -->
     <div class="view" id="view-panel">
+    <div class="panel-filter-bar" id="panel-filter-bar">
+      <div class="panel-filter-title">Filtros</div>
+      <select class="panel-filter-sel" id="pf-empresa" onchange="applyPanelFilter('empresa',this.value)">
+        <option value="">Todas las empresas</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-ciudad" onchange="applyPanelFilter('ciudad',this.value)">
+        <option value="">Todas las ciudades</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-proyecto" onchange="applyPanelFilter('proyecto',this.value)">
+        <option value="">Todos los proyectos</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-tecnico" onchange="applyPanelFilter('tecnico',this.value)">
+        <option value="">Todos los técnicos</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-estado" onchange="applyPanelFilter('estado',this.value)">
+        <option value="">Todos los estados</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-feedback" onchange="applyPanelFilter('feedback',this.value)">
+        <option value="">Cualquier feedback</option>
+        <option value="1">★ 1+ estrellas</option>
+        <option value="2">★★ 2+ estrellas</option>
+        <option value="3">★★★ 3+ estrellas</option>
+        <option value="4">★★★★ 4+ estrellas</option>
+        <option value="5">★★★★★ 5 estrellas</option>
+      </select>
+      <button class="panel-filter-clear" onclick="clearPanelFilters()">Limpiar filtros</button>
+      <span class="panel-filter-count" id="pf-count"></span>
+    </div>
       <div class="panel-hero">
         <div class="panel-hero-inner">
           <div class="panel-hero-eyebrow">Panel ejecutivo · PMC-TI-REN26</div>

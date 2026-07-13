@@ -13,8 +13,8 @@
 // ════════════════════════════════════════════════════════════════════
 function calculateProjectMetrics() {
   var all = window.USERS || [];
-  var backups  = all.filter(function(u){ return u.es_backup; });
-  var activos  = all.filter(function(u){ return !u.es_backup; });
+  var backups  = all.filter(function(u){ return isBackup(u); });
+  var activos  = all.filter(function(u){ return !isBackup(u); });
 
   // Totales
   var totalEquipos      = all.length;          // 146
@@ -122,7 +122,7 @@ window.CityNormalizer = CityNormalizer;
 const KPIService = {
   
   calculate(records) {
-    records = (records || []).filter(r => !r.es_backup);
+    records = (records || []).filter(r => !isBackup(r));
     const total = records.length;
     
     const entregados = records.filter(r => {
@@ -179,7 +179,7 @@ const KPIService = {
 
   // Número de colaboradores activos con equipo asignado (excluye backups)
   totalColaboradores() {
-    return (window.USERS || []).filter(function(u){ return !u.es_backup; }).length;
+    return (window.USERS || []).filter(function(u){ return !isBackup(u); }).length;
   },
 
   // Alias de compatibilidad — delega a totalColaboradores()
@@ -450,7 +450,7 @@ const IntegrityService = {
     const issues = [];
     const stats  = {};
 
-    const activos = ren.filter(r => r.es_backup !== true && r.es_backup !== 'SI');
+    const activos = ren.filter(r => !isBackup(r));
     stats.total         = ren.length;
     stats.activos        = activos.length;
     stats.backups        = ren.length - activos.length;

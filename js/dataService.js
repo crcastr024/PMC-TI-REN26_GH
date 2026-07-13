@@ -10,8 +10,6 @@ function normalizeRecord_F3(r) {
   // ── Normalizar estado uppercase → canonical
   r.estado = StateMachine.normalize(r.estado || 'Pendiente');
   
-  // ── Backup flag (boolean)
-  r.es_backup = (r.es_backup === true) || (r.es_backup === 'SI') || r.estado === StateMachine.states.BACKUP;
   
   // ── Cédula como string
   if (r.cedula != null) r.cedula = String(r.cedula);
@@ -729,7 +727,34 @@ window.goViewByRole = goViewByRole;
 
 // ── 4. Panel ejecutivo (renderizado) ───────────────────────────
 function renderPanelEjecutivo() {
-  const real = getReal();
+  // QA-04 Task 5: aplicar filtros globales del panel
+  var _f = window.PANEL_FILTERS || {};
+  var real = getReal().filter(function(u) {
+    if (_f.empresa  && u.empresa  !== _f.empresa)  return false;
+    if (_f.ciudad   && u.ciudad   !== _f.ciudad)   return false;
+    if (_f.proyecto && u.proyecto !== _f.proyecto) return false;
+    if (_f.tecnico  && (u.tecnico || '') !== _f.tecnico) return false;
+    if (_f.estado   && u.estado   !== _f.estado)   return false;
+    if (_f.feedback && (u.feedback || 0) < parseInt(_f.feedback)) return false;
+    return true;
+  });
+  // Poblar selects con opciones únicas del dataset completo (una sola vez)
+  var allReal = getReal();
+  ['empresa','ciudad','proyecto','tecnico','estado'].forEach(function(field) {
+    var sel = document.getElementById('pf-' + field);
+    if (!sel || sel._populated) return;
+    var vals = [...new Set(allReal.map(u => u[field]).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="">Todo</option>' + vals.map(function(v) {
+      return '<option value="' + esc(v) + '">' + esc(v) + '</option>';
+    }).join('');
+    sel._populated = true;
+    if (_f[field]) sel.value = _f[field];
+  });
+  // Indicador de registros filtrados
+  var countEl = document.getElementById('pf-count');
+  if (countEl) countEl.textContent = real.length !== allReal.length ? real.length + ' de ' + allReal.length + ' registros' : '';
+  var filterBar = document.getElementById('panel-filter-bar');
+  if (filterBar) filterBar.classList.toggle('has-filters', Object.values(_f).some(Boolean));
   const kpi  = KPIService.calculate(real);
   const raee = KPIService.raeeStats();
 

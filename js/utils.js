@@ -38,8 +38,12 @@ const cap = (s) => {
   return s.replace(/(^|[\s\-\.\/])([\p{L}])/gu, (_, sp, c) => sp + c.toUpperCase());
 };
 
-const getReal = () => window.USERS.filter(u => !u.es_backup);
-const getBackup = () => window.USERS.filter(u => u.es_backup);
+// QA-03.1: Backup se detecta únicamente por nombre (sin columna ES_BACKUP)
+const isBackup = (r) => !!(r && r.nombre && String(r.nombre).trim().toUpperCase().startsWith('BACKUP'));
+window.isBackup = isBackup;
+
+const getReal   = () => window.USERS.filter(u => !isBackup(u));
+const getBackup = () => window.USERS.filter(u =>  isBackup(u));
 
 const STORAGE = {
   theme: 'pmc_theme_v8', settings: 'pmc_settings_v8', notifications: 'pmc_notifications_v8'
@@ -287,7 +291,7 @@ const DataService = {
     filter = filter || {};
     return window.USERS.filter(u => {
       // F3.9 · Excluir backups por defecto — getRenewals solo retorna registros activos
-      if (u.es_backup === true || u.es_backup === 'SI') return false;
+      if (isBackup(u)) return false; // QA-03.1: backup derivado de nombre
       if (filter.role === 'tecnico' && filter.assignedTo) {
         if ((u.tecnico || '').toLowerCase() !== filter.assignedTo.toLowerCase()) return false;
       }
@@ -301,7 +305,7 @@ const DataService = {
       if (filter.estado && u.estado !== filter.estado) return false;
       if (filter.blocked === true && !u.blocked) return false;
       if (filter.blocked === false && u.blocked) return false;
-      if (filter.excludeBackup && u.es_backup) return false;
+      if (filter.excludeBackup && isBackup(u)) return false;
       return true;
     });
   },
@@ -334,7 +338,7 @@ const DataService = {
     // audit[], timeline[], approval{} son escritos por los métodos dedicados.
     // clasificacion_obsolescencia y campos RAEE son escritos SOLO por ObsolescenceService.
     // equipoAnterior/equipoNuevo son sub-objetos calculados en runtime.
-    const PROTECTED = new Set(['audit','timeline','approval','id','es_backup',
+    const PROTECTED = new Set(['audit','timeline','approval','id',
       'clasificacion_obsolescencia','generacion_cpu','accion_requerida','accion_detalle',
       'estado_eq_ant','clasificacion_raee','_obsolescence_meta',
       'equipoAnterior','equipoNuevo']);
@@ -361,7 +365,7 @@ const DataService = {
     requirePermission('renewal.create');
     const maxId = window.USERS.length > 0 ? Math.max.apply(null, window.USERS.map(u => u.id)) : 0;
     const record = Object.assign({
-      id: maxId + 1, es_backup: false,
+      id: maxId + 1,
       estado: STATES.PENDIENTE, estado_entrega_equipo_nuevo: '',
       audit: [], timeline: [], blocked: false, block_reason: '', block_category: '',
       approval: { status: null, by: null, at: null, reason: '' },
@@ -916,7 +920,7 @@ function uniqueUsers() {
   // GH3.39.1 FC-10: delega a totalColaboradores() — fuente canónica de colaboradores (141)
   if (window.KPIService && KPIService.totalColaboradores) return KPIService.totalColaboradores();
   if (window.KPIService && KPIService.totalRenewals) return KPIService.totalRenewals();
-  return (window.USERS||[]).filter(function(u){ return !u.es_backup; }).length;
+  return (window.USERS||[]).filter(function(u){ return !isBackup(u); }).length;
 }
 
 // ═══ RESUMEN ═══
