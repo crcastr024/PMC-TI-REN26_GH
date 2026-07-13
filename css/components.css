@@ -871,3 +871,102 @@
 .panel-filter-clear:hover { background: var(--bg-card-hover); border-color: var(--accent); color: var(--accent); }
 .panel-filter-count { font-size: 11px; color: var(--text-3); margin-left: 4px; }
 .panel-filter-bar.has-filters .panel-filter-clear { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+
+/* QA-05 Task 6 — Chips de estado completos */
+.badge-programado         { background: var(--blue-l);   color: var(--blue); }
+.badge-en-tránsito-equipo-nuevo,.badge-en-tránsito { background: #ede9fe; color: #7c3aed; }
+.badge-entregado-equipo-nuevo { background: var(--green-l); color: var(--green); }
+.badge-pendiente-devolución-equipo-anterior,.badge-recolección { background: #fff7ed; color: #c2410c; }
+.badge-en-tránsito-equipo-anterior { background: #fdf4ff; color: #9333ea; }
+.badge-equipo-anterior-recibido { background: #f0fdf4; color: var(--green); }
+.badge-renovación-completada,.badge-cerrado,.badge-finalizado { background: var(--green-l); color: var(--green); font-weight:800; }
+.badge-pendiente-aprobación { background: var(--amber-l); color: var(--amber); }
+.badge-corrección-requerida { background: #fef2f2; color: #dc2626; }
+.badge-bloqueado { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.badge-feedback  { background: #fdf4ff; color: #9333ea; }
+.badge-backup    { background: rgba(245,158,11,.10); color: var(--amber); border: 1px dashed var(--amber); }
+/* status chip — versión pill con dot */
+.status-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 9px 3px 7px; border-radius:var(--r-pill); font-size:11px; font-weight:700; letter-spacing:.3px; white-space:nowrap; }
+.status-chip::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.7; flex-shrink:0; }
+
+/* QA-05 Task 1 — Timeline Stepper */
+.tl-stepper { display:flex; flex-direction:column; padding:0 4px; }
+.tl-step-row { display:flex; align-items:flex-start; gap:0; }
+.tl-step-col { display:flex; flex-direction:column; align-items:center; width:32px; flex-shrink:0; }
+.tl-step-node {
+  width:24px; height:24px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:800; flex-shrink:0;
+  border: 2px solid;
+  transition: all .2s;
+}
+.tl-step-line { width:2px; flex:1; min-height:16px; }
+.tl-step-info { padding:2px 0 12px 10px; }
+.tl-step-name { font-size:12px; font-weight:600; line-height:1.3; }
+.tl-step-meta { font-size:10px; color:var(--text-3); margin-top:2px; }
+
+/* Estados del step */
+.tl-step-row.step-done .tl-step-node { background:var(--green); border-color:var(--green); color:#fff; }
+.tl-step-row.step-done .tl-step-line { background:var(--green); }
+.tl-step-row.step-done .tl-step-name { color:var(--text-3); }
+.tl-step-row.step-current .tl-step-node { background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 0 0 3px rgba(211,0,52,.20); }
+.tl-step-row.step-current .tl-step-line { background:var(--border); }
+.tl-step-row.step-current .tl-step-name { color:var(--accent); font-weight:700; }
+.tl-step-row.step-pending .tl-step-node { background:transparent; border-color:var(--border); color:var(--text-4); }
+.tl-step-row.step-pending .tl-step-line { background:var(--border); }
+.tl-step-row.step-pending .tl-step-name { color:var(--text-4); }
+.tl-step-row.step-blocked .tl-step-node { background:#fef2f2; border-color:#dc2626; color:#dc2626; }
+.tl-step-row.step-blocked .tl-step-line { background:#fecaca; }
+.tl-step-row.step-blocked .tl-step-name { color:#dc2626; }
+
+/* Compact timeline en el modal */
+.tl-compact { display:flex; align-items:center; gap:0; overflow-x:auto; padding:4px 0 8px; }
+.tl-compact-step { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:60px; }
+.tl-compact-node { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:800; border:2px solid; flex-shrink:0; }
+.tl-compact-label { font-size:9px; text-align:center; line-height:1.2; max-width:58px; }
+.tl-compact-connector { width:24px; height:2px; flex-shrink:0; margin-bottom:14px; }
+.tl-compact-step.step-done .tl-compact-node { background:var(--green); border-color:var(--green); color:#fff; }
+.tl-compact-step.step-done .tl-compact-label { color:var(--text-3); }
+.tl-compact-step.step-done .tl-compact-connector { background:var(--green); }
+.tl-compact-step.step-current .tl-compact-node { background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 0 0 3px rgba(211,0,52,.20); }
+.tl-compact-step.step-current .tl-compact-label { color:var(--accent); font-weight:700; }
+.tl-compact-step.step-current .tl-compact-connector { background:var(--border); }
+.tl-compact-step.step-pending .tl-compact-node { background:transparent; border-color:var(--border); color:var(--text-4); }
+.tl-compact-step.step-pending .tl-compact-label { color:var(--text-4); }
+.tl-compact-step.step-pending .tl-compact-connector { background:var(--border); }
+.tl-compact-step.step-blocked .tl-compact-node { background:#fef2f2; border-color:#dc2626; color:#dc2626; }
+.tl-compact-step.step-blocked .tl-compact-label { color:#dc2626; }
+/* banner */
+.tl-banner { padding:6px 12px; border-radius:var(--r-sm); font-size:11px; font-weight:600; margin-top:8px; }
+.tl-banner-blocked { background:#fef2f2; color:#dc2626; }
+.tl-banner-correction { background:var(--amber-l); color:var(--amber); }
+
+/* QA-05 Task 3 — Stats bar */
+.stats-bar {
+  grid-area: main; grid-row: 1; /* sticky overlay top */
+  display: flex; align-items: center; gap: 0;
+  padding: 0 20px;
+  background: var(--bg-elev); border-bottom: 1px solid var(--border);
+  height: 36px; position: sticky; top: 0; z-index: 9;
+  font-size: 12px; overflow-x: auto;
+}
+.stats-bar-item { display:flex; align-items:center; gap:6px; padding:0 16px; border-right:1px solid var(--border); white-space:nowrap; }
+.stats-bar-item:first-child { padding-left:0; }
+.stats-bar-item:last-child  { border-right:none; }
+.stats-bar-val { font-family:'Inter Tight'; font-size:14px; font-weight:800; }
+.stats-bar-label { color:var(--text-3); }
+.stats-bar-val.c-total     { color:var(--text-1); }
+.stats-bar-val.c-pendiente { color:var(--text-2); }
+.stats-bar-val.c-proceso   { color:var(--blue); }
+.stats-bar-val.c-enviado   { color:#7c3aed; }
+.stats-bar-val.c-completado{ color:var(--green); }
+
+/* QA-05 Tasks 5+7 — Acciones rápidas + indicadores en tabla */
+.td-actions { white-space:nowrap; padding:0 8px !important; }
+.th-actions { width:90px; text-align:center; }
+.row-action {
+  background:transparent; border:none; padding:3px 5px;
+  cursor:pointer; font-size:13px; border-radius:4px;
+  transition:background .12s; color:var(--text-2);
+}
+.row-action:hover { background:var(--bg-card-hover); }

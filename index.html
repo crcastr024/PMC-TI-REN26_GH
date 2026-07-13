@@ -196,6 +196,14 @@
 
   <!-- ════════════════════════ MAIN ════════════════════════ -->
   <main class="main" id="main-scroll">
+  <!-- QA-05 Task 3 — Stats bar siempre visible -->
+  <div class="stats-bar" id="stats-bar" style="display:none">
+    <div class="stats-bar-item"><span class="stats-bar-val c-total" id="sb-total">—</span><span class="stats-bar-label">equipos</span></div>
+    <div class="stats-bar-item"><span class="stats-bar-val c-pendiente" id="sb-pendientes">—</span><span class="stats-bar-label">pendientes</span></div>
+    <div class="stats-bar-item"><span class="stats-bar-val c-proceso" id="sb-proceso">—</span><span class="stats-bar-label">en proceso</span></div>
+    <div class="stats-bar-item"><span class="stats-bar-val c-enviado" id="sb-enviados">—</span><span class="stats-bar-label">enviados/entregados</span></div>
+    <div class="stats-bar-item"><span class="stats-bar-val c-completado" id="sb-completados">—</span><span class="stats-bar-label">completados</span></div>
+  </div>
 
     <!-- ═════ VISTA: RESUMEN ═════ -->
     <div class="view active" id="view-resumen">
@@ -293,7 +301,7 @@
         <div class="toolbar">
           <div class="search-box">
             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="search-input" placeholder="Buscar por nombre, cédula, serial, hostname, placa, ciudad…">
+            <input type="text" id="search-input" placeholder="Buscar por nombre, cédula, serial, hostname, placa, AF, empresa, proyecto, ciudad…">
           </div>
           <select class="filter-pill" id="filter-empresa"><option value="">Todas las empresas</option><option>HBT</option><option>HGS</option></select>
           <select class="filter-pill" id="filter-tipo"><option value="">Todos los tipos</option><option>PORTATIL</option><option>TORRE</option></select>
@@ -303,7 +311,7 @@
           <span class="filter-count" id="tbl-count">— registros</span>
         </div>
         <div class="tbl-wrap"><div class="tbl-scroll"><table class="tbl">
-          <thead><tr><th>ID</th><th>Emp</th><th>Tipo</th><th>Nombre</th><th>Ciudad</th><th>Proyecto</th><th>Equipo</th><th>Serial</th><th>Placa</th><th>Hostname</th><th>Técnico</th><th>Estado</th><th>Acta</th></tr></thead>
+          <thead><tr><th>ID</th><th title="Indicadores">⚑</th><th>Emp</th><th>Tipo</th><th>Nombre</th><th>Ciudad</th><th>Proyecto</th><th>Equipo</th><th>Serial</th><th>Placa</th><th>Hostname</th><th>Técnico</th><th>Estado</th><th>Acta</th></tr<th class="th-actions">Acciones</th></tr></thead>
           <tbody id="tbl-body"></tbody>
         </table></div></div>
       </div>
@@ -833,7 +841,7 @@
           <div class="tbl-wrap" style="border:none;border-radius:0;box-shadow:none">
             <div class="tbl-scroll">
               <table class="tbl">
-                <thead><tr><th>ID</th><th>Emp</th><th>Nombre</th><th>Ciudad</th><th>Proyecto</th><th>Equipo nuevo</th><th>Estado</th><th>Acta</th></tr></thead>
+                <thead><tr><th>ID</th><th title="Indicadores">⚑</th><th>Emp</th><th>Nombre</th><th>Ciudad</th><th>Proyecto</th><th>Equipo nuevo</th><th>Estado</th><th>Acta</th></tr></thead>
                 <tbody id="td-users"></tbody>
               </table>
             </div>

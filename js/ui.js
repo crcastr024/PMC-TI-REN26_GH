@@ -206,7 +206,7 @@ function getFiltered() {
     if (proj && u.proyecto !== proj) return false;
     if (est && u.estado !== est) return false;
     if (q) {
-      const blob = [u.nombre, u.cedula, u.usuario, u.correo, u.ciudad, u.serial, u.hostname, u.placa, u.proyecto, u.marca, u.modelo].join(' ').toLowerCase();
+      const blob = [u.nombre, u.cedula, u.usuario, u.correo, u.ciudad, u.serial, u.hostname, u.placa, u.empresa, u.proyecto, u.eq_ant_af, u.eq_nvo_af, u.eq_ant_serial, u.eq_ant_hostname, u.eq_nvo_serial, u.eq_nvo_hostname, u.proyecto, u.marca, u.modelo].join(' ').toLowerCase();
       if (blob.indexOf(q) < 0) return false;
     }
     return true;
@@ -225,8 +225,15 @@ function renderUsuarios() {
     const estCls = isBackup(u) ? 'badge-backup' : ConfigService.badgeClass(u.estado || 'pendiente');
     const tipoCls = (u.tipo || '').toUpperCase() === 'TORRE' ? 'badge-torre' : 'badge-portatil';
     const recentCls = (state.settings.highlight && state.recentlyUpdatedId === u.id) ? ' class="recently-updated"' : '';
+    var _indicators = '';
+    if (isBackup(u)) _indicators += '<span title="Backup" style="font-size:11px">🔒</span>';
+    if (u.recomendacion_raee === 'RAEE') _indicators += '<span title="RAEE" style="color:#C00000;font-size:11px;font-weight:700">♻</span>';
+    if (u.equipo_reasignable) _indicators += '<span title="Reasignable" style="color:var(--blue);font-size:11px">↩</span>';
+    if ((u.estado === 'Renovación completada' || u.estado === 'Cerrado') && !(u.feedback > 0)) _indicators += '<span title="Feedback pendiente" style="color:var(--amber);font-size:11px">★</span>';
+    if (!u.acta_firmada && (u.estado === 'Entregado equipo nuevo' || u.estado === 'Renovación completada')) _indicators += '<span title="Acta pendiente" style="color:#7c3aed;font-size:11px">📄</span>';
     return '<tr' + recentCls + ' onclick="openEditModal(' + u.id + ')">' +
       '<td class="td-id">' + u.id + '</td>' +
+      '<td style="font-size:14px;white-space:nowrap;min-width:50px">' + (_indicators || '—') + '</td>' +
       '<td><span class="badge badge-' + u.empresa.toLowerCase() + '">' + esc(u.empresa) + '</span></td>' +
       '<td><span class="badge ' + tipoCls + '">' + esc(u.tipo || '—') + '</span></td>' +
       '<td class="td-strong">' + esc(u.nombre || (isBackup(u) ? 'BACKUP ' + u.empresa : '—')) + '</td>' +
@@ -239,6 +246,11 @@ function renderUsuarios() {
       '<td class="td-soft">' + esc(u.tecnico || '—') + '</td>' +
       '<td><span class="badge ' + estCls + '">' + esc(u.estado || 'Pendiente') + '</span></td>' +
       '<td style="text-align:center">' + (u.acta_firmada ? '<span style="color:var(--green);font-weight:700">✓</span>' : '<span style="color:var(--text-4)">—</span>') + '</td>' +
+      '<td class="td-actions" onclick="event.stopPropagation()">' +
+        '<button class="row-action" onclick="openEditModal(' + u.id + ')" title="Editar">✏</button>' +
+        '<button class="row-action" onclick="copyRecord(' + u.id + ')" title="Copiar info">📋</button>' +
+        '<button class="row-action" onclick="showHistory(' + u.id + ')" title="Historial">⏱</button>' +
+      '</td>' +
       '</tr>';
   }).join('');
 }
@@ -667,8 +679,62 @@ function openEditModal(id) {
       '<span class="star" data-star="5">' + ((u.feedback||0)>=5?'★':'☆') + '</span>' +
     '</div>' +
   '</div>' +
+'</div>' +
+'<div class="form-section" id="audit-section" style="margin-top:4px;padding:12px 16px 8px;background:var(--bg-subtle);border-radius:var(--r-md)">' +
+  '<div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Última actualización</div>' +
+  '<div style="display:flex;gap:16px;align-items:baseline">' +
+    '<span id="m-audit-date" style="font-family:Inter Tight;font-size:13px;font-weight:700;color:var(--text-1)">' + esc(u.updated_at ? formatDateEs(u.updated_at) : '—') + '</span>' +
+    '<span id="m-audit-by" style="font-size:12px;color:var(--text-2)">' + esc(u.updated_by || '—') + '</span>' +
+  '</div>' +
 '</div>';
   
+
+// QA-05 Task 2 — Progressive disclosure: secciones por estado
+function updateSectionVisibility(estado) {
+  // Índice en el flow de estados
+  var FLOW = ['Pendiente','Alistamiento','Programado',
+              'En tránsito equipo nuevo','Entregado equipo nuevo',
+              'Pendiente devolución equipo anterior','En tránsito equipo anterior',
+              'Equipo anterior recibido','Renovación completada',
+              'Pendiente aprobación','Cerrado'];
+  var idx = FLOW.indexOf(estado);
+  var isBlocked = (estado === 'Bloqueado');
+
+  // Reglas de visibilidad por sección
+  function showSec(id, visible) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = visible ? '' : 'none';
+    el.style.opacity = visible ? '1' : '0';
+    el.style.transition = 'opacity .2s';
+  }
+
+  // Sect 1 (datos usuario) + Sect 2 (eq ant): siempre visibles
+  // Sect 3 (eq nuevo): visible desde Programado (idx >= 2)
+  var seccion3 = document.querySelector('[class="form-section"] .form-section-head');
+  // Usar querySelector por title del header (más robusto)
+  document.querySelectorAll('.form-section').forEach(function(sec) {
+    var head = sec.querySelector('.form-section-head');
+    if (!head) return;
+    var t = head.textContent.trim();
+    if (t.indexOf('3 ·') === 0 || t.indexOf('Equipo nuevo') >= 0) {
+      sec.style.display = (idx >= 2 || isBlocked) ? '' : 'none';
+    } else if (t.indexOf('5 ·') === 0 || t.indexOf('Devolución') >= 0) {
+      // Devolución: desde Recolección (idx >= 5)
+      sec.style.display = (idx >= 5 || isBlocked) ? '' : 'none';
+    } else if (t.indexOf('6 ·') === 0 || t.indexOf('Evaluación') >= 0) {
+      // Evaluación RAEE: desde Recibido (idx >= 7)
+      sec.style.display = (idx >= 7 || isBlocked) ? '' : 'none';
+    } else if (t.indexOf('7 ·') === 0 || t.indexOf('Calificación') >= 0) {
+      // Feedback: solo en completada (idx >= 8)
+      sec.style.display = (idx >= 8) ? '' : 'none';
+    }
+    // Sect 4 (seguimiento): siempre visible
+    // Audit section: siempre visible
+  });
+}
+window.updateSectionVisibility = updateSectionVisibility;
+
 // QA-03: Reglas dinámicas del formulario
   (function applyModalRules() {
     var STATES_POST_ALIST = [
@@ -728,7 +794,10 @@ function openEditModal(id) {
     var estadoEl = $('m-estado');
     if (estadoEl) {
       updateNotasAlist(estadoEl.value);
-      estadoEl.addEventListener('change', function() { updateNotasAlist(this.value); });
+      estadoEl.addEventListener('change', function() {
+          updateNotasAlist(this.value);
+          if (window.updateSectionVisibility) updateSectionVisibility(this.value);
+        });
     }
 
     // ── R4: Feedback solo habilitado cuando estado = Renovación completada ─
@@ -779,6 +848,8 @@ function openEditModal(id) {
       });
     });
 
+    // Task 2: initial visibility
+    if (window.updateSectionVisibility && $('m-estado')) updateSectionVisibility($('m-estado').value);
   })();
 
   // QA-03: Datalist RAM para autocompletado DDR4/DDR5/LPDDR4/LPDDR5
@@ -873,6 +944,10 @@ window.actualizarRecomendacion = function() {
   window.actualizarRecomendacion();
 
   $('modal-bg').classList.add('active');
+
+  // QA-05: Inicializar dirty form tracking y validación
+  if (window._initDirtyForm) setTimeout(_initDirtyForm, 50);
+  if (window.attachFieldValidation) setTimeout(attachFieldValidation, 50);
 }
 
 // GH3.37.1 Item 11 — Indicador visual de sincronización con Excel
@@ -913,7 +988,13 @@ function setStarRating(value) {
 }
 window.setStarRating = setStarRating;
 
-function closeModal() { $('modal-bg').classList.remove('active'); state.editingId = null; }
+function closeModal(force) {
+  if (!force && window._hasDirtyForm && window._hasDirtyForm()) {
+    if (!confirm('Hay cambios sin guardar.\n\nPresionar Aceptar para descartar o Cancelar para volver.')) return;
+  }
+  if (window._clearDirty) _clearDirty();
+  $('modal-bg').classList.remove('active'); state.editingId = null;
+}
 window.closeModal = closeModal;
 
 function saveRecord() {
@@ -1018,7 +1099,7 @@ function saveRecord() {
                 renderResumen();
                 renderView(window.state ? state.view : 'resumen');
                 // GH3.37.1 Item 11: confirmación visual
-                toast('✓ Guardado · Sincronizado con Excel', 'success');
+                toast('✓ Guardado · Sincronizado con Excel', 'success'); if (window._clearDirty) _clearDirty();
                 if (window._showSyncStatus) _showSyncStatus('ok');
               }
             });
@@ -1165,6 +1246,146 @@ window.toggleSidebar = toggleSidebar;
   } catch(e) { /* privado / sin Storage */ }
 })();
 
+
+
+
+// QA-05 Task 5 — Acciones rápidas
+function copyRecord(id) {
+  var u = DataService.getRenewal(id);
+  if (!u) return;
+  var text = [
+    'ID: ' + u.id,
+    'Nombre: ' + (u.nombre || '—'),
+    'Empresa: ' + (u.empresa || '—'),
+    'Serial: ' + (u.eq_ant_serial || u.eq_nvo_serial || '—'),
+    'Estado: ' + (u.estado || '—'),
+    'Técnico: ' + (u.tecnico || '—'),
+  ].join('\n');
+  try {
+    navigator.clipboard.writeText(text);
+    toast('Info copiada al portapapeles', 'info');
+  } catch(e) { /* clipboard no disponible */ }
+}
+window.copyRecord = copyRecord;
+
+function showHistory(id) {
+  var u = DataService.getRenewal(id);
+  if (!u) return;
+  openEditModal(id);
+  // El stepper ya está en la sección 6 del modal
+  setTimeout(function() {
+    var tlEl = document.getElementById('m-timeline-container');
+    if (tlEl) tlEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 150);
+}
+window.showHistory = showHistory;
+
+// QA-05 Task 3 — Stats bar siempre visible
+function updateStatsBar() {
+  var real = getReal ? getReal() : (window.USERS || []).filter(u => !isBackup(u));
+  if (!real || !real.length) return;
+  var STATES_PROCESO = ['Alistamiento','Programado'];
+  var STATES_ENVIADO = ['En tránsito equipo nuevo','Entregado equipo nuevo'];
+  var STATES_CERRADO = ['Renovación completada','Cerrado'];
+  var pendientes  = real.filter(u => u.estado === 'Pendiente').length;
+  var proceso     = real.filter(u => STATES_PROCESO.includes(u.estado)).length;
+  var enviados    = real.filter(u => STATES_ENVIADO.includes(u.estado)).length;
+  var completados = real.filter(u => STATES_CERRADO.includes(u.estado)).length;
+  var bar = document.getElementById('stats-bar');
+  if (!bar) return;
+  bar.style.display = 'flex';
+  var setText2 = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+  setText2('sb-total',      real.length);
+  setText2('sb-pendientes', pendientes);
+  setText2('sb-proceso',    proceso);
+  setText2('sb-enviados',   enviados);
+  setText2('sb-completados',completados);
+}
+window.updateStatsBar = updateStatsBar;
+
+
+// QA-05 Task 8 — Validación visual en tiempo real
+function attachFieldValidation() {
+  var REQUIRED = ['m-nombre','m-empresa','m-estado'];
+  REQUIRED.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('blur', function() {
+      var empty = !this.value.trim();
+      this.style.borderColor = empty ? '#dc2626' : '';
+      var msg = this.parentNode.querySelector('.field-error');
+      if (empty) {
+        if (!msg) {
+          msg = document.createElement('div');
+          msg.className = 'field-error';
+          msg.style.cssText = 'color:#dc2626;font-size:10px;margin-top:2px;font-weight:600';
+          msg.textContent = 'Campo requerido';
+          this.parentNode.appendChild(msg);
+        }
+      } else if (msg) {
+        msg.remove();
+        this.style.borderColor = '';
+      }
+    });
+  });
+}
+window.attachFieldValidation = attachFieldValidation;
+
+// QA-05 Task 9 — Dirty Form: detectar cambios sin guardar
+(function() {
+  var _dirtyFields = new Set();
+  var _original = {};
+
+  window._initDirtyForm = function() {
+    _dirtyFields.clear(); _original = {};
+    document.querySelectorAll('.modal-body input, .modal-body select, .modal-body textarea').forEach(function(el) {
+      if (el.id && el.id.startsWith('m-')) {
+        _original[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+        el.addEventListener('change', function() {
+          var cur = el.type === 'checkbox' ? el.checked : el.value;
+          if (cur !== _original[el.id]) _dirtyFields.add(el.id);
+          else _dirtyFields.delete(el.id);
+          _startAutoSave();
+        });
+      }
+    });
+  };
+
+  window._hasDirtyForm = function() { return _dirtyFields.size > 0; };
+  window._clearDirty   = function() { _dirtyFields.clear(); if (_autoTimer) clearTimeout(_autoTimer); };
+
+  // Task 10 — AutoSave: 5s debounce
+  var _autoTimer = null;
+  function _startAutoSave() {
+    if (_autoTimer) clearTimeout(_autoTimer);
+    _showSaveStatus('Guardando en 5s...');
+    _autoTimer = setTimeout(function() {
+      if (_dirtyFields.size > 0) {
+        _showSaveStatus('Guardando...');
+        try {
+          saveRecord();
+          _showSaveStatus('Guardado ✓');
+          window._clearDirty();
+          setTimeout(function() { _showSaveStatus(''); }, 3000);
+        } catch(e) { _showSaveStatus('Error al guardar'); }
+      }
+    }, 5000);
+  }
+
+  function _showSaveStatus(msg) {
+    var el = document.getElementById('autosave-status');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'autosave-status';
+      el.style.cssText = 'position:sticky;bottom:0;left:0;right:0;padding:6px 16px;background:var(--accent-l);color:var(--accent);font-size:11px;font-weight:600;text-align:center;z-index:5;transition:opacity .3s';
+      var mb = document.getElementById('modal-body');
+      if (mb) mb.parentNode.insertBefore(el, mb.nextSibling);
+    }
+    el.textContent = msg;
+    el.style.display = msg ? '' : 'none';
+  }
+
+})();
 
 // QA-04 Task 5 — Filtros del panel ejecutivo
 window.PANEL_FILTERS = {};
