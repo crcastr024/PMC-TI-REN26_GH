@@ -35,9 +35,7 @@ const ExcelMapper = (() => {
     if (s.toUpperCase() === 'TRUE'  || s === '1') return true;
     if (s.toUpperCase() === 'FALSE' || s === '0') {
       // Sólo cast a false si la columna es conocidamente booleana
-      const boolCols = ['ACTA_ENVIADA','ACTA_FIRMADA','ES_BACKUP','FEEDBACK_RECIBIDO',
-        'EVIDENCIA_ADJUNTA','BLOCKED','AUNTRABAJA','AUN_TRABAJA',
-        '_DELETED','FEEDBACK_ENVIADO'];
+      const boolCols = ['LISTA_RECOLECCION']; // QA-03: solo columnas del Excel v1.0
       if (boolCols.some(b => colName && colName.toUpperCase().includes(b.replace('_','')))) return false;
     }
     // Número
@@ -482,7 +480,6 @@ const FIELD_COLUMN_ALIASES = {
   // GH3.41.2: actualizados al nuevo contrato Excel
   'estado':            'estado_renovacion',
   'registro':          'nivel_usuario',
-  'observaciones':     'observaciones_generales',
   'feedback':          'calificacion_feedback',
   'nombre_archivo':    'nombre_archivo_acta',
 };

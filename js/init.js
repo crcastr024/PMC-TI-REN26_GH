@@ -76,7 +76,7 @@ window.HBT = (function() {
     var ALLOWED = (window.WriteContract && window.WriteContract.ALLOWED_FIELDS)
                   ? window.WriteContract.ALLOWED_FIELDS
                   : ['ciudad','proyecto','tecnico','estado','caso_envio','fecha_envio',
-                     'acta_enviada','acta_firmada','feedback_recibido','aun_trabaja'];
+                     'notas_alistamiento','fecha_entrega','eq_nvo_so'];
 
     console.error('[HBT FIELD MAP] Headers Excel (' + hdrs.length + '):');
     var table = [];

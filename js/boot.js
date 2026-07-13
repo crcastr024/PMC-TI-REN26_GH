@@ -927,7 +927,7 @@ const ApprovalService = {
       id: 'acta_firmada',
       label: 'Acta de entrega firmada',
       description: 'PandaDoc · firma del usuario receptor',
-      check: (r) => !!(r.acta_firmada === true || r.acta_firmada === 'SI'),
+      check: (r) => !!(r.fecha_firma_acta), // QA-03: derivado de fecha
     },
     {
       id: 'evidencia_adjunta',
@@ -954,7 +954,7 @@ const ApprovalService = {
       id: 'feedback_registrado',
       label: 'Feedback del usuario registrado',
       description: 'Encuesta de satisfacción (1-5 estrellas)',
-      check: (r) => (r.feedback || 0) > 0 || (r.feedback_recibido && r.feedback_recibido !== 'NO'),
+      check: (r) => (r.feedback || 0) > 0, // QA-03: feedback_recibido eliminado
     },
   ],
   

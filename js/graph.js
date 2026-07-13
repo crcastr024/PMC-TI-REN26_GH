@@ -346,7 +346,6 @@ const SP_FIELD_MAP = {
   'EqNvoRam':                 'eq_nvo_ram',
   'EqNvoDisco':               'eq_nvo_disco',
   'DatoMaestro':              'dato_maestro',
-  'NombreSAP':                'nombre_sap',
   // ── Equipo anterior ──────────────────────────────────────────
   'EqAntTipo':                'eq_ant_tipo',
   'EqAntMarca':               'eq_ant_marca',
@@ -363,13 +362,10 @@ const SP_FIELD_MAP = {
   'Estado':                   'estado',
   'EstadoEntregaEquipoNuevo': 'estado_entrega_equipo_nuevo',
   'DisposicionFinal':         'disposicion_final',
-  'EstadoDevolucion':         'estado_devolucion',
   'ActaEnviada':              'acta_enviada',
-  'ActaFirmada':              'acta_firmada',
   'ActaEntregaUrl':           'acta_entrega_url',
   'EvidenciaAdjunta':         'evidencia_adjunta',
   'NombreArchivo':            'nombre_archivo',
-  'Feedback':                 'feedback',
   'FeedbackRecibido':         'feedback_recibido',
   'Observaciones':            'observaciones',
   'Alistamiento':             'alistamiento',
@@ -382,11 +378,9 @@ const SP_FIELD_MAP = {
   'FechaTransito':            'fecha_transito',
   'FechaRecepcionBodega':     'fecha_recepcion_bodega',
   'Bloqueado':                'blocked',
-  'RazonBloqueo':             'block_reason',
   'CategoriaBloqueo':         'block_category',
   'EstadoAnteriorBloqueo':    'block_previous_state',
   'EsBackup':                 'es_backup',
-  'AunTrabaja':               'aun_trabaja',
   // ── Metadatos SP ─────────────────────────────────────────────
   'id':                       'sp_item_id',   // ID del ítem en SP (para PATCH en F7.4)
 };
@@ -1218,8 +1212,7 @@ const GraphProvider = (() => {
           // Garantías mínimas
           if (!record.id) record.id = idx + 1;
           if (!record.estado) record.estado = 'PENDIENTE';
-          if (!record.es_backup) record.es_backup = false;
-          return record;
+                  return record;
         });
 
         // 3. Tablas secundarias — provienen del Bootstrap (cargadas antes de este punto)

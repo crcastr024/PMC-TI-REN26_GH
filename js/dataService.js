@@ -16,14 +16,11 @@ function normalizeRecord_F3(r) {
   // ── Cédula como string
   if (r.cedula != null) r.cedula = String(r.cedula);
   
-  // ── Booleanos SI/NO → boolean real
-  r.acta_enviada     = siNoToBool(r.acta_enviada);
-  r.acta_firmada     = siNoToBool(r.acta_firmada);
+  // QA-03: acta_enviada y acta_firmada derivados de las fechas (columnas eliminadas del Excel)
+  r.acta_enviada     = !!r.fecha_envio_acta;
+  r.acta_firmada     = !!r.fecha_firma_acta;
   if (r.acta_entrega_url === undefined) r.acta_entrega_url = '';
-  r.feedback_enviado = siNoToBool(r.feedback_enviado);
-  r.feedback_recibido = siNoToBool(r.feedback_recibido);
   r.devuelto = siNoToBool(r.devuelto);
-  r.aun_trabaja = (r.aun_trabaja === null || r.aun_trabaja === undefined) ? true : siNoToBool(r.aun_trabaja);
   
   // ── Equivalencias para legacy UI (que espera marca/modelo/serial sin prefijo eq_nvo_)
   // Los heredamos del nuevo, pero solo si no existían

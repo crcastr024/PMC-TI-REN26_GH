@@ -583,13 +583,23 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Placa</label><input type="text" class="form-input" id="m-eq_ant_placa" value="' + esc(u.eq_ant_placa) + '"></div>' +
       '<div class="form-group"><label class="form-label">Hostname</label><input type="text" class="form-input" id="m-eq_ant_hostname" value="' + esc(u.eq_ant_hostname) + '"></div>' +
       '<div class="form-group"><label class="form-label">Procesador</label><input type="text" class="form-input" id="m-eq_ant_procesador" value="' + esc(u.eq_ant_procesador) + '"></div>' +
-      '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" class="form-input" id="m-eq_ant_memoria" value="' + esc(u.eq_ant_memoria) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" list="ram-opts" class="form-input" id="m-eq_ant_memoria" value="' + esc(u.eq_ant_memoria) + '"></div>' +
       '<div class="form-group"><label class="form-label">Disco duro (ant.)</label><input type="text" class="form-input" id="m-eq_ant_disco" value="' + esc(u.eq_ant_disco) + '"></div>' +
       '<div class="form-group"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_ant_so" value="' + esc(u.eq_ant_so) + '"></div>' +
-    '</div></div>' +
-    
-    '<div class="form-section"><div class="form-section-head">3 · Obsolescencia y clasificación RAEE</div>' +
+    '</div>' +
       renderObsolescencePanelHTML(u) +
+    '</div>' +
+    
+    '<div class="form-section"><div class="form-section-head">3 · Evaluación del equipo anterior</div>' +
+    '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);padding:8px 0 4px">Evaluacion fisica del equipo</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-group"><label class="form-label">Bateria</label><select class="form-select" id="m-eval_bateria" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_bateria==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_bateria==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_bateria==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_bateria==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Teclado</label><select class="form-select" id="m-eval_teclado" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_teclado==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_teclado==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_teclado==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_teclado==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Touchpad</label><select class="form-select" id="m-eval_touchpad" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_touchpad==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_touchpad==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_touchpad==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_touchpad==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Estetico</label><select class="form-select" id="m-eval_estetico" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_estetico==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_estetico==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_estetico==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_estetico==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+    '</div>' +
+    '<div id="m-recomendacion-display" style="margin-top:8px;padding:8px 14px;border-radius:var(--r-sm);background:#E8F5E9;color:#2E7D32;font-size:12px;font-weight:700;display:none"></div>' +
+    '<div id="m-motivo-raee-display" style="margin-top:4px;padding:4px 14px;font-size:11px;color:#777;display:none"></div>' +
     '</div>' +
     
     '<div class="form-section"><div class="form-section-head">4 · Equipo nuevo asignado</div><div class="form-grid-3">' +
@@ -600,7 +610,7 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Placa</label><input type="text" class="form-input" id="m-eq_nvo_placa" value="' + esc(eqNvo.placa) + '"></div>' +
       '<div class="form-group"><label class="form-label">Hostname</label><input type="text" class="form-input" id="m-eq_nvo_hostname" value="' + esc(eqNvo.hostname) + '"></div>' +
       '<div class="form-group"><label class="form-label">Procesador</label><input type="text" class="form-input" id="m-eq_nvo_procesador" value="' + esc(eqNvo.procesador) + '"></div>' +
-      '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" class="form-input" id="m-eq_nvo_ram" value="' + esc(eqNvo.ram) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" list="ram-opts" class="form-input" id="m-eq_nvo_ram" value="' + esc(eqNvo.ram) + '"></div>' +
       '<div class="form-group"><label class="form-label">Disco</label><input type="text" class="form-input" id="m-eq_nvo_disco" value="' + esc(eqNvo.disco) + '"></div>' +
       '<div class="form-group"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_nvo_so" value="' + esc(u.eq_nvo_so) + '" placeholder="Ej: Windows 11 Pro"></div>' +
       '<div class="form-group full"><label class="form-label">Dato maestro SAP (AF) <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="text" class="form-input" id="m-eq_nvo_af" value="' + esc(eqNvo.af) + '" placeholder="Código AF / dato maestro SAP"></div>' +
@@ -617,41 +627,181 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">F. Entrega</label><input type="date" class="form-input" id="m-fecha_entrega" value="' + esc(u.fecha_entrega) + '"></div>' +
       '<div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
         '<div class="form-group" style="margin:0"><label class="form-label">F. envío acta</label><input type="date" class="form-input" id="m-fecha_envio_acta" value="' + esc(u.fecha_envio_acta) + '"></div>' +
-        '<div><label class="form-check"><input type="checkbox" id="m-feedback_recibido"' + (u.feedback_recibido ? ' checked' : '') + '> Feedback recibido del usuario</label></div>' +
         '<div class="form-group"><label class="form-label">URL del acta (SharePoint)</label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url || '') + '" placeholder="https://app.pandadoc.com/..."></div>' +
         '<div class="form-group" style="margin:0"><label class="form-label">F. firma acta</label><input type="date" class="form-input" id="m-fecha_firma_acta" value="' + esc(u.fecha_firma_acta) + '"></div>' +
       '</div>' +
       '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;font-size:12px">Acta de entrega</a>' : '') + '</div>' +
       '<hr style="border:none;border-top:1px dashed var(--border);margin:8px 0">' +
       '<div class="form-group"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo) + '" placeholder="Ej: Acta_Juan_Perez.pdf"></div>' +
-'<div class="form-section"><div class="form-section-head">7 · Devolución del equipo anterior</div>' +
+    '</div></div>' +
+    
+'<div class="form-section" id="seccion-devolucion"><div class="form-section-head">6 · Devolución del equipo anterior</div>' +
+    '<div style="padding:8px 0 10px;border-bottom:1px dashed var(--border);margin-bottom:10px">' +
+            '<label class="form-check"><input type="checkbox" id="m-lista_recoleccion"' + (u.lista_recoleccion ? ' checked' : '') + '> Equipo agregado a lista de recoleccion</label>' +
+    '</div>' +
+    '<div id="dev-campos">' +
       '<div class="form-group"><label class="form-label">Estado de devolución</label><select class="form-select" id="m-estado_devolucion">' + devEstadoOpts + '</select></div>' +
       '<div class="form-group"><label class="form-label">Disposición final del equipo</label><select class="form-select" id="m-disposicion_final">' + dispFinalOpts + '</select></div>' +
       '<div class="form-group"><label class="form-label">F. Solicitud devolución</label><input type="date" class="form-input" id="m-fecha_solicitud_devolucion" value="' + esc(u.fecha_solicitud_devolucion) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. en tránsito</label><input type="date" class="form-input" id="m-fecha_transito" value="' + esc(u.fecha_transito) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. Recepción en Bodega</label><input type="date" class="form-input" id="m-fecha_recepcion_bodega" value="' + esc(u.fecha_recepcion_bodega) + '"></div>' +
       '<p class="full" style="font-size:11px;color:var(--text-3);margin:0">La disposición final queda registrada en auditoría (usuario, fecha, valor anterior/nuevo) al guardar.</p>' +
-    '<div class="form-group full" style="margin-top:8px;padding:8px 12px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
-      '<label class="form-check"><input type="checkbox" id="m-lista_recoleccion"' + (u.lista_recoleccion ? ' checked' : '') + '> Equipo agregado a lista de recoleccion</label>' +
     '</div>' +
-    '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);padding:8px 0 4px">Evaluacion fisica del equipo</div>' +
-    '<div class="form-grid">' +
-      '<div class="form-group"><label class="form-label">Bateria</label><select class="form-select" id="m-eval_bateria" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_bateria==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_bateria==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_bateria==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_bateria==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Teclado</label><select class="form-select" id="m-eval_teclado" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_teclado==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_teclado==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_teclado==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_teclado==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Touchpad</label><select class="form-select" id="m-eval_touchpad" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_touchpad==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_touchpad==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_touchpad==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_touchpad==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Estetico</label><select class="form-select" id="m-eval_estetico" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_estetico==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_estetico==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_estetico==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_estetico==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+  '</div>' +
+    
+'<div class="form-section" id="seccion-feedback"><div class="form-section-head">7 · Calificación</div>' +
+  '<div style="text-align:center;padding:16px 0 8px">' +
+    '<p style="font-size:12px;color:var(--text-3);margin:0 0 10px">Solo disponible al completar el proceso</p>' +
+    '<div id="m-feedback-stars" data-value="' + (u.feedback || 0) + '" style="font-size:2.2rem;cursor:pointer;display:inline-flex;gap:6px">' +
+      '<span class="star" data-star="1">' + ((u.feedback||0)>=1?'★':'☆') + '</span>' +
+      '<span class="star" data-star="2">' + ((u.feedback||0)>=2?'★':'☆') + '</span>' +
+      '<span class="star" data-star="3">' + ((u.feedback||0)>=3?'★':'☆') + '</span>' +
+      '<span class="star" data-star="4">' + ((u.feedback||0)>=4?'★':'☆') + '</span>' +
+      '<span class="star" data-star="5">' + ((u.feedback||0)>=5?'★':'☆') + '</span>' +
     '</div>' +
-    '<div id="m-recomendacion-display" style="margin-top:8px;padding:8px 14px;border-radius:var(--r-sm);background:#E8F5E9;color:#2E7D32;font-size:12px;font-weight:700;display:none"></div>' +
-    '<div id="m-motivo-raee-display" style="margin-top:4px;padding:4px 14px;font-size:11px;color:#777;display:none"></div>' +
-    '</div></div>';
+  '</div>' +
+'</div>';
   
+// QA-03: Reglas dinámicas del formulario
+  (function applyModalRules() {
+    var STATES_POST_ALIST = [
+      'Programado','En tránsito equipo nuevo','Entregado equipo nuevo',
+      'Pendiente devolución equipo anterior','En tránsito equipo anterior',
+      'Equipo anterior recibido','Renovación completada','Pendiente aprobación',
+      'Corrección requerida','Cerrado','Feedback','BACKUP'
+    ];
+
+    // ── R1: Lista de recolección → habilita/deshabilita sección Devolución ──
+    function updateDevSection(checked) {
+      var devCampos = document.getElementById('dev-campos');
+      if (!devCampos) return;
+      devCampos.querySelectorAll('input,select,textarea').forEach(function(el) {
+        el.disabled = !checked;
+        var grp = el.closest ? el.closest('.form-group') : null;
+        if (grp) grp.style.opacity = checked ? '1' : '0.4';
+      });
+    }
+    var listaEl = $('m-lista_recoleccion');
+    if (listaEl) {
+      updateDevSection(listaEl.checked);
+      listaEl.addEventListener('change', function() { updateDevSection(this.checked); });
+    }
+
+    // ── R2: Estado devolución → habilita solo la fecha relevante ──────────
+    var DATE_MAP = {
+      'Pendiente':    'm-fecha_solicitud_devolucion',
+      'En tránsito':  'm-fecha_transito',
+      'Devuelto':     null,
+      'Bodega':       'm-fecha_recepcion_bodega',
+    };
+    function updateDevDates(val) {
+      ['m-fecha_solicitud_devolucion','m-fecha_transito','m-fecha_recepcion_bodega'].forEach(function(id) {
+        var el = $(id); if (!el) return;
+        var active = DATE_MAP[val] === id;
+        el.disabled = !active;
+        var grp = el.closest ? el.closest('.form-group') : null;
+        if (grp) grp.style.opacity = active ? '1' : '0.5';
+      });
+    }
+    var estDevEl = $('m-estado_devolucion');
+    if (estDevEl) {
+      updateDevDates(estDevEl.value);
+      estDevEl.addEventListener('change', function() { updateDevDates(this.value); });
+    }
+
+    // ── R3: Estado REN26 > Alistamiento → notas_alistamiento readonly ─────
+    function updateNotasAlist(val) {
+      var notasEl = $('m-notas_alistamiento');
+      if (!notasEl) return;
+      var locked = STATES_POST_ALIST.indexOf(val) >= 0;
+      notasEl.readOnly = locked;
+      notasEl.style.background = locked ? 'var(--bg-subtle)' : '';
+      notasEl.style.color      = locked ? 'var(--text-3)' : '';
+    }
+    var estadoEl = $('m-estado');
+    if (estadoEl) {
+      updateNotasAlist(estadoEl.value);
+      estadoEl.addEventListener('change', function() { updateNotasAlist(this.value); });
+    }
+
+    // ── R4: Feedback solo habilitado cuando estado = Renovación completada ─
+    function updateFeedback(val) {
+      var fbSec = document.getElementById('seccion-feedback');
+      if (!fbSec) return;
+      var enabled = val === 'Renovación completada';
+      fbSec.querySelectorAll('.star').forEach(function(s) {
+        s.style.cursor  = enabled ? 'pointer' : 'default';
+        s.style.opacity = enabled ? '1' : '0.35';
+        s._fbEnabled = enabled;
+      });
+      var hint = fbSec.querySelector('p');
+      if (hint) hint.style.display = enabled ? 'none' : '';
+    }
+    if (estadoEl) {
+      updateFeedback(estadoEl.value);
+      estadoEl.addEventListener('change', function() { updateFeedback(this.value); });
+    }
+
+    // ── R5: Normalización de texto ─────────────────────────────────────────
+    var UPPER_FIELDS = ['m-eq_ant_serial','m-eq_ant_hostname','m-eq_ant_placa','m-eq_ant_marca',
+                        'm-eq_ant_modelo','m-eq_nvo_serial','m-eq_nvo_hostname','m-eq_nvo_placa',
+                        'm-eq_nvo_marca','m-eq_nvo_modelo','m-eq_ant_af','m-eq_nvo_af'];
+    UPPER_FIELDS.forEach(function(id) {
+      var el = $(id); if (!el) return;
+      el.addEventListener('blur', function() { this.value = this.value.toUpperCase(); });
+    });
+
+    // ── R6: Placa solo números ───────────────────────────────────────────────
+    ['m-eq_ant_placa','m-eq_nvo_placa'].forEach(function(id) {
+      var el = $(id); if (!el) return;
+      el.addEventListener('input', function() { this.value = this.value.replace(/[^0-9]/g, ''); });
+    });
+
+    // ── R7: Disco auto-formato GB/TB ─────────────────────────────────────────
+    ['m-eq_ant_disco','m-eq_nvo_disco'].forEach(function(id) {
+      var el = $(id); if (!el) return;
+      el.addEventListener('blur', function() {
+        var v = this.value.trim();
+        if (!v) return;
+        if (/^[0-9]+$/i.test(v)) {
+          var n = parseInt(v, 10);
+          this.value = n >= 100 ? v + ' GB' : v + ' TB';
+        } else if (!/gb|tb/i.test(v)) {
+          this.value = v + ' GB';
+        }
+      });
+    });
+
+  })();
+
+  // QA-03: Datalist RAM para autocompletado DDR4/DDR5/LPDDR4/LPDDR5
+  (function() {
+    if (!document.getElementById('ram-opts')) {
+      var dl = document.createElement('datalist'); dl.id = 'ram-opts';
+      ['4GB DDR4','8GB DDR4','16GB DDR4','32GB DDR4',
+       '8GB DDR5','16GB DDR5','32GB DDR5','64GB DDR5',
+       '8GB LPDDR4','16GB LPDDR4','8GB LPDDR5','16GB LPDDR5','32GB LPDDR5'].forEach(function(v) {
+        var o = document.createElement('option'); o.value = v; dl.appendChild(o);
+      });
+      document.body.appendChild(dl);
+    }
+  })();
+
 // Inicializar estrellas
   const fbWidget = $('m-feedback-stars');
   if (fbWidget) {
     const init = parseInt(fbWidget.dataset.value || '0');
     fbWidget.querySelectorAll('.star').forEach(s => {
       const n = parseInt(s.dataset.star);
-      s.classList.toggle('active', n <= init);
+      s.textContent = n <= init ? '★' : '☆';
+      s.addEventListener('click', function() {
+        if (!this._fbEnabled) return;
+        const v = parseInt(this.dataset.star);
+        fbWidget.dataset.value = v;
+        fbWidget.querySelectorAll('.star').forEach(st => {
+          st.textContent = parseInt(st.dataset.star) <= v ? '★' : '☆';
+        });
+      });
     });
   }
 
@@ -993,10 +1143,10 @@ function openCreateModal() {
     eq_ant_placa: '', eq_ant_hostname: '', eq_ant_procesador: '', eq_ant_memoria: '',
     eq_ant_so: '', eq_ant_clasificacion: '',
     tipo: 'PORTATIL', marca: '', modelo: '', serial: '', placa: '', hostname: '',
-    procesador: '', ram: '', disco: '', dato_maestro: 'Pendiente', nombre_sap: '',
+    procesador: '', ram: '', disco: '', dato_maestro: 'Pendiente',
     tecnico: '', estado: 'Pendiente', alistamiento: '', caso_envio: '',
     fecha_asignacion: '', fecha_envio: '', fecha_entrega: '',
-    acta_enviada: false, fecha_envio_acta: '', acta_firmada: false, fecha_firma_acta: '',
+    fecha_envio_acta: '', fecha_firma_acta: '',
     feedback: 0,
     estado_devolucion: '', fecha_solicitud_devolucion: '', fecha_transito: '',
     fecha_recepcion_bodega: '', recibido_bodega: false, equipo_reasignable: false,
