@@ -924,3 +924,37 @@ function uniqueUsers() {
 }
 
 // ═══ RESUMEN ═══
+
+// ════════════════════════════════════════════════════════════════════
+// EventBus — Canal de mensajes desacoplado (Pub/Sub)
+// HOTFIX: Restaurado aquí tras eliminación accidental en QA-05 Task 1.
+// Debe cargarse antes de sync.js, provider.js y boot.js.
+// ════════════════════════════════════════════════════════════════════
+const EventBus = (function() {
+  var _subs = {};
+  var _log  = [];  // últimos 50 eventos para diagnóstico
+
+  function publish(event, payload) {
+    _log.push({ event: event, payload: payload, at: new Date().toISOString() });
+    if (_log.length > 50) _log.shift();
+    var handlers = _subs[event];
+    if (!handlers || handlers.length === 0) return;
+    // slice() para iterar sobre una copia — handlers que se auto-eliminan en su callback
+    handlers.slice().forEach(function(fn) {
+      try { fn(payload); } catch(e) { /* intentional: handler error no bloquea el canal */ }
+    });
+  }
+
+  function subscribe(event, handler) {
+    if (!_subs[event]) _subs[event] = [];
+    _subs[event].push(handler);
+    return function unsubscribe() {
+      if (_subs[event]) {
+        _subs[event] = _subs[event].filter(function(h) { return h !== handler; });
+      }
+    };
+  }
+
+  return { publish: publish, subscribe: subscribe, _log: _log };
+})();
+window.EventBus = EventBus;
