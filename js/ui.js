@@ -19,14 +19,15 @@ function renderResumen() {
   const pendientes = m.pendientes;
   const actas = real.filter(u => u.acta_firmada).length;
   const pct = m.totalColaboradores > 0 ? Math.round(entregados / m.totalColaboradores * 100) : 0;
+  var _setText = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = (v !== undefined && v !== null) ? String(v) : ''; };
   
-  $('h-users').textContent = m.totalColaboradores;  // 141
-  $('h-pendientes').textContent = pendientes;
-  $('h-proceso').textContent = proceso;
-  $('h-entregados').textContent = entregados;
-  $('h-pct').textContent = pct + '%';
+  _setText('h-users', m.totalColaboradores);
+  _setText('h-pendientes', pendientes);
+  _setText('h-proceso', proceso);
+  _setText('h-entregados', entregados);
+  _setText('h-pct', pct + '%');
   
-  $('h-empresas').textContent = 'HBT ' + m.hbt + ' \u00b7 HGS ' + m.hgs;
+  _setText('h-empresas', 'HBT ' + m.hbt + ' \u00b7 HGS ' + m.hgs);
   var _lkpiC = document.getElementById('lkpi-colabs');
   if (_lkpiC) _lkpiC.textContent = m.totalColaboradores;
   var _lkpiCS = document.getElementById('lkpi-colabs-sub');
@@ -34,16 +35,20 @@ function renderResumen() {
   var _lkpiE = document.getElementById('lkpi-empresas');
   if (_lkpiE) _lkpiE.textContent = 'HBT ' + m.hbt + ' \u00b7 HGS ' + m.hgs;
   
-  $('k-total').textContent = m.totalEquipos;        // P3: SIEMPRE 146
-  const _allCount = m.totalEquipos;                 // P3: 146
+  const _allCount   = m.totalEquipos;
   const _backupCount = m.totalBackups;
-  $('k-entregados').textContent = entregados;
-  $('k-pct').textContent = pct + '%';
-  $('k-alistamiento').textContent = alistamiento;
-  $('k-pendientes').textContent = pendientes;
-  $('k-actas').textContent = actas;
+  _setText('k-total',       _allCount);
+  _setText('k-entregados',  entregados);
+  _setText('k-pct',         pct + '%');
+  _setText('k-alistamiento',alistamiento);
+  _setText('k-pendientes',  pendientes);
+  _setText('k-actas',       actas);
+  var _bcEl = document.getElementById('k-backup');
+  if (_bcEl) _bcEl.textContent = _backupCount;
+  var _bcSubEl = document.getElementById('k-backup-sub');
+  if (_bcSubEl) _bcSubEl.textContent = m.hbt + ' HBT · ' + m.hgs + ' HGS (backup)';
   
-  $('b-usuarios').textContent = _allCount;
+  _setText('b-usuarios', _allCount);
   const provName = (DataService.providerName ? DataService.providerName() : 'Mock');
   // QA-04: LED + hora solamente
   var _ledEl = document.getElementById('sync-led');
@@ -73,6 +78,8 @@ function renderResumen() {
   
   renderEmpresaChart();
   renderTecnicoChart();
+  if (window.updateStatsBar) updateStatsBar();
+
   renderMap();
 }
 
@@ -218,7 +225,7 @@ function renderUsuarios() {
   const data = getFiltered();
   $('tbl-count').textContent = data.length + ' de ' + (window.calculateProjectMetrics ? calculateProjectMetrics().totalEquipos : DataService.count()) + ' registros';
   if (data.length === 0) {
-    $('tbl-body').innerHTML = '<tr><td colspan="13"><div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><div class="empty-title">Sin resultados</div><div class="empty-msg">Ajusta los filtros o búsqueda</div></div></td></tr>';
+    $('tbl-body').innerHTML = '<tr><td colspan="15"><div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><div class="empty-title">Sin resultados</div><div class="empty-msg">Ajusta los filtros o búsqueda</div></div></td></tr>';
     return;
   }
   $('tbl-body').innerHTML = data.map(u => {

@@ -155,51 +155,31 @@ function renderTimelineHTML(record) {
   if (!record) return '';
 
   const timeline = record.timeline || [];
-  const states   = StateMachine.flow.slice();
-  const curState = record.estado;
-  const curIdx   = states.indexOf(curState);
-  const isBlocked = curState === StateMachine.states.BLOQUEADO;
+  const states = StateMachine.flow.slice(); // 11 estados happy path
+  const currentState = record.estado;
+  const currentIdx = states.indexOf(currentState);
 
-  // ── Nombres cortos para el stepper QA-05 Task 1
-  const SHORT = {
-    'Pendiente':                            'Pendiente',
-    'Alistamiento':                         'Alistamiento',
-    'Programado':                           'Programado',
-    'En tránsito equipo nuevo':             'Enviado',
-    'Entregado equipo nuevo':               'Entregado',
-    'Pendiente devolución equipo anterior': 'Recolección',
-    'En tránsito equipo anterior':          'En tránsito',
-    'Equipo anterior recibido':             'Recibido',
-    'Renovación completada':                'Completado',
-    'Pendiente aprobación':                 'Aprobación',
-    'Cerrado':                              'Cerrado',
-  };
+  // ── Progreso visual de los 11 estados (timeline original)
+  let progressHTML = '<div class="tl-progress">';
+  states.forEach((st, idx) => {
+    let cls = 'tl-step';
+    if (idx < currentIdx) cls += ' tl-step-done';
+    else if (idx === currentIdx) cls += ' tl-step-current';
+    else cls += ' tl-step-pending';
 
-  // ── Stepper horizontal compact
-  let stepperHTML = '<div class="tl-compact">';
-  states.forEach(function(st, idx) {
-    var cls   = idx < curIdx  ? 'step-done'
-              : idx === curIdx ? (isBlocked ? 'step-blocked' : 'step-current')
-              :                  'step-pending';
-    var icon  = idx < curIdx  ? '✓'
-              : idx === curIdx ? (isBlocked ? '!' : String(idx + 1))
-              :                  String(idx + 1);
-    var label = SHORT[st] || st;
-    stepperHTML += '<div class="tl-compact-step ' + cls + '" title="' + esc(st) + '">' +
-      '<div class="tl-compact-node">' + icon + '</div>' +
-      '<div class="tl-compact-label">' + esc(label) + '</div>' +
-    '</div>';
-    if (idx < states.length - 1) {
-      stepperHTML += '<div class="tl-compact-connector ' + (idx < curIdx ? 'step-done' : 'step-pending') + '"></div>';
-    }
+    const icon = idx < currentIdx ? '✓' : (idx === currentIdx ? '●' : '○');
+    progressHTML += '<div class="' + cls + '" title="' + esc(st) + '">' +
+      '<div class="tl-step-icon">' + icon + '</div>' +
+      '<div class="tl-step-label">' + esc(st) + '</div>' +
+      '</div>';
   });
-  stepperHTML += '</div>';
+  progressHTML += '</div>';
 
-  // ── Banner estados especiales
-  if (isBlocked) {
-    stepperHTML += '<div class="tl-banner tl-banner-blocked">🚧 Bloqueado: ' + esc(record.block_reason || 'sin motivo') + '</div>';
-  } else if (curState === StateMachine.states.CORRECCION_REQUERIDA) {
-    stepperHTML += '<div class="tl-banner tl-banner-correction">✗ Corrección requerida' +
+  // Estados especiales fuera del happy path
+  if (currentState === StateMachine.states.BLOQUEADO) {
+    progressHTML += '<div class="tl-banner tl-banner-blocked">🚧 Bloqueado: ' + esc(record.block_reason || 'sin motivo') + '</div>';
+  } else if (currentState === StateMachine.states.CORRECCION_REQUERIDA) {
+    progressHTML += '<div class="tl-banner tl-banner-correction">✗ Corrección requerida' +
       (record._missing_items ? ' · falta: ' + record._missing_items.join(', ') : '') + '</div>';
   }
 
@@ -208,8 +188,8 @@ function renderTimelineHTML(record) {
   if (timeline.length === 0) {
     historyHTML += '<div class="tl-empty">Sin eventos registrados</div>';
   } else {
-    const sorted = timeline.slice().sort(function(a, b) { return b.at.localeCompare(a.at); });
-    sorted.forEach(function(ev, idx) {
+    const sorted = timeline.slice().sort((a, b) => b.at.localeCompare(a.at));
+    sorted.forEach((ev, idx) => {
       const isFirst = idx === 0;
       historyHTML += '<div class="tl-event' + (isFirst ? ' tl-event-current' : '') + '">' +
         '<div class="tl-event-dot"></div>' +
@@ -245,7 +225,7 @@ function renderTimelineHTML(record) {
       '</div>';
   }
 
-  return stepperHTML + historyHTML + raeePanel;
+  return progressHTML + historyHTML + raeePanel;
 }
 window.renderTimelineHTML = renderTimelineHTML;
 
