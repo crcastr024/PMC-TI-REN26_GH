@@ -640,7 +640,7 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Disco duro (ant.)</label><input type="text" class="form-input" id="m-eq_ant_disco" value="' + esc(u.eq_ant_disco) + '"></div>' +
       '<div class="form-group full"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_ant_so" value="' + esc(u.eq_ant_so) + '"></div>' +
     '</div>' +
-  '</div>' +
+  '</div>';'</div>' +
 
     '<div class="form-section" id="seccion-raee-tecnologico"><div class="form-section-head">3 · Clasificación Tecnológica</div>' +
     (function() {
@@ -768,7 +768,7 @@ function openEditModal(id) {
       '<div style="font-size:12px;font-weight:700">' + (u.VERSION ? '<span style="color:var(--accent)">v' + u.VERSION + '</span> · Cambios rastreados' : '<span style="color:var(--text-3)">Sin registros</span>') + '</div>' +
     '</div>' +
   '</div>' +
-  
+  '</div>';
 
 // QA-05 Task 2 — Progressive disclosure: secciones por estado
 function updateSectionVisibility(estado) {
