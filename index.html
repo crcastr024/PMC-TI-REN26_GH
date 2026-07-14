@@ -140,14 +140,17 @@
 
   <!-- ════════════════════════ TOPBAR ════════════════════════ -->
   <header class="topbar">
+    <button class="tb-toggle" id="tb-toggle" onclick="toggleSidebar()" title="Contraer/expandir menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="tb-crumb">
       <span class="tb-crumb-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
       <span class="tb-crumb-text">PMC-TI-REN26 · <strong id="crumb-view">Resumen</strong></span>
     </div>
 
-    <div class="tb-status">
-      <span class="tb-status-dot"></span>
-      <span id="tb-sync">Sincronizado</span>
+    <div class="tb-status" id="tb-sync-wrap" title="Última sincronización">
+      <span class="tb-led" id="sync-led"></span>
+      <span class="tb-led-time" id="tb-sync">--:--</span>
     </div>
 
     <!-- F4 · Selector de rol (dev tool) -->
@@ -188,14 +191,26 @@
       <span class="dot-badge" id="notif-dot" style="display:none"></span>
     </button>
 
-    <button class="tb-btn" onclick="openCreateModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Nuevo registro
-    </button>
+    
   </header>
 
+
+  <!-- QA-06.1 Task 3 — Banner modo seguro (Usuarios_Sistema no disponible) -->
+  <div id="auth-warn-banner" style="display:none" role="alert" aria-live="polite">
+    <span class="auth-warn-icon">⚠</span>
+    <span class="auth-warn-text">No fue posible cargar la configuración de permisos. El sistema se ejecuta en modo seguro.</span>
+    <button class="auth-warn-close" onclick="this.parentElement.style.display='none'" aria-label="Cerrar aviso">✕</button>
+  </div>
   <!-- ════════════════════════ MAIN ════════════════════════ -->
   <main class="main" id="main-scroll">
+  <!-- QA-05 Task 3 — Stats bar siempre visible -->
+  <div class="stats-bar" id="stats-bar" style="display:none">
+    <div class="stats-bar-item"><span class="stats-bar-val c-total" id="sb-total">—</span><span class="stats-bar-label">equipos</span></div>
+    <div class="stats-bar-item"><span class="stats-bar-val c-pendiente" id="sb-pendientes">—</span><span class="stats-bar-label">pendientes</span></div>
+    <div class="stats-bar-item"><span class="stats-bar-val c-proceso" id="sb-proceso">—</span><span class="stats-bar-label">en proceso</span></div>
+    <div class="stats-bar-item"><span class="stats-bar-val c-enviado" id="sb-enviados">—</span><span class="stats-bar-label">enviados/entregados</span></div>
+    <div class="stats-bar-item"><span class="stats-bar-val c-completado" id="sb-completados">—</span><span class="stats-bar-label">completados</span></div>
+  </div>
 
     <!-- ═════ VISTA: RESUMEN ═════ -->
     <div class="view active" id="view-resumen">
@@ -293,7 +308,7 @@
         <div class="toolbar">
           <div class="search-box">
             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="search-input" placeholder="Buscar por nombre, cédula, serial, hostname, placa, ciudad…">
+            <input type="text" id="search-input" placeholder="Buscar por nombre, cédula, serial, hostname, placa, AF, empresa, proyecto, ciudad…">
           </div>
           <select class="filter-pill" id="filter-empresa"><option value="">Todas las empresas</option><option>HBT</option><option>HGS</option></select>
           <select class="filter-pill" id="filter-tipo"><option value="">Todos los tipos</option><option>PORTATIL</option><option>TORRE</option></select>
@@ -303,7 +318,7 @@
           <span class="filter-count" id="tbl-count">— registros</span>
         </div>
         <div class="tbl-wrap"><div class="tbl-scroll"><table class="tbl">
-          <thead><tr><th>ID</th><th>Emp</th><th>Tipo</th><th>Nombre</th><th>Ciudad</th><th>Proyecto</th><th>Equipo</th><th>Serial</th><th>Placa</th><th>Hostname</th><th>Técnico</th><th>Estado</th><th>Acta</th></tr></thead>
+          <thead><tr><th>ID</th><th title="Indicadores">⚑</th><th>Emp</th><th>Tipo</th><th>Nombre</th><th>Ciudad</th><th>Proyecto</th><th>Equipo</th><th>Serial</th><th>Placa</th><th>Hostname</th><th>Técnico</th><th>Estado</th><th>Acta</th></tr<th class="th-actions">Acciones</th></tr></thead>
           <tbody id="tbl-body"></tbody>
         </table></div></div>
       </div>
@@ -598,6 +613,34 @@
 
     <!-- ═════ F4 · VISTA: PANEL EJECUTIVO (Visitante) ═════ -->
     <div class="view" id="view-panel">
+    <div class="panel-filter-bar" id="panel-filter-bar">
+      <div class="panel-filter-title">Filtros</div>
+      <select class="panel-filter-sel" id="pf-empresa" onchange="applyPanelFilter('empresa',this.value)">
+        <option value="">Todas las empresas</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-ciudad" onchange="applyPanelFilter('ciudad',this.value)">
+        <option value="">Todas las ciudades</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-proyecto" onchange="applyPanelFilter('proyecto',this.value)">
+        <option value="">Todos los proyectos</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-tecnico" onchange="applyPanelFilter('tecnico',this.value)">
+        <option value="">Todos los técnicos</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-estado" onchange="applyPanelFilter('estado',this.value)">
+        <option value="">Todos los estados</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-feedback" onchange="applyPanelFilter('feedback',this.value)">
+        <option value="">Cualquier feedback</option>
+        <option value="1">★ 1+ estrellas</option>
+        <option value="2">★★ 2+ estrellas</option>
+        <option value="3">★★★ 3+ estrellas</option>
+        <option value="4">★★★★ 4+ estrellas</option>
+        <option value="5">★★★★★ 5 estrellas</option>
+      </select>
+      <button class="panel-filter-clear" onclick="clearPanelFilters()">Limpiar filtros</button>
+      <span class="panel-filter-count" id="pf-count"></span>
+    </div>
       <div class="panel-hero">
         <div class="panel-hero-inner">
           <div class="panel-hero-eyebrow">Panel ejecutivo · PMC-TI-REN26</div>
@@ -805,7 +848,7 @@
           <div class="tbl-wrap" style="border:none;border-radius:0;box-shadow:none">
             <div class="tbl-scroll">
               <table class="tbl">
-                <thead><tr><th>ID</th><th>Emp</th><th>Nombre</th><th>Ciudad</th><th>Proyecto</th><th>Equipo nuevo</th><th>Estado</th><th>Acta</th></tr></thead>
+                <thead><tr><th>ID</th><th title="Indicadores">⚑</th><th>Emp</th><th>Nombre</th><th>Ciudad</th><th>Proyecto</th><th>Equipo nuevo</th><th>Estado</th><th>Acta</th></tr></thead>
                 <tbody id="td-users"></tbody>
               </table>
             </div>
@@ -999,7 +1042,7 @@
     </div>
     <!-- Footer -->
     <p style="color:rgba(255,255,255,0.3);font-size:11px;margin-top:24px;">
-      Heinsohn Business Technology 
+      Heinsohn Business Technology
     </p>
   </div>
 </div>
@@ -1051,8 +1094,8 @@
     <div style="font-size:16px;font-weight:700;color:var(--k);margin-bottom:16px">Confirmar guardado</div>
     <div id="confirm-summary" style="font-size:13px;color:#555;line-height:1.6;margin-bottom:20px"></div>
     <div style="display:flex;gap:12px;justify-content:flex-end">
-      <button class="btn btn-secondary" onclick="cancelarGuardado()" style="padding:8px 18px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer">Cancelar</button>
-      <button class="btn btn-primary" onclick="ejecutarGuardado()" id="confirm-execute-btn" style="padding:8px 18px;border:none;border-radius:6px;background:var(--r);color:#fff;font-weight:700;cursor:pointer">Confirmar guardado</button>
+      <button onclick="cancelarGuardado()" style="padding:10px 22px;border:1px solid #ccc;border-radius:7px;background:#f5f5f5;color:#333;font-size:13px;font-weight:600;cursor:pointer;min-width:110px">Cancelar</button>
+      <button onclick="ejecutarGuardado()" id="confirm-execute-btn" style="padding:10px 22px;border:none;border-radius:7px;background:var(--r,#C00000);color:#fff;font-size:13px;font-weight:700;cursor:pointer;min-width:110px">Guardar</button>
     </div>
   </div>
 </div>

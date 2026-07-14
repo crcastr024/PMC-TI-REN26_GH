@@ -5,6 +5,72 @@
 // ════════════════════════════════════════════════════════════════════
 
 
+
+// ════════════════════════════════════════════════════════════════════
+// GH3.39.1 P2/P3 — calculateProjectMetrics()
+// ÚNICA fuente de verdad para todos los dashboards.
+// Todos los módulos deben consumir esta función.
+// ════════════════════════════════════════════════════════════════════
+function calculateProjectMetrics() {
+  var all = window.USERS || [];
+  var backups  = all.filter(function(u){ return isBackup(u); });
+  var activos  = all.filter(function(u){ return !isBackup(u); });
+
+  // Totales
+  var totalEquipos      = all.length;          // 146
+  var totalColaboradores = activos.length;       // 141
+  var totalBackups      = backups.length;        // 5
+
+  // Por empresa (todos los equipos, incluyendo backups)
+  var hbt = all.filter(function(u){ return u.empresa === 'HBT'; });
+  var hgs = all.filter(function(u){ return u.empresa === 'HGS'; });
+
+  // Por estado (solo activos)
+  var estados = {};
+  activos.forEach(function(u){
+    var st = u.estado || 'Sin estado';
+    estados[st] = (estados[st] || 0) + 1;
+  });
+
+  // Por técnico
+  var porTecnico = {};
+  activos.forEach(function(u){
+    var t = u.tecnico || 'Sin asignar';
+    porTecnico[t] = (porTecnico[t] || 0) + 1;
+  });
+
+  // Por ciudad (normalizada)
+  var porCiudad = {};
+  activos.forEach(function(u){
+    var c = (window.CityNormalizer ? CityNormalizer.normalize(u.ciudad) : (u.ciudad||'Sin ciudad')).trim() || 'Sin ciudad';
+    porCiudad[c] = (porCiudad[c] || 0) + 1;
+  });
+
+  // Destino RAEE
+  var raee        = activos.filter(function(u){ return u.recomendacion_raee === 'RAEE'; }).length;
+  var reasignable = activos.filter(function(u){ return u.recomendacion_raee === 'Reasignable'; }).length;
+  var donacion    = activos.filter(function(u){ return u.recomendacion_raee === 'Donación'; }).length;
+
+  return {
+    totalEquipos:       totalEquipos,        // P3: siempre 146
+    totalColaboradores: totalColaboradores,  // 141
+    totalBackups:       totalBackups,        // 5
+    hbt:                hbt.length,          // P3: siempre 88
+    hgs:                hgs.length,          // P3: siempre 58
+    pendientes:         estados['Pendiente']      || estados['PENDIENTE'] || 0,
+    entregados:         estados['Entregado']      || 0,
+    enProceso:          (totalColaboradores - (estados['Pendiente'] || estados['PENDIENTE'] || 0) - (estados['Entregado'] || 0)),
+    raee:               raee,
+    reasignables:       reasignable,
+    donaciones:         donacion,
+    porEmpresa:         { HBT: hbt.length, HGS: hgs.length },
+    porTecnico:         porTecnico,
+    porCiudad:          porCiudad,
+    estados:            estados,
+  };
+}
+window.calculateProjectMetrics = calculateProjectMetrics;
+
 // ════════════════════════════════════════════════════════════════════
 // GH3.37.1 Item 3 — CityNormalizer: fuente única de normalización de ciudades
 // Convierte todas las variantes de una ciudad a una sola representación
@@ -56,7 +122,7 @@ window.CityNormalizer = CityNormalizer;
 const KPIService = {
   
   calculate(records) {
-    records = (records || []).filter(r => !r.es_backup);
+    records = (records || []).filter(r => !isBackup(r));
     const total = records.length;
     
     const entregados = records.filter(r => {
@@ -113,7 +179,7 @@ const KPIService = {
 
   // Número de colaboradores activos con equipo asignado (excluye backups)
   totalColaboradores() {
-    return (window.USERS || []).filter(function(u){ return !u.es_backup; }).length;
+    return (window.USERS || []).filter(function(u){ return !isBackup(u); }).length;
   },
 
   // Alias de compatibilidad — delega a totalColaboradores()
@@ -384,7 +450,7 @@ const IntegrityService = {
     const issues = [];
     const stats  = {};
 
-    const activos = ren.filter(r => r.es_backup !== true && r.es_backup !== 'SI');
+    const activos = ren.filter(r => !isBackup(r));
     stats.total         = ren.length;
     stats.activos        = activos.length;
     stats.backups        = ren.length - activos.length;
@@ -551,10 +617,10 @@ const InventarioService = {
   getByIdInv(id)    { return (window.INVENTORY || []).find(i => i.id_inv === id) || null; },
   getByCedula(ced)  { return (window.INVENTORY || []).find(i => String(i.cedula_asignada) === String(ced)) || null; },
   // F5 · Métodos de escritura (pendientes — requieren write-back a Provider)
-  reservar(id_inv, renovacion_id)   { console.warn('[F5 PENDIENTE] InventarioService.reservar'); },
-  asignar(id_inv, cedula, usuario)  { console.warn('[F5 PENDIENTE] InventarioService.asignar'); },
-  baja(id_inv, motivo)              { console.warn('[F5 PENDIENTE] InventarioService.baja'); },
-  reasignar(id_inv, nueva_cedula)   { console.warn('[F5 PENDIENTE] InventarioService.reasignar'); },
+  reservar(id_inv, renovacion_id)   { /* F5 pendiente */ },
+  asignar(id_inv, cedula, usuario)  { /* F5 pendiente */ },
+  baja(id_inv, motivo)              { /* F5 pendiente */ },
+  reasignar(id_inv, nueva_cedula)   { /* F5 pendiente */ },
 };
 window.InventarioService = InventarioService;
 

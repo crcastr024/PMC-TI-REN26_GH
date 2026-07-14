@@ -35,16 +35,14 @@ const ExcelMapper = (() => {
     if (s.toUpperCase() === 'TRUE'  || s === '1') return true;
     if (s.toUpperCase() === 'FALSE' || s === '0') {
       // Sólo cast a false si la columna es conocidamente booleana
-      const boolCols = ['ACTA_ENVIADA','ACTA_FIRMADA','ES_BACKUP','FEEDBACK_RECIBIDO',
-        'EVIDENCIA_ADJUNTA','BLOCKED','AUNTRABAJA','AUN_TRABAJA',
-        '_DELETED','DEVUELTO','FEEDBACK_ENVIADO'];
+      const boolCols = ['LISTA_RECOLECCION']; // QA-03: solo columnas del Excel v1.0
       if (boolCols.some(b => colName && colName.toUpperCase().includes(b.replace('_','')))) return false;
     }
     // Número
     if (!isNaN(Number(s)) && s !== '') {
       const n = Number(s);
       // Solo cast numérico para columnas claramente numéricas
-      const numCols = ['ID','FEEDBACK','_VERSION'];
+      const numCols = ['ID','CALIFICACION_FEEDBACK','VERSION'];
       if (numCols.some(c => colName && colName.toUpperCase() === c)) return n;
     }
     return s;
@@ -473,12 +471,17 @@ window.WriteQueue = WriteQueue;
 // ────────────────────────────────────────────────────────────────────
 // GH3.31 BLOQUE 1: Mapa de aliases campo_interno → columna_excel
 // Permite que campos con nombre histórico distinto lleguen correctamente al Excel.
+// GH3.41.2: FIELD_COLUMN_ALIASES — contrato oficial de columnas Excel
+// Mapea: nombre_campo_js → nombre_columna_excel
 const FIELD_COLUMN_ALIASES = {
-  'alistamiento':     'fecha_alistamiento',
-  'fecha_envio_acta': 'fecha_acta_enviada',
-  'fecha_firma_acta': 'fecha_acta_firmada',
-  'observaciones':    'observacion',
-  'estado_devolucion':'devuelto',
+  // Fechas con nombre distinto
+  'fecha_envio_acta':  'fecha_acta_enviada',
+  'fecha_firma_acta':  'fecha_acta_firmada',
+  // GH3.41.2: actualizados al nuevo contrato Excel
+  'estado':            'estado_renovacion',
+  'registro':          'nivel_usuario',
+  'feedback':          'calificacion_feedback',
+  'nombre_archivo':    'nombre_archivo_acta',
 };
 
 const WorkbookWriter = (() => {
@@ -553,6 +556,10 @@ const WorkbookWriter = (() => {
       const user = (window.state && state.user) || { name: 'sistema', email: 'sistema' };
       const now  = new Date().toISOString();
 
+      // GH3.39.2 P1: record declarado ANTES del forEach para que prevValue esté disponible
+      // La declaración original en if(versionIdx) estaba fuera del scope del forEach
+      const record = DataService.getRenewal(id);
+
       // Campos del usuario
       Object.entries(safeChanges).forEach(([field, value]) => {
         // GH3.31 BLOQUE 1: traducir nombre_campo → nombre_columna_excel si existe alias
@@ -568,12 +575,12 @@ const WorkbookWriter = (() => {
       });
 
       // Campos de control automáticos: _VERSION += 1, _UPDATED_AT, _UPDATED_BY
-      const versionIdx = headers.findIndex(h => String(h).trim().toUpperCase() === '_VERSION');
-      const updAtIdx   = headers.findIndex(h => String(h).trim().toUpperCase() === '_UPDATED_AT');
-      const updByIdx   = headers.findIndex(h => String(h).trim().toUpperCase() === '_UPDATED_BY');
+      const versionIdx = headers.findIndex(h => String(h).trim().toUpperCase() === 'VERSION');
+      const updAtIdx   = headers.findIndex(h => String(h).trim().toUpperCase() === 'UPDATED_AT');
+      const updByIdx   = headers.findIndex(h => String(h).trim().toUpperCase() === 'UPDATED_BY');
 
       if (versionIdx >= 0) {
-        const record = DataService.getRenewal(id);
+        // GH3.39.2 P1: record ya declarado arriba — no redeclarar
         const currentVersion = (record && record._version) ? Number(record._version) : 0;
         cellUpdates.push({ address: `${ExcelMapper.columnLetter(versionIdx)}${rowNum}`, value: currentVersion + 1 });
         // Actualizar en memoria también
@@ -649,7 +656,7 @@ const WorkbookWriter = (() => {
             const expected = upd.value === null ? '' : String(upd.value);
             const ok = readBack === expected || readBack === null;
             if (ok) {
-              console.error('[WRITE VERIFY] OK —', upd.field, ':', expected);
+              /* WRITE VERIFY OK: upd.field verified */
             } else {
               console.error('[WRITE VERIFY] MISMATCH', upd.field,
                 '| Esperado:', expected, '| Encontrado:', readBack);
@@ -657,7 +664,7 @@ const WorkbookWriter = (() => {
             _writeResults.push({ field: upd.field, address: upd.address, expected, readBack, ok });
             if (window.HBT) {
               window.HBT._lastWrite = {
-                sessionId: sessionId,
+                // GH3.39.4: sessionId eliminado — modo stateless
                 field: upd.field,
                 address: upd.address,
                 patchUrl,
@@ -675,16 +682,16 @@ const WorkbookWriter = (() => {
           // Sin verificación: registrar solo el PATCH
           if (window.HBT) {
             window.HBT._lastWrite = {
-              sessionId, field: upd.field, address: upd.address,
+              // GH3.39.4: sessionId eliminado — modo stateless
+              field: upd.field, address: upd.address,
               patchUrl, patchValue: upd.value, time: new Date().toISOString(),
             };
           }
         }
       }
 
-      // Stage 6: Cerrar sesión
-      // GH3.26: closeSession eliminado — stateless mode
-      sessionId = null;
+      // Stage 6: Cerrar sesión — eliminado en GH3.26 (stateless mode)
+      // GH3.39.4: sessionId = null eliminado — variable residual del modelo con sesión
 
       // Stage 7: Post-commit
       WriteLock.release(id);

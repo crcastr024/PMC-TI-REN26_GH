@@ -346,7 +346,6 @@ const SP_FIELD_MAP = {
   'EqNvoRam':                 'eq_nvo_ram',
   'EqNvoDisco':               'eq_nvo_disco',
   'DatoMaestro':              'dato_maestro',
-  'NombreSAP':                'nombre_sap',
   // ── Equipo anterior ──────────────────────────────────────────
   'EqAntTipo':                'eq_ant_tipo',
   'EqAntMarca':               'eq_ant_marca',
@@ -363,31 +362,24 @@ const SP_FIELD_MAP = {
   'Estado':                   'estado',
   'EstadoEntregaEquipoNuevo': 'estado_entrega_equipo_nuevo',
   'DisposicionFinal':         'disposicion_final',
-  'EstadoDevolucion':         'estado_devolucion',
   'ActaEnviada':              'acta_enviada',
-  'ActaFirmada':              'acta_firmada',
   'ActaEntregaUrl':           'acta_entrega_url',
   'EvidenciaAdjunta':         'evidencia_adjunta',
   'NombreArchivo':            'nombre_archivo',
-  'Feedback':                 'feedback',
   'FeedbackRecibido':         'feedback_recibido',
   'Observaciones':            'observaciones',
   'Alistamiento':             'alistamiento',
   'CasoEnvio':                'caso_envio',
   'FechaAsignacion':          'fecha_asignacion',
   'FechaEnvio':               'fecha_envio',
-  'FechaEntrega':             'fecha_entrega',
   'FechaEnvioActa':           'fecha_envio_acta',
   'FechaFirmaActa':           'fecha_firma_acta',
   'FechaSolicitudDevolucion': 'fecha_solicitud_devolucion',
   'FechaTransito':            'fecha_transito',
   'FechaRecepcionBodega':     'fecha_recepcion_bodega',
   'Bloqueado':                'blocked',
-  'RazonBloqueo':             'block_reason',
   'CategoriaBloqueo':         'block_category',
   'EstadoAnteriorBloqueo':    'block_previous_state',
-  'EsBackup':                 'es_backup',
-  'AunTrabaja':               'aun_trabaja',
   // ── Metadatos SP ─────────────────────────────────────────────
   'id':                       'sp_item_id',   // ID del ítem en SP (para PATCH en F7.4)
 };
@@ -536,80 +528,79 @@ window.RAEEEngine = RAEEEngine;
 
 const WriteContract = (() => {
   // Campos que NUNCA deben ir a SharePoint
+  // GH A1: es_backup y clasificacion_obsolescencia movidos a ALLOWED — deben persistir en Excel
   const PROTECTED_FIELDS = new Set([
     'audit', 'timeline', 'approval',
-    'clasificacion_obsolescencia', 'generacion_cpu', 'accion_requerida', 'accion_detalle',
+    'generacion_cpu', 'accion_requerida', 'accion_detalle',
     'estado_eq_ant', 'clasificacion_raee', '_obsolescence_meta',
     'equipoAnterior', 'equipoNuevo',
-    'es_backup',                       // derivado — no se gestiona en SP
     'sp_item_id',                      // meta SP — no se escribe al campo real
-    'recibido_bodega', 'equipo_reasignable', 'equipo_devuelto', // derivados calculados
+    'recibido_bodega', 'equipo_reasignable', 'equipo_devuelto', // derivados de formulario
   ]);
 
   // Campos de solo lectura (vienen del Excel/SAP — no se editan en el Dashboard)
+  // QA-03: READONLY_FIELDS — columnas sin control UI en el nuevo Excel
   const READONLY_FIELDS = new Set([
-    'id', 'cedula', 'nombre', 'usuario', 'correo', 'empresa',
-    'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial',
-    'eq_nvo_placa','eq_nvo_hostname','eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco',
-    'dato_maestro', 'nombre_sap',
-    'eq_ant_tipo', 'eq_ant_marca', 'eq_ant_modelo', 'eq_ant_serial',
-    'eq_ant_af', 'eq_ant_placa', 'eq_ant_hostname',
-    'eq_ant_procesador', 'eq_ant_ram', 'eq_ant_so',
-    'ceco', 'cargo', 'gerente', 'registro',
+    'id',                      // clave interna — nunca editar
+    'fecha_devolucion',        // Bodega — sin control en formulario
+    'observaciones_devolucion',// notas devolución — sin control en formulario
   ]);
 
   // Campos sincronizables → SharePoint (whitelist oficial)
+  // QA-03: ALLOWED_FIELDS — alineado al Excel Maestro definitivo
+  // Columnas eliminadas del Excel: CLASIFICACION_OBSOLESCENCIA, ACTA_ENVIADA, ACTA_FIRMADA,
+  // FECHA_ALISTAMIENTO, FECHA_ASIGNACION, FEEDBACK_RECIBIDO, ES_BACKUP
+  // Columnas nuevas en Excel: EQ_NVO_SO, NOTAS_ALISTAMIENTO, FECHA_ENTREGA
   const ALLOWED_FIELDS = [
-    // Datos básicos editables
-    'ciudad', 'proyecto',
-    // Proceso REN26
+    // Sección 1 — Colaborador
+    'empresa', 'nombre', 'cedula', 'usuario', 'correo', 'ciudad', 'ceco', 'proyecto',
+    'cargo', 'gerente', 'registro',
+    // Sección 2 — Equipo anterior
+    'eq_ant_tipo', 'eq_ant_marca', 'eq_ant_modelo', 'eq_ant_serial', 'eq_ant_af',
+    'eq_ant_placa', 'eq_ant_hostname', 'eq_ant_procesador',
+    'eq_ant_memoria', 'eq_ant_disco', 'eq_ant_so',
+    // Sección 4 — Equipo nuevo (+ eq_nvo_so nuevo en este Excel)
+    'eq_nvo_tipo', 'eq_nvo_marca', 'eq_nvo_modelo', 'eq_nvo_serial', 'eq_nvo_af',
+    'eq_nvo_placa', 'eq_nvo_hostname', 'eq_nvo_procesador', 'eq_nvo_ram', 'eq_nvo_disco',
+    'eq_nvo_so',
+    // Sección 5 — Proceso REN26
     'tecnico', 'estado', 'estado_entrega_equipo_nuevo',
-    'alistamiento', 'caso_envio',
-    'fecha_asignacion', 'fecha_envio', 'fecha_entrega',
+    'notas_alistamiento',
+    'caso_envio', 'fecha_envio', 'fecha_entrega',
     'fecha_envio_acta', 'fecha_firma_acta',
-    // Devolución
+    'acta_entrega_url', 'nombre_archivo',
+    'feedback',
+    // Sección 7 — Devolución
     'estado_devolucion', 'disposicion_final',
     'fecha_solicitud_devolucion', 'fecha_transito', 'fecha_recepcion_bodega',
-    // Entrega y seguimiento
-    'acta_enviada', 'acta_firmada', 'acta_entrega_url',
-    'evidencia_adjunta', 'nombre_archivo',
-    // Feedback
-    'feedback', 'feedback_recibido',
-    // Bloqueo
-    'blocked', 'block_reason', 'block_category', 'block_previous_state',
-    // General
-    'observaciones', 'aun_trabaja',
-    // GH3.27 nuevos campos — requieren columnas en Excel: LISTA_RECOLECCION,
-    // EVAL_BATERIA, EVAL_TECLADO, EVAL_TOUCHPAD, EVAL_ESTETICO
-    'lista_recoleccion', 'eval_bateria', 'eval_teclado', 'eval_touchpad', 'eval_estetico',
-    // GH3.28: Motor RAEE — columnas creadas en Excel Maestro GH3.28
+    'lista_recoleccion',
+    // Evaluación física y RAEE
+    'eval_bateria', 'eval_teclado', 'eval_touchpad', 'eval_estetico',
     'recomendacion_raee', 'motivo_raee', 'motor_raee_version', 'fecha_evaluacion_raee',
-    'usuario_evaluacion_raee',  // GH3.29
+    'usuario_evaluacion_raee',
   ];
 
   // Campos requeridos (no pueden ser null/vacío al escribir)
   const REQUIRED_FIELDS = new Set(['tecnico', 'estado', 'empresa', 'cedula', 'nombre']);
 
   // Tipos esperados por campo (para validación de tipo)
+  // QA-03: FIELD_TYPES — alineado al Excel Maestro definitivo
   const FIELD_TYPES = {
     estado:                      'choice',
     estado_entrega_equipo_nuevo: 'choice',
     disposicion_final:           'choice',
     tecnico:                     'choice',
-    acta_enviada:                'boolean',
-    acta_firmada:                'boolean',
     acta_entrega_url:            'string',
-    evidencia_adjunta:           'boolean',
-    blocked:                     'boolean',
     feedback:                    'number',
-    fecha_asignacion:            'date',
     fecha_envio:                 'date',
-    fecha_entrega:               'date',
     fecha_envio_acta:            'date',
     fecha_firma_acta:            'date',
     fecha_solicitud_devolucion:  'date',
     fecha_transito:              'date',
     fecha_recepcion_bodega:      'date',
+    fecha_entrega:               'date',   // QA-03: restaurado en nuevo Excel
+    notas_alistamiento:          'string', // QA-03: reemplaza fecha_alistamiento
+    eq_nvo_so:                   'string', // QA-03: nuevo en Excel
   };
 
   // Choices válidos por campo
@@ -698,7 +689,16 @@ const GraphWriteValidator = (() => {
       }
 
       const type = WriteContract.FIELD_TYPES[field];
-      const choices = WriteContract.VALID_CHOICES[field];
+      // GH3.41.1: resolver choices en tiempo de validación, no en tiempo de carga
+      // ConfigService no existe cuando graph.js inicializa su IIFE (#6 en carga)
+      // pero sí existe cuando validateField() se ejecuta (boot.js carga en #13)
+      const choices = (function() {
+        if (field === 'disposicion_final' && typeof ConfigService !== 'undefined')
+          return ConfigService.DISPOSICION_FINAL_OPTS.filter(Boolean);
+        if (field === 'estado_entrega_equipo_nuevo' && typeof ConfigService !== 'undefined')
+          return ConfigService.ESTADO_ENTREGA_EQ_NVO.filter(Boolean);
+        return WriteContract.VALID_CHOICES[field];
+      })();
 
       // 4. Validación de tipo
       if (type === 'boolean') {
@@ -1211,8 +1211,7 @@ const GraphProvider = (() => {
           // Garantías mínimas
           if (!record.id) record.id = idx + 1;
           if (!record.estado) record.estado = 'PENDIENTE';
-          if (!record.es_backup) record.es_backup = false;
-          return record;
+                  return record;
         });
 
         // 3. Tablas secundarias — provienen del Bootstrap (cargadas antes de este punto)
@@ -1448,10 +1447,22 @@ window.JSONProvider = JSONProvider;
 // ═══════════════════════════════════════════════════════════════════
 const DataMapper = {
   ROLE_MAP: {
-    'SUPER ADMIN':    'super_admin',
-    'GESTOR ACTIVOS': 'gestor_activos',
-    'TECNICO':        'tecnico',
-    'VISITANTE':      'visitante',
+    // Variantes externas → rol interno canónico
+    'SUPER ADMIN':        'super_admin',
+    'SUPER_ADMIN':        'super_admin',
+    'ADMINISTRADOR':      'super_admin',
+    'ADMIN':              'super_admin',
+    'LIDER TI':           'super_admin',
+    'LIDER DE PROYECTOS': 'super_admin',
+    'GESTOR ACTIVOS':     'gestor_activos',
+    'GESTOR_ACTIVOS':     'gestor_activos',
+    'GESTOR IT':          'gestor_activos',
+    'COORDINADOR TI':     'gestor_activos',
+    'GESTOR':             'gestor_activos',
+    'TECNICO':            'tecnico',
+    'TÉCNICO':            'tecnico',
+    'CONSULTA':           'consulta',
+    'VISITANTE':          'visitante',
   },
   
   /** "SUPER ADMIN" -> "super_admin" (clave interna canónica para can()/PERMISSIONS) */

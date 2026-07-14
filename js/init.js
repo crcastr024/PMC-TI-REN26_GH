@@ -65,7 +65,7 @@ window.HBT = (function() {
       corruptData:    _state._corruptData,
       timestamp:      new Date().toISOString(),
     };
-    console.error('[HBT DEBUG]\n' + JSON.stringify(info, null, 2));
+    console.debug('[HBT DEBUG]\n' + JSON.stringify(info, null, 2));
     return info;
   };
 
@@ -76,9 +76,9 @@ window.HBT = (function() {
     var ALLOWED = (window.WriteContract && window.WriteContract.ALLOWED_FIELDS)
                   ? window.WriteContract.ALLOWED_FIELDS
                   : ['ciudad','proyecto','tecnico','estado','caso_envio','fecha_envio',
-                     'fecha_entrega','acta_enviada','acta_firmada','feedback_recibido','aun_trabaja'];
+                     'notas_alistamiento','fecha_entrega','eq_nvo_so'];
 
-    console.error('[HBT FIELD MAP] Headers Excel (' + hdrs.length + '):');
+    console.debug('[HBT FIELD MAP] Headers Excel (' + hdrs.length + '):');
     var table = [];
     hdrs.forEach(function(h, idx) {
       if (!h) return;
@@ -91,14 +91,14 @@ window.HBT = (function() {
       var writable = ALLOWED.indexOf(field) >= 0;
       var status   = writable ? 'BIDI ✓' : 'READ-ONLY';
       table.push({ campo: field, columna: colLetter, excel: h, writable: writable, status: status });
-      console.error('  ' + field.padEnd(35) + colLetter.padEnd(5) + status);
+      console.debug('  ' + field.padEnd(35) + colLetter.padEnd(5) + status);
     });
 
     // Campos en ALLOWED sin columna Excel
     ALLOWED.forEach(function(f) {
       var found = hdrs.some(function(h){ return String(h||'').trim().toLowerCase()===f.toLowerCase(); });
       if (!found) {
-        console.error('  *** ' + f.padEnd(33) + '???  NO EXISTE EN EXCEL — campo descartado');
+        console.debug('  *** ' + f.padEnd(33) + '???  NO EXISTE EN EXCEL — campo descartado');
         table.push({ campo: f, columna: '???', excel: null, writable: false, status: 'SIN COLUMNA EN EXCEL' });
       }
     });
@@ -107,13 +107,13 @@ window.HBT = (function() {
 
   // ── P7: testWrite(id) ────────────────────────────────────────────
   _state.testWrite = async function(id) {
-    console.error('[TEST WRITE] Inicio — id:', id);
+    console.debug('[TEST WRITE] Inicio — id:', id);
     var WW = window.WorkbookWriter;
-    if (!WW) { console.error('[TEST WRITE] FAIL — WorkbookWriter no disponible'); return; }
+    if (!WW) { console.debug('[TEST WRITE] FAIL — WorkbookWriter no disponible'); return; }
     var DS = window.DataService;
-    if (!DS) { console.error('[TEST WRITE] FAIL — DataService no disponible'); return; }
+    if (!DS) { console.debug('[TEST WRITE] FAIL — DataService no disponible'); return; }
     var record = DS.getRenewal ? DS.getRenewal(id) : null;
-    if (!record) { console.error('[TEST WRITE] FAIL — Registro', id, 'no encontrado'); return; }
+    if (!record) { console.debug('[TEST WRITE] FAIL — Registro', id, 'no encontrado'); return; }
 
     var originalCiudad = record.ciudad || '';
     var testValue = 'HBTTEST' + Date.now().toString().slice(-6);
@@ -124,23 +124,23 @@ window.HBT = (function() {
 
     try {
       // PATCH 1 — escribir valor de prueba
-      console.error('[TEST WRITE] PATCH 1: ciudad =', testValue);
+      console.debug('[TEST WRITE] PATCH 1: ciudad =', testValue);
       var r1 = await WW.writeRecord(id, { ciudad: testValue });
       var ok1 = r1 && r1.ok;
-      console.error('[TEST WRITE] PATCH 1:', ok1 ? 'OK' : 'FAIL', '|', r1 && r1.reason || '');
+      console.debug('[TEST WRITE] PATCH 1:', ok1 ? 'OK' : 'FAIL', '|', r1 && r1.reason || '');
       var v1 = _state._lastWrite;
-      console.error('[TEST WRITE] GET 1:', v1 && v1.verifyOk ? 'OK — confirmado en Excel' : 'Sin verificación / MISMATCH');
+      console.debug('[TEST WRITE] GET 1:', v1 && v1.verifyOk ? 'OK — confirmado en Excel' : 'Sin verificación / MISMATCH');
 
       // PATCH 2 — restaurar valor original
-      console.error('[TEST WRITE] PATCH 2 (rollback): ciudad =', originalCiudad);
+      console.debug('[TEST WRITE] PATCH 2 (rollback): ciudad =', originalCiudad);
       var r2 = await WW.writeRecord(id, { ciudad: originalCiudad || ' ' });
       var ok2 = r2 && r2.ok;
-      console.error('[TEST WRITE] PATCH 2:', ok2 ? 'OK' : 'FAIL');
+      console.debug('[TEST WRITE] PATCH 2:', ok2 ? 'OK' : 'FAIL');
       var v2 = _state._lastWrite;
-      console.error('[TEST WRITE] GET 2:', v2 && v2.verifyOk ? 'OK — rollback confirmado' : 'Sin verificación / MISMATCH');
+      console.debug('[TEST WRITE] GET 2:', v2 && v2.verifyOk ? 'OK — rollback confirmado' : 'Sin verificación / MISMATCH');
 
       var passed = ok1 && ok2;
-      console.error('[TEST WRITE] RESULTADO:', passed ? 'TEST OK ✓' : 'TEST FAIL ✗');
+      console.debug('[TEST WRITE] RESULTADO:', passed ? 'TEST OK ✓' : 'TEST FAIL ✗');
       return { patch1: ok1, get1: v1 && v1.verifyOk, patch2: ok2, get2: v2 && v2.verifyOk, passed };
     } finally {
       _state.verifyWrites = prevVerify;

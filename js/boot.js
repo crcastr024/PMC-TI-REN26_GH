@@ -90,9 +90,31 @@ const BootstrapManager = (() => {
 
   // ── Paso 3: Cargar usuarios del sistema y resolver rol ───────────────────
   async function _loadUsersAndResolveRole(userEmail) {
+    // QA-06.1: Sin escalamiento automático. Usuarios_Sistema es la única fuente.
 
-    const users = await _loadTable(TableRegistry.USUARIOS);
+    let users = [];
+    let usersUnavailable = false;
+
+    try {
+      users = await _loadTable(TableRegistry.USUARIOS);
+    } catch (e) {
+      // Error de red / Graph / tabla inexistente → modo seguro
+      usersUnavailable = true;
+    }
+
+    // Tabla vacía == indistinguible de tabla inexistente == modo seguro
+    if (!users.length) usersUnavailable = true;
+
     window.SYSTEM_USERS = users;
+
+    if (usersUnavailable) {
+      // Task 4: log único, sin stack trace
+      console.warn('[AUTH] Usuarios_Sistema unavailable → Role: visitante');
+      // Task 3: señal para mostrar banner
+      window._AUTH_USERS_UNAVAILABLE = true;
+    } else {
+      window._AUTH_USERS_UNAVAILABLE = false;
+    }
 
     // Normalizar usuarios — campos mínimos
     users.forEach(u => {
@@ -100,8 +122,13 @@ const BootstrapManager = (() => {
       u.rol    = u.rol || u.role || 'visitante';
     });
 
-    // Resolver rol usando la función existente (lee SYSTEM_USERS)
+    // Resolver rol: exclusivamente desde Usuarios_Sistema
     const role = F7_resolveRole(userEmail);
+
+    if (role === 'visitante' && users.length > 0) {
+      // Usuario autenticado pero no configurado en Usuarios_Sistema
+      console.warn('[AUTH] Usuario no encontrado en Usuarios_Sistema → Role: visitante');
+    }
 
     return { users, role };
   }
@@ -261,6 +288,11 @@ async function boot() {
 
   // ── RC2.6: Cuando Bootstrap completa → cargar datos de negocio ──────────
   EventBus.subscribe('bootstrap.completed', async ({ role, user: _authUser }) => {
+  // QA-06.1 Task 3: mostrar banner si Usuarios_Sistema no disponible
+  if (window._AUTH_USERS_UNAVAILABLE) {
+    var bannerEl = document.getElementById('auth-warn-banner');
+    if (bannerEl) bannerEl.style.display = 'flex';
+  }
   const payload = { role, user: _authUser };
 
     if (loadingEl) loadingEl.style.display = 'flex';
@@ -810,7 +842,7 @@ const ObsolescenceService = {
   getStats() {
     const stats = { RAEE: 0, Reasignable: 0, 'Revisión manual': 0, total: 0 };
     window.USERS.forEach(r => {
-      if (r.es_backup) return;
+      if (isBackup(r)) return;
       stats.total++;
       const cls = r.estado_eq_ant || 'Revisión manual';
       if (stats[cls] !== undefined) stats[cls]++;
@@ -848,7 +880,7 @@ window.ObsolescenceService = ObsolescenceService;
       try {
         if (window.KPIService) {
           var kt = KPIService.totalRenewals();
-          var manual = (window.USERS || []).filter(function(u){ return !u.es_backup; }).length;
+          var manual = (window.USERS || []).filter(function(u){ return !isBackup(u); }).length;
           if (kt !== manual) issues.push({ module:'KPIs', msg:'totalRenewals mismatch: '+kt+' vs '+manual });
         }
       } catch(e) { issues.push({ module:'KPIs', msg: e.message }); }
@@ -927,7 +959,7 @@ const ApprovalService = {
       id: 'acta_firmada',
       label: 'Acta de entrega firmada',
       description: 'PandaDoc · firma del usuario receptor',
-      check: (r) => !!(r.acta_firmada === true || r.acta_firmada === 'SI'),
+      check: (r) => !!(r.fecha_firma_acta), // QA-03: derivado de fecha
     },
     {
       id: 'evidencia_adjunta',
@@ -954,7 +986,7 @@ const ApprovalService = {
       id: 'feedback_registrado',
       label: 'Feedback del usuario registrado',
       description: 'Encuesta de satisfacción (1-5 estrellas)',
-      check: (r) => (r.feedback || 0) > 0 || (r.feedback_recibido && r.feedback_recibido !== 'NO'),
+      check: (r) => (r.feedback || 0) > 0, // QA-03: feedback_recibido eliminado
     },
   ],
   
@@ -1145,7 +1177,7 @@ const ApprovalService = {
    */
   getQueue() {
     return window.USERS.filter(r =>
-      !r.es_backup &&
+      !isBackup(r) &&
       r.estado === StateMachine.states.PENDIENTE_APROBACION
     );
   },
@@ -1155,7 +1187,7 @@ const ApprovalService = {
    */
   getRejected() {
     return window.USERS.filter(r =>
-      !r.es_backup &&
+      !isBackup(r) &&
       r.estado === StateMachine.states.CORRECCION_REQUERIDA
     );
   },
@@ -1198,16 +1230,20 @@ const ConfigService = (() => {
   const getFlow   = () => STATE_FLOW.slice();
 
   // ── 3. Clasificaciones RAEE — valores permitidos como enum
-  const CLASIFICACIONES_RAEE = ['RAEE', 'Reasignable', 'Revisión manual'];
+  // GH3.40.2 Task 4: catálogo oficial RAEE — 4 valores (el motor se actualiza en sprint posterior)
+  const CLASIFICACIONES_RAEE = ['Reutilizar', 'Reasignar', 'RAEE', 'Revisión manual'];
 
   // ── 4. Disposición final del equipo anterior — valores permitidos
   // F3.6 · Disposición final — 4 valores del spec de negocio
+  // GH3.40.2 Task 3: catálogo oficial de disposición final
   const DISPOSICION_FINAL_OPTS = [
-    '',
-    'Venta interna empleado',
+    'Pendiente definir',
     'Reasignación interna',
-    'Baja RAEE',
-    'Pendiente evaluación',
+    'RAEE',
+    'Donación',
+    'Venta',
+    'Garantía',
+    'Otro',
   ];
 
   // F3.6 · Estado de entrega del equipo nuevo — entidad física independiente del proceso REN26
@@ -1238,7 +1274,7 @@ const ConfigService = (() => {
     return prefix + String(estado).toLowerCase().replace(/[\s/]+/g, '-');
   };
 
-  // ── 7. Registros de nivel de renovación (Registro/Nivel) — 5 valores reales
+
   const NIVELES_REGISTRO = [
     'Nivel 1 - Analista / Operativo (Asistentes, recepción, apoyo administrativo y cargos operativos).',
     'Nivel 2 - Consultor / Profesional (Consultores, PMO, coordinadores y personal con contacto frecuente con clientes o gestión de proyectos).',
@@ -1283,6 +1319,129 @@ window.ConfigService = ConfigService;
 // PRODUCTION_CONFIG cargado desde js/config.js (RC3.3)
 // Toda la app lee desde window.PRODUCTION_CONFIG
 
+// ════════════════════════════════════════════════════════════════════
+// GH3.39.3 Fase 3 — Panel de Diagnóstico (Ctrl+Shift+D)
+// Panel oculto de soporte técnico — no visible para usuarios finales
+// ════════════════════════════════════════════════════════════════════
+(function() {
+  var _diagOpen = false;
+
+  function _formatMs(ms) {
+    return ms == null ? '—' : ms < 1000 ? ms + 'ms' : (ms/1000).toFixed(2) + 's';
+  }
+
+  function _buildDiagHTML() {
+    var m = window.calculateProjectMetrics ? calculateProjectMetrics() : null;
+    var users = window.USERS || [];
+    var sysU  = window.SYSTEM_USERS || [];
+    var cfg   = window.PRODUCTION_CONFIG || window.APP_CONFIG || {};
+    var hbt   = window.HBT || {};
+    var st    = window.state || {};
+    var now   = new Date().toLocaleTimeString('es-CO');
+
+    var lastSync   = hbt._lastWrite   ? hbt._lastWrite.time   : '—';
+    var lastValid  = hbt._lastValidation ? hbt._lastValidation.ts : '—';
+    var writeOk    = hbt._lastWrite   ? (hbt._lastWrite.verifyOk !== false ? '✓' : '✗') : '—';
+    var provName   = window.DataService && DataService.providerName ? DataService.providerName() : 'desconocido';
+
+    var eventLog = [];
+    if (window.EventBus && EventBus._log) {
+      eventLog = EventBus._log.slice(-10).reverse();
+    }
+
+    return [
+      '<div id="__diag-panel__" style="position:fixed;top:0;right:0;width:380px;max-height:100vh;',
+      'overflow-y:auto;background:#0f1117;color:#e0e0e0;font-family:monospace;font-size:11px;',
+      'z-index:99999;padding:16px;box-shadow:-4px 0 24px rgba(0,0,0,.6);border-left:3px solid #C00000;">',
+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">',
+      '<b style="color:#C00000;font-size:13px">⚙ Panel de Diagnóstico</b>',
+      '<span style="color:#888;font-size:10px">Ctrl+Shift+D para cerrar</span>',
+      '</div>',
+
+      '<div style="color:#888;margin-bottom:8px">',
+      now + ' · v' + (cfg.version || cfg.appVersion || 'GH3.39.3'),
+      '</div>',
+
+      '<div style="background:#1a1e2e;padding:8px;border-radius:4px;margin-bottom:8px">',
+      '<b style="color:#7ec8e3">DATOS</b><br>',
+      'Equipos totales: <b style="color:#fff">' + (m ? m.totalEquipos : users.length) + '</b><br>',
+      'Colaboradores: <b style="color:#fff">' + (m ? m.totalColaboradores : '—') + '</b><br>',
+      'Backups: <b style="color:#fff">' + (m ? m.totalBackups : '—') + '</b><br>',
+      'HBT: <b style="color:#fff">' + (m ? m.hbt : '—') + '</b> · ',
+      'HGS: <b style="color:#fff">' + (m ? m.hgs : '—') + '</b><br>',
+      'window.USERS.length: <b style="color:#fff">' + users.length + '</b><br>',
+      'window.SYSTEM_USERS.length: <b style="color:#fff">' + sysU.length + '</b>',
+      '</div>',
+
+      '<div style="background:#1a1e2e;padding:8px;border-radius:4px;margin-bottom:8px">',
+      '<b style="color:#7ec8e3">SESIÓN</b><br>',
+      'Usuario: <b style="color:#fff">' + (st.user && st.user.email || '—') + '</b><br>',
+      'Rol: <b style="color:#fff">' + (st.user && (st.user.role||st.user.rol) || '—') + '</b><br>',
+      'Vista: <b style="color:#fff">' + (st.view || '—') + '</b><br>',
+      'SyncInProgress: <b style="color:' + (st._syncInProgress ? '#f90' : '#0f0') + '">' + (st._syncInProgress ? 'SÍ' : 'NO') + '</b>',
+      '</div>',
+
+      '<div style="background:#1a1e2e;padding:8px;border-radius:4px;margin-bottom:8px">',
+      '<b style="color:#7ec8e3">PROVEEDOR</b><br>',
+      'Provider: <b style="color:#fff">' + provName + '</b><br>',
+      'authMode: <b style="color:#fff">' + (cfg.authenticationMode || '—') + '</b><br>',
+      'dataSource: <b style="color:#fff">' + (cfg.dataSource || '—') + '</b><br>',
+      'debug: <b style="color:#fff">' + (cfg.debug === true ? 'ON' : 'OFF') + '</b>',
+      '</div>',
+
+      '<div style="background:#1a1e2e;padding:8px;border-radius:4px;margin-bottom:8px">',
+      '<b style="color:#7ec8e3">ÚLTIMA SINCRONIZACIÓN</b><br>',
+      'Tiempo: <b style="color:#fff">' + lastSync + '</b><br>',
+      'Verificación: <b style="color:#fff">' + writeOk + '</b><br>',
+      'Última validación: <b style="color:#fff">' + lastValid + '</b>',
+      '</div>',
+
+      '<div style="background:#1a1e2e;padding:8px;border-radius:4px;margin-bottom:8px">',
+      '<b style="color:#7ec8e3">EXCEL / HEADERS</b><br>',
+      'RENOVACIONES cols: <b style="color:#fff">' +
+        (window._EXCEL_HEADERS && _EXCEL_HEADERS.RENOVACIONES ? _EXCEL_HEADERS.RENOVACIONES.length : '—') + '</b><br>',
+      'WorkbookBase: <b style="color:#fff">' + (window.workbookBase && workbookBase() ? '✓ resuelto' : '✗ no disponible') + '</b>',
+      '</div>',
+
+      '<div style="background:#1a1e2e;padding:8px;border-radius:4px;margin-bottom:8px">',
+      '<b style="color:#7ec8e3">INTEGRIDAD</b><br>',
+      (function() {
+        try {
+          var v = window.IntegrityService ? IntegrityService.verify() : null;
+          if (!v) return 'IntegrityService: no disponible';
+          return 'ok: <b style="color:' + (v.ok ? '#0f0' : '#f00') + '">' + (v.ok ? 'PASS' : 'FAIL') + '</b>' +
+            (v.issues && v.issues.length ? '<br>Errores: ' + v.issues.map(function(i){return i.module;}).join(', ') : '');
+        } catch(e) { return 'IntegrityService: ' + e.message; }
+      })(),
+      '</div>',
+
+      '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #333;color:#555;font-size:9px">',
+      'PMC-TI-REN26 · GH3.39.3 · Heinsohn Business Technology',
+      '</div>',
+      '</div>'
+    ].join('');
+  }
+
+  function _openDiag() {
+    var existing = document.getElementById('__diag-panel__');
+    if (existing) { existing.remove(); _diagOpen = false; return; }
+    document.body.insertAdjacentHTML('beforeend', _buildDiagHTML());
+    _diagOpen = true;
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      e.preventDefault();
+      _openDiag();
+    }
+  });
+
+  // Exponer para diagnóstico desde consola
+  window._diagPanel = { open: _openDiag, build: _buildDiagHTML };
+})();
+
+
 window.APP_CONFIG = (() => {
   // RC1: APP_CONFIG se construye desde PRODUCTION_CONFIG (fuente única de verdad)
   const PC = window.PRODUCTION_CONFIG || {};
@@ -1317,3 +1476,178 @@ window.APP_CONFIG = (() => {
 // ═══════════════════════════════════════════════════════════════════
 // F3 · KPIService (métricas agregadas, dominio puro)
 // ═══════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════
+// DEP-01 — Funciones restauradas: estaban definidas y se perdieron
+// durante refactorizaciones. No son funcionalidad nueva.
+// ════════════════════════════════════════════════════════════════════
+
+// ── DEP-01.1: renderObsolescencePanelHTML ───────────────────────────
+// Renderiza el panel de obsolescencia/RAEE del equipo anterior en el modal.
+// Llamada desde ui.js en la sección 2 (Equipo anterior).
+function renderObsolescencePanelHTML(record) {
+  if (!record) return '';
+  var cls = record.estado_eq_ant || record._obsolescence_class || '';
+  var rec = record.recomendacion_raee || '';
+  if (!cls && !rec) return '';
+  var colorMap = {
+    'RAEE':             '#C00000',
+    'Reasignable':      '#2E7D32',
+    'Venta interna':    '#1565C0',
+    'Donacion':         '#E65100',
+    'Revisión manual':  '#757575',
+  };
+  var color = colorMap[rec] || colorMap[cls] || '#757575';
+  var label = rec || cls;
+  if (!label) return '';
+  return '<div style="margin:8px 0;padding:8px 14px;border-left:3px solid ' + color +
+         ';background:var(--bg-subtle);border-radius:0 var(--r-sm) var(--r-sm) 0">' +
+         '<div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase' +
+         ';letter-spacing:.5px;margin-bottom:2px">Clasificación RAEE</div>' +
+         '<span style="font-size:12px;font-weight:700;color:' + color + '">' +
+         (window.esc ? esc(label) : label) + '</span>' +
+         '</div>';
+}
+window.renderObsolescencePanelHTML = renderObsolescencePanelHTML;
+
+// ── DEP-01.2: updateRoleBadge ────────────────────────────────────────
+// Actualiza el badge de rol en el topbar con el rol activo del usuario.
+function updateRoleBadge() {
+  var role  = window.state && (state.user.role || state.user.rol) || '';
+  var label = {
+    super_admin:   'Super Admin',
+    gestor_activos:'Gestor Activos',
+    tecnico:       'Técnico',
+    consulta:      'Consulta',
+    visitante:     'Visitante',
+  }[role] || role;
+  var dotEl   = document.getElementById('tb-role-dot');
+  var labelEl = document.getElementById('tb-role-label');
+  if (dotEl)   { dotEl.className = 'role-dot ' + role; }
+  if (labelEl) { labelEl.textContent = label || '—'; }
+}
+window.updateRoleBadge = updateRoleBadge;
+
+// ── DEP-01.3: toggleRoleSwitcher ────────────────────────────────────
+// Muestra/oculta el menú desplegable del role switcher (solo super_admin).
+function toggleRoleSwitcher() {
+  var menu = document.getElementById('role-switcher-menu');
+  if (!menu) return;
+  var isOpen = menu.style.display === 'block' || menu.classList.contains('open');
+  menu.style.display = isOpen ? '' : 'block';
+  menu.classList.toggle('open', !isOpen);
+}
+window.toggleRoleSwitcher = toggleRoleSwitcher;
+
+// ── DEP-01.4: switchRole ─────────────────────────────────────────────
+// Cambia el rol activo del usuario (herramienta de desarrollo — solo super_admin).
+function switchRole(newRole, event) {
+  if (event) event.stopPropagation();
+  if (!window.state) return;
+  var menu = document.getElementById('role-switcher-menu');
+  if (menu) { menu.style.display = ''; menu.classList.remove('open'); }
+  // Solo super_admin puede cambiar de rol
+  var actualRole = state.user.role || state.user.rol;
+  if (actualRole !== 'super_admin') return;
+  state.user.role = newRole;
+  state.user.rol  = newRole;
+  var permissions = (window.PERMISSIONS && window.PERMISSIONS[newRole]) || {};
+  state.user.permissions = permissions;
+  // Re-aplicar RBAC con el nuevo rol
+  if (window._applyRBAC) _applyRBAC(newRole, state.user.email || state.user.id);
+  updateRoleBadge();
+  var toast_fn = window.toast;
+  if (toast_fn) toast_fn('Rol cambiado a: ' + newRole, 'info');
+}
+window.switchRole = switchRole;
+
+// ── DEP-01.5: Modal "Bloquear renovación" ────────────────────────────
+function openBlockModal() {
+  var editingId = window.state && state.editingId;
+  if (!editingId) return;
+  var bg = document.getElementById('block-modal-bg');
+  if (!bg) return;
+  // Poblar opciones de categoría
+  var sel = document.getElementById('block-category') || document.getElementById('block-category-select');
+  if (sel && window.ConfigService && ConfigService.CATEGORIAS_BLOQUEO) {
+    sel.innerHTML = ConfigService.CATEGORIAS_BLOQUEO.map(function(c) {
+      return '<option value="' + (window.esc ? esc(c) : c) + '">' + (window.esc ? esc(c) : c) + '</option>';
+    }).join('');
+  }
+  var eyebrow = document.getElementById('block-modal-eyebrow');
+  if (eyebrow) eyebrow.textContent = 'Registro #' + editingId;
+  var reason = document.getElementById('block-reason');
+  if (reason) reason.value = '';
+  bg.classList.add('active');
+}
+window.openBlockModal = openBlockModal;
+
+function closeBlockModal() {
+  var bg = document.getElementById('block-modal-bg');
+  if (bg) bg.classList.remove('active');
+}
+window.closeBlockModal = closeBlockModal;
+
+function submitBlock() {
+  var editingId = window.state && state.editingId;
+  if (!editingId) { closeBlockModal(); return; }
+  var sel    = document.getElementById('block-category') || document.getElementById('block-category-select');
+  var reason = document.getElementById('block-reason');
+  var cat    = sel    ? sel.value    : '';
+  var mot    = reason ? reason.value.trim() : '';
+  if (!mot) {
+    if (window.toast) toast('El motivo es obligatorio', 'warning');
+    return;
+  }
+  // Actualizar el registro con estado Bloqueado
+  var changes = {
+    estado: StateMachine.states.BLOQUEADO,
+    block_reason:    mot,
+    block_category:  cat,
+  };
+  if (window.DataService) DataService.updateRenewal(editingId, changes, window.state && state.user);
+  if (window.saveRecord) saveRecord();
+  closeBlockModal();
+  if (window.toast) toast('Renovación bloqueada', 'warning');
+}
+window.submitBlock = submitBlock;
+
+// ── DEP-01.6: Modal "Solicitar validación de cierre" ─────────────────
+function openValidationModal() {
+  var editingId = window.state && state.editingId;
+  if (!editingId) return;
+  var bg = document.getElementById('val-modal-bg');
+  if (!bg) return;
+  var eyebrow = document.getElementById('val-modal-eyebrow');
+  if (eyebrow) eyebrow.textContent = 'Registro #' + editingId;
+  var body = document.getElementById('val-modal-body');
+  if (body) {
+    var r = window.DataService ? DataService.getRenewal(editingId) : null;
+    body.innerHTML = r
+      ? '<p style="font-size:13px;color:var(--text-2);line-height:1.6">Solicitar revisión y aprobación de cierre para:<br>' +
+        '<strong>' + (r.nombre || '—') + '</strong> · ' + (r.empresa || '—') + '</p>'
+      : '<p style="font-size:13px;color:var(--text-2)">Registro #' + editingId + '</p>';
+  }
+  bg.classList.add('active');
+}
+window.openValidationModal = openValidationModal;
+
+function closeValidationModal() {
+  var bg = document.getElementById('val-modal-bg');
+  if (bg) bg.classList.remove('active');
+}
+window.closeValidationModal = closeValidationModal;
+
+function submitValidation() {
+  var editingId = window.state && state.editingId;
+  if (!editingId) { closeValidationModal(); return; }
+  var changes = { estado: StateMachine.states.PENDIENTE_APROBACION };
+  if (window.DataService) DataService.updateRenewal(editingId, changes, window.state && state.user);
+  if (window.saveRecord) saveRecord();
+  closeValidationModal();
+  if (window.toast) toast('Validación solicitada', 'success');
+}
+window.submitValidation = submitValidation;
+
+// ── DEP-01.7: RC2_doLogin — export faltante ──────────────────────────
+window.RC2_doLogin = RC2_doLogin;
