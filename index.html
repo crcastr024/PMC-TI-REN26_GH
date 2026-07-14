@@ -65,6 +65,9 @@
         <img class="logo-light" src="" alt="Heinsohn" id="sb-logo-light">
         <img class="logo-dark" src="" alt="Heinsohn" id="sb-logo-dark">
       </div>
+      <button class="sb-hamburger" id="sb-hamburger" onclick="toggleSidebar()" title="Contraer/expandir">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
     </div>
 
     <nav class="sb-nav">
@@ -91,6 +94,7 @@
         <span>Devoluciones</span>
       </div>
 
+      <div class="sb-section-title">Reportes</div>
       <div class="sb-item" data-view="reportes">
         <div class="sb-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
         <span>Reportes</span>
@@ -861,7 +865,7 @@
   </main>
 
   <!-- ════════════════════════ FOOTER ════════════════════════ -->
-  <footer class="footer">
+  <footer class="footer" id="app-footer">
     <div class="footer-grid">
       <div class="footer-col">
         <div class="footer-brand-logo"><img src="" alt="HEINSOHN" id="footer-brand-logo"></div>

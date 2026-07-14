@@ -29,6 +29,17 @@ function _applyRBAC(role, userEmail) {
   var displayName = (sysUser && (sysUser.nombre || sysUser.name)) || (userEmail || 'Usuario');
   var nameEl = document.getElementById('user-name');
   if (nameEl) nameEl.textContent = displayName;
+  // RC-06 item 13: actualizar avatar y rol
+  var avatarEl = document.getElementById('user-avatar');
+  if (avatarEl) {
+    var parts = displayName.split(' ').filter(Boolean);
+    avatarEl.textContent = parts.length >= 2
+      ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase()
+      : displayName.slice(0,2).toUpperCase();
+  }
+  var roleEl = document.getElementById('user-role');
+  var roleLabels = { super_admin:'Super Admin',gestor_activos:'Gestor de Activos',tecnico:'Técnico',consulta:'Consulta',visitante:'Visitante' };
+  if (roleEl) roleEl.textContent = (roleLabels[role] || role);
   // Actualizar state.user si no tiene nombre
   if (window.state && state.user && !state.user.nombre) state.user.nombre = displayName;
 
@@ -1647,11 +1658,19 @@ window.closeValidationModal = closeValidationModal;
 function submitValidation() {
   var editingId = window.state && state.editingId;
   if (!editingId) { closeValidationModal(); return; }
+  // RC-06 item 8: cambiar estado + guardar + cerrar modal + notificar
   var changes = { estado: StateMachine.states.PENDIENTE_APROBACION };
   if (window.DataService) DataService.updateRenewal(editingId, changes, window.state && state.user);
   if (window.saveRecord) saveRecord();
   closeValidationModal();
-  if (window.toast) toast('Validación solicitada', 'success');
+  // Cerrar modal de edición también
+  var modalBg = document.getElementById('modal-bg');
+  if (modalBg) modalBg.classList.remove('active');
+  if (window.state) state.editingId = null;
+  // Actualizar la tabla con el nuevo estado
+  if (window.renderResumen) renderResumen();
+  if (window.renderView) renderView(window.state ? state.view : 'resumen');
+  if (window.toast) toast('Validación solicitada · Estado actualizado a Pendiente aprobación', 'success');
 }
 window.submitValidation = submitValidation;
 

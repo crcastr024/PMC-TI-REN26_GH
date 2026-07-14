@@ -998,3 +998,61 @@
   border-bottom: 1px solid var(--border, #E2E2E2);
   box-shadow: 0 2px 6px rgba(0,0,0,.07);
 }
+
+/* ── RC-06 FIXES: sb-hamburger en sb-head ── */
+.sb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border, #E2E2E2);
+}
+.sb-hamburger {
+  width: 32px; height: 32px;
+  border: none; background: none;
+  cursor: pointer;
+  border-radius: 6px;
+  color: var(--text-2, #6B6B6B);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.sb-hamburger:hover { background: var(--bg-hover, rgba(0,0,0,.06)); }
+.sb-hamburger svg { width: 18px; height: 18px; }
+
+/* ── RC-06 FIXES: Tooltips sidebar contraído ── */
+.sidebar.collapsed .sb-item {
+  position: relative;
+}
+.sidebar.collapsed .sb-item::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border, #E2E2E2);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-1, #1F1F1F);
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+}
+.sidebar.collapsed .sb-item:hover::after { opacity: 1; }
+
+/* ── RC-06 FIXES: Footer respeta sidebar ── */
+#app-footer {
+  transition: margin-left .25s;
+}
+body:not(.sb-collapsed) #app-footer {
+  margin-left: var(--sb-width, 240px);
+}
+body.sb-collapsed #app-footer {
+  margin-left: var(--sb-collapsed-width, 60px);
+}

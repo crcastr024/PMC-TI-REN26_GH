@@ -724,7 +724,7 @@ function openEditModal(id) {
         '<div class="form-group" style="margin:0"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo||'') + '" placeholder="Ej: acta_juan_garcia.pdf"></div>' +
         '<div class="form-group" style="margin:0"><label class="form-label">URL del acta (SharePoint)</label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url||'') + '" placeholder="https://..."></div>' +
       '</div>' +
-      '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<a href="' + esc(u.acta_entrega_url) + '" target="_blank" style="font-size:11px">📄 Ver acta</a>' : '') + '</div>' +
+      '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:underline">📄 Ver acta firmada</a>' : '<span style="font-size:11px;color:var(--text-3)">No existe un acta registrada.</span>') + '</div>' +
     '</div></div>' +
     '<div class="form-section" id="seccion-devolucion"><div class="form-section-head">6 · Devolución del equipo anterior</div>' +
     '<div style="padding:8px 0 10px;border-bottom:1px dashed var(--border);margin-bottom:10px">' +
@@ -736,33 +736,21 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">F. Solicitud devolución</label><input type="date" class="form-input" id="m-fecha_solicitud_devolucion" value="' + toDateInput(u.fecha_solicitud_devolucion) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. en tránsito</label><input type="date" class="form-input" id="m-fecha_transito" value="' + toDateInput(u.fecha_transito) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. Recepción en Bodega</label><input type="date" class="form-input" id="m-fecha_recepcion_bodega" value="' + toDateInput(u.fecha_recepcion_bodega) + '"></div>' +
-      '<p class="full" style="font-size:11px;color:var(--text-3);margin:0">La disposición final queda registrada en auditoría (usuario, fecha, valor anterior/nuevo) al guardar.</p>' +
+      '<p class="full" style="font-size:11px;color:var(--text-3);margin:0">La disposición final queda registrada en la Lista de Control de Recolecciones SharePoint.</p>' +
+      '<div class="form-group full" style="margin-top:8px"><label class="form-label">Observaciones de devolución</label><textarea class="form-input" id="m-observaciones_devolucion" rows="2" placeholder="Estado del equipo al recibirlo, novedades...">' + esc(u.observaciones_devolucion||'') + '</textarea></div>' +
     '</div>' +
-  '</div>' +
-  '</div>' +
-    '<div class="form-section" id="seccion-eval-fisica"><div class="form-section-head">7 · Evaluación Física del Equipo</div>' +
-    '<div style="font-size:11px;color:var(--text-3);margin-bottom:10px;line-height:1.5">El técnico registra el estado físico del equipo al recibirlo en bodega. La clasificación se calcula automáticamente.</div>' +
+    '<div class="form-section" id="seccion-eval-fisica" style="margin-top:14px;border-top:1px dashed var(--border);padding-top:14px"><div class="form-section-head">7 · Evaluación Física del Equipo</div>' +
+    '<div style="font-size:11px;color:var(--text-3);margin-bottom:10px">Registrar el estado físico del equipo recibido.</div>' +
     '<div class="form-grid">' +
-      '<div class="form-group"><label class="form-label">Estado batería</label><select class="form-select" id="m-eval_bateria" onchange="actualizarRecomendacion()">' +
-        '<option value="">— seleccionar —</option>' +
-        ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_bateria===o?' selected':'')+'>'+o+'</option>';}).join('') +
-      '</select></div>' +
-      '<div class="form-group"><label class="form-label">Estado teclado</label><select class="form-select" id="m-eval_teclado" onchange="actualizarRecomendacion()">' +
-        '<option value="">— seleccionar —</option>' +
-        ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_teclado===o?' selected':'')+'>'+o+'</option>';}).join('') +
-      '</select></div>' +
-      '<div class="form-group"><label class="form-label">Estado touchpad</label><select class="form-select" id="m-eval_touchpad" onchange="actualizarRecomendacion()">' +
-        '<option value="">— seleccionar —</option>' +
-        ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_touchpad===o?' selected':'')+'>'+o+'</option>';}).join('') +
-      '</select></div>' +
-      '<div class="form-group"><label class="form-label">Estado estético</label><select class="form-select" id="m-eval_estetico" onchange="actualizarRecomendacion()">' +
-        '<option value="">— seleccionar —</option>' +
-        ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_estetico===o?' selected':'')+'>'+o+'</option>';}).join('') +
-      '</select></div>' +
+      '<div class="form-group"><label class="form-label">Estado batería</label><select class="form-select" id="m-eval_bateria" onchange="actualizarRecomendacion()"><option value="">—</option>' + ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_bateria===o?' selected':'')+'>'+o+'</option>';}).join('') + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Estado teclado</label><select class="form-select" id="m-eval_teclado" onchange="actualizarRecomendacion()"><option value="">—</option>' + ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_teclado===o?' selected':'')+'>'+o+'</option>';}).join('') + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Estado touchpad</label><select class="form-select" id="m-eval_touchpad" onchange="actualizarRecomendacion()"><option value="">—</option>' + ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_touchpad===o?' selected':'')+'>'+o+'</option>';}).join('') + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Estado estético</label><select class="form-select" id="m-eval_estetico" onchange="actualizarRecomendacion()"><option value="">—</option>' + ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_estetico===o?' selected':'')+'>'+o+'</option>';}).join('') + '</select></div>' +
     '</div>' +
-        '<div id="m-motor-eval-container" style="margin-top:12px"><div id="m-recomendacion-display" style="display:none"></div><div id="m-motivo-raee-display" style="display:none"></div></div>' +
-    
+    '<div id="m-motor-eval-container" style="margin-top:12px"><div id="m-recomendacion-display" style="display:none"></div><div id="m-motivo-raee-display" style="display:none"></div></div>' +
     '</div>' +
+  '</div>' +
+  '</div>' +
 
 '<div class="form-section" id="audit-section">' +
   '<div class="form-section-head">Auditoría</div>' +
@@ -872,10 +860,11 @@ window.updateSectionVisibility = updateSectionVisibility;
 
     // ── R2: Estado devolución → habilita solo la fecha relevante ──────────
     var DATE_MAP = {
-      'Pendiente':    'm-fecha_solicitud_devolucion',
-      'En tránsito':  'm-fecha_transito',
-      'Devuelto':     null,
-      'Bodega':       'm-fecha_recepcion_bodega',
+      'Pendiente':          null,
+      'No aplica':          null,
+      'Solicitada':         'm-fecha_solicitud_devolucion',
+      'En tránsito':        'm-fecha_transito',
+      'Recibida en bodega': 'm-fecha_recepcion_bodega',
     };
     function updateDevDates(val) {
       ['m-fecha_solicitud_devolucion','m-fecha_transito','m-fecha_recepcion_bodega'].forEach(function(id) {
@@ -1134,7 +1123,7 @@ function saveRecord() {
     'empresa','nombre','cedula','usuario','correo','ciudad','ceco','proyecto','cargo','gerente','registro',
     'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname','eq_ant_procesador','eq_ant_memoria','eq_ant_disco','eq_ant_so',
     'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname','eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco','eq_nvo_so',
-    'tecnico','estado','estado_entrega_equipo_nuevo','notas_alistamiento','caso_envio','fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta',
+    'tecnico','estado','estado_entrega_equipo_nuevo','notas_alistamiento','caso_envio','fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta','nombre_archivo',
     'estado_devolucion','disposicion_final','fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega',
     // GH3.28: campos evaluación física y motor RAEE
     'lista_recoleccion','eval_bateria','eval_teclado','eval_touchpad','eval_estetico'
@@ -1351,12 +1340,21 @@ function toggleSidebar() {
   if (!app || !sidebar) return;
   var collapsed = sidebar.classList.toggle('collapsed');
   app.classList.toggle('sb-collapsed', collapsed);
+  // RC-06 item 11: body class para que footer reaccione
+  document.body.classList.toggle('sb-collapsed', collapsed);
   try { localStorage.setItem('sb_state', collapsed ? 'collapsed' : 'expanded'); } catch(e) { /* privado / sin Storage */ }
 }
 window.toggleSidebar = toggleSidebar;
 
 // Restaurar estado del sidebar al cargar
 (function initSidebarState() {
+  // RC-06 item 10: poblar data-tip para tooltips con sidebar contraído
+  setTimeout(function() {
+    document.querySelectorAll('.sb-item').forEach(function(item) {
+      var span = item.querySelector('span:first-of-type');
+      if (span && !item.dataset.tip) item.setAttribute('data-tip', span.textContent.trim());
+    });
+  }, 100);
   try {
     var state = localStorage.getItem('sb_state');
     if (state === 'collapsed') {

@@ -183,6 +183,9 @@ window.FIELD_COLUMN_ALIASES = {
   'eq_ant_memoria':  'EqAntRam',
   'eq_ant_disco':    'EqAntDisco',
   'eq_ant_so':       'EqAntSO',
+  // Devolución
+  'lista_recoleccion': 'ListaRecoleccion',   // guard CamelCase
+  'observaciones_devolucion': 'ObservacionesDevolucion',
   // Registro
   'ceco':            'CentroCostos',
   'registro':        'Nivel',
