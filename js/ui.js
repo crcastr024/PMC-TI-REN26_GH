@@ -628,6 +628,24 @@ function openEditModal(id) {
         var r   = u.recomendacion_raee || '';
         var mot = u.motivo_raee || '';
         var ver = u.motor_raee_version || '';
+        // RC-02 T1: si no hay recomendacion_raee almacenada, intentar calcularla
+        // con los datos disponibles del equipo anterior + evaluación física
+        if (!r) {
+          // Intentar con RAEEEngine si hay evaluaciones físicas
+          if (!r && u.eval_bateria && u.eval_teclado && u.eval_touchpad && u.eval_estetico &&
+              typeof RAEEEngine !== 'undefined' && typeof RAEEEngine.calcular === 'function') {
+            var _calc = RAEEEngine.calcular(u.eval_bateria, u.eval_teclado, u.eval_touchpad, u.eval_estetico);
+            if (_calc) { r = _calc.recomendacion; mot = _calc.motivo; ver = _calc.version; }
+          }
+          // Intentar con ObsolescenceService (clasifica por procesador/edad)
+          if (!r && typeof ObsolescenceService !== 'undefined' && typeof ObsolescenceService.classifyRecord === 'function') {
+            var _obs = ObsolescenceService.classifyRecord(u);
+            if (_obs && _obs.recomendacion_raee) { r = _obs.recomendacion_raee; mot = _obs.motivo_raee || ''; }
+          }
+          // Usar clasificación de obsolescencia ya calculada por normalizeRecord_F3
+          if (!r && u.estado_eq_ant) { r = u.estado_eq_ant; }
+          if (!r && u.clasificacion_obsolescencia) { r = u.clasificacion_obsolescencia; }
+        }
         if (!r) {
           return '<p style="font-size:12px;color:var(--text-3);margin:0;padding:4px 0">' +
             'Sin clasificación — completa la evaluación física en la sección 6 para obtener la recomendación automática.</p>';
@@ -676,18 +694,14 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Caso envío (mensajería)</label><input type="text" class="form-input" id="m-caso_envio" value="' + esc(u.caso_envio) + '" placeholder="Guía de mensajería"></div>' +
       '<div class="form-group"><label class="form-label">F. Envío</label><input type="date" class="form-input" id="m-fecha_envio" value="' + esc(u.fecha_envio) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. Entrega</label><input type="date" class="form-input" id="m-fecha_entrega" value="' + esc(u.fecha_entrega) + '"></div>' +
-      '<div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;padding:14px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
-        '<div class="form-group" style="margin:0"><label class="form-label">F. envío acta</label><input type="date" class="form-input" id="m-fecha_envio_acta" value="' + esc(u.fecha_envio_acta) + '"></div>' +
-        '<div class="form-group"><label class="form-label">URL del acta (SharePoint)</label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url || '') + '" placeholder="https://app.pandadoc.com/..."></div>' +
-        '<div class="form-group" style="margin:0"><label class="form-label">F. firma acta</label><input type="date" class="form-input" id="m-fecha_firma_acta" value="' + esc(u.fecha_firma_acta) + '"></div>' +
+      '<div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
+        '<div class="form-group" style="margin:0"><label class="form-label">F. envío acta</label><input type="date" class="form-input" id="m-fecha_envio_acta"' + (u.fecha_envio_acta ? ' value="' + esc(u.fecha_envio_acta.slice(0,10)) + '"' : '') + '></div>' +
+        '<div class="form-group" style="margin:0"><label class="form-label">F. firma acta</label><input type="date" class="form-input" id="m-fecha_firma_acta"' + (u.fecha_firma_acta ? ' value="' + esc(u.fecha_firma_acta.slice(0,10)) + '"' : '') + '></div>' +
+        '<div class="form-group" style="margin:0"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo||'') + '" placeholder="Ej: acta_juan_garcia.pdf"></div>' +
+        '<div class="form-group" style="margin:0"><label class="form-label">URL del acta (SharePoint)</label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url||'') + '" placeholder="https://..."></div>' +
       '</div>' +
-      '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;font-size:12px">Acta de entrega</a>' : '') + '</div>' +
-      '<hr style="border:none;border-top:1px dashed var(--border);margin:8px 0">' +
-      '<div class="form-group"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo) + '" placeholder="Ej: Acta_Juan_Perez.pdf"></div>' +
+      '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<a href="' + esc(u.acta_entrega_url) + '" target="_blank" style="font-size:11px">📄 Ver acta</a>' : '') + '</div>' +
     '</div></div>' +
-    
-    
-'<div class="form-section" id="seccion-devolucion"><div class="form-section-head">5 · Devolución del equipo anterior</div>' +
     '<div style="padding:8px 0 10px;border-bottom:1px dashed var(--border);margin-bottom:10px">' +
             '<label class="form-check"><input type="checkbox" id="m-lista_recoleccion"' + (u.lista_recoleccion ? ' checked' : '') + '> Equipo agregado a lista de recoleccion</label>' +
     '</div>' +
@@ -773,10 +787,13 @@ function updateSectionVisibility(estado) {
     if (!head) return;
     var t = head.textContent.trim();
     if (t.indexOf('3 ·') === 0 || t.indexOf('Equipo nuevo') >= 0) {
-      sec.style.display = (idx >= 2 || isBlocked) ? '' : 'none';
+      // RC-02 T3: Sección 3 siempre visible — el técnico puede ver el equipo
+      // nuevo desde el inicio para preparar el alistamiento
+      sec.style.display = '';
     } else if (t.indexOf('5 ·') === 0 || t.indexOf('Devolución') >= 0) {
-      // Devolución: desde Recolección (idx >= 5)
-      sec.style.display = (idx >= 5 || isBlocked) ? '' : 'none';
+      // RC-02 T4: Sección 5 siempre visible — el checkbox lista_recoleccion
+      // controla los campos internos (gate original)
+      sec.style.display = '';
     } else if (t.indexOf('6 ·') === 0 || t.indexOf('Evaluación') >= 0) {
       // Evaluación RAEE: desde Recibido (idx >= 7)
       sec.style.display = (idx >= 7 || isBlocked) ? '' : 'none';

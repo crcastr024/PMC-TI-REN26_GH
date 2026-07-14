@@ -267,5 +267,6 @@ function renderTimelineHTML(record) {
 
   return progressHTML + historyHTML + raeePanel;
 }
-window.renderTimelineHTML = renderTimelineHTML;
+window.renderTimelineHTML  = renderTimelineHTML;
+window.normalizeRecord_F3  = normalizeRecord_F3;  // Exportado para tests y sync.js
 
