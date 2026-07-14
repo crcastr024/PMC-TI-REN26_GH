@@ -435,7 +435,13 @@ function _bootCore() {
   updatePreviewButton();
   updateAprobacionesItem();
   updateRoleBadge();
-  updateSidebarByRole();
+  // RC-03 T1: updateSidebarByRole absorbida por _applyRBAC
+  // _applyRBAC ya fue llamada en línea 321 (bootstrap) pero re-ejecutar
+  // aquí garantiza que el sidebar refleja el rol final post-carga.
+  if (window.state && state.user) {
+    _applyRBAC(state.user.role || state.user.rol || 'visitante',
+               state.user.email || state.user.id || '');
+  }
   // GH3.5: timer gestionado para evitar fuga de recursos
   const _approvalTimer = setInterval(updateAprobacionesItem, 5000);
   // El timer se cancela automáticamente cuando el usuario cierra la sesión

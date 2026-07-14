@@ -157,6 +157,8 @@ window.HBT = (function() {
 // porque ExcelFieldName.toLowerCase() coincide directamente con el campo interno.
 // Si el Excel usa CamelCase (EqNvoTipo), este alias permite encontrar la columna.
 window.FIELD_COLUMN_ALIASES = {
+  // Nombre completo del colaborador
+  'nombre':          'NombreCompleto',    // SP_FIELD_MAP: Title→nombre y NombreCompleto→nombre
   // Equipo nuevo
   'eq_nvo_tipo':     'EqNvoTipo',
   'eq_nvo_marca':    'EqNvoMarca',
