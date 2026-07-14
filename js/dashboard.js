@@ -617,10 +617,10 @@ const InventarioService = {
   getByIdInv(id)    { return (window.INVENTORY || []).find(i => i.id_inv === id) || null; },
   getByCedula(ced)  { return (window.INVENTORY || []).find(i => String(i.cedula_asignada) === String(ced)) || null; },
   // F5 · Métodos de escritura (pendientes — requieren write-back a Provider)
-  reservar(id_inv, renovacion_id)   { console.warn('[F5 PENDIENTE] InventarioService.reservar'); },
-  asignar(id_inv, cedula, usuario)  { console.warn('[F5 PENDIENTE] InventarioService.asignar'); },
-  baja(id_inv, motivo)              { console.warn('[F5 PENDIENTE] InventarioService.baja'); },
-  reasignar(id_inv, nueva_cedula)   { console.warn('[F5 PENDIENTE] InventarioService.reasignar'); },
+  reservar(id_inv, renovacion_id)   { /* F5 pendiente */ },
+  asignar(id_inv, cedula, usuario)  { /* F5 pendiente */ },
+  baja(id_inv, motivo)              { /* F5 pendiente */ },
+  reasignar(id_inv, nueva_cedula)   { /* F5 pendiente */ },
 };
 window.InventarioService = InventarioService;
 

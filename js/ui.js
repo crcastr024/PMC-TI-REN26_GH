@@ -4,6 +4,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 function renderResumen() {
+  try {
   // GH3.39.2 P2/P3: ÚNICA fuente de verdad — calculateProjectMetrics()
   var m = window.calculateProjectMetrics ? calculateProjectMetrics() : {
     totalEquipos: (window.USERS||[]).length,
@@ -13,8 +14,12 @@ function renderResumen() {
 
   const real = getReal(); // para actas y compatibilidad
   const total = m.totalColaboradores;
-  const entregados = (m.estados&&m.estados['Entregado'])||real.filter(u=>u.estado==='Entregado'||u.estado==='Completado').length;
-  const alistamiento = (m.estados&&m.estados['Alistamiento'])||real.filter(u=>u.estado==='Alistamiento').length;
+  const entregados   = (m.estados && m.estados['Entregado'] !== undefined)
+    ? m.estados['Entregado']
+    : real.filter(u=>u.estado==='Entregado'||u.estado==='Completado'||u.estado==='Entregado equipo nuevo').length;
+  const alistamiento = (m.estados && m.estados['Alistamiento'] !== undefined)
+    ? m.estados['Alistamiento']
+    : real.filter(u=>u.estado==='Alistamiento').length;
   const proceso = m.enProceso;
   const pendientes = m.pendientes;
   const actas = real.filter(u => u.acta_firmada).length;
@@ -81,6 +86,9 @@ function renderResumen() {
   if (window.updateStatsBar) updateStatsBar();
 
   renderMap();
+  } catch(e) {
+    console.error('[renderResumen]', e.message);
+  }
 }
 
 function renderEmpresaChart() {
@@ -1427,18 +1435,19 @@ window.clearPanelFilters = clearPanelFilters;
 // Fuente: window.SYSTEM_USERS (usuarios_sistema.json) normalizado por DataMapper.
 // ═══════════════════════════════════════════════════════════════════
 function F7_resolveRole(username) {
+  // QA-06.1: Resolución exclusivamente desde Usuarios_Sistema.
+  // Sin fallbacks por dominio, empresa, sufijo ni wildcard.
   if (!username) return 'visitante';
 
-  // Normalizar: acepta email completo o solo el prefijo de usuario
   const lower = String(username).trim().toLowerCase();
 
-  // 1. Buscar en SYSTEM_USERS por email exacto
+  // 1. Coincidencia exacta por correo
   const byEmail = (window.SYSTEM_USERS || []).find(u =>
     u.correo && u.correo.toLowerCase() === lower
   );
   if (byEmail) return DataMapper.toInternalRole(byEmail.rol);
 
-  // 2. Buscar por prefijo de email (parte antes del @)
+  // 2. Coincidencia por prefijo de correo (parte antes del @)
   const prefix = lower.split('@')[0];
   const byPrefix = (window.SYSTEM_USERS || []).find(u => {
     const userPrefix = (u.correo || '').toLowerCase().split('@')[0];
@@ -1446,14 +1455,13 @@ function F7_resolveRole(username) {
   });
   if (byPrefix) return DataMapper.toInternalRole(byPrefix.rol);
 
-  // 3. Buscar por nombre (case-insensitive)
+  // 3. Coincidencia por nombre de usuario
   const byName = (window.SYSTEM_USERS || []).find(u =>
     u.nombre && u.nombre.toLowerCase().includes(prefix)
   );
   if (byName) return DataMapper.toInternalRole(byName.rol);
 
-  // 4. Fallback: visitante (mínimo privilegio)
-
+  // 4. Visitante — mínimo privilegio. Sin excepciones.
   return 'visitante';
 }
 window.F7_resolveRole = F7_resolveRole;

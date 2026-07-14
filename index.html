@@ -194,6 +194,13 @@
     
   </header>
 
+
+  <!-- QA-06.1 Task 3 — Banner modo seguro (Usuarios_Sistema no disponible) -->
+  <div id="auth-warn-banner" style="display:none" role="alert" aria-live="polite">
+    <span class="auth-warn-icon">⚠</span>
+    <span class="auth-warn-text">No fue posible cargar la configuración de permisos. El sistema se ejecuta en modo seguro.</span>
+    <button class="auth-warn-close" onclick="this.parentElement.style.display='none'" aria-label="Cerrar aviso">✕</button>
+  </div>
   <!-- ════════════════════════ MAIN ════════════════════════ -->
   <main class="main" id="main-scroll">
   <!-- QA-05 Task 3 — Stats bar siempre visible -->

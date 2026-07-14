@@ -656,7 +656,7 @@ const WorkbookWriter = (() => {
             const expected = upd.value === null ? '' : String(upd.value);
             const ok = readBack === expected || readBack === null;
             if (ok) {
-              console.error('[WRITE VERIFY] OK —', upd.field, ':', expected);
+              /* WRITE VERIFY OK: upd.field verified */
             } else {
               console.error('[WRITE VERIFY] MISMATCH', upd.field,
                 '| Esperado:', expected, '| Encontrado:', readBack);

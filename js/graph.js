@@ -1447,10 +1447,22 @@ window.JSONProvider = JSONProvider;
 // ═══════════════════════════════════════════════════════════════════
 const DataMapper = {
   ROLE_MAP: {
-    'SUPER ADMIN':    'super_admin',
-    'GESTOR ACTIVOS': 'gestor_activos',
-    'TECNICO':        'tecnico',
-    'VISITANTE':      'visitante',
+    // Variantes externas → rol interno canónico
+    'SUPER ADMIN':        'super_admin',
+    'SUPER_ADMIN':        'super_admin',
+    'ADMINISTRADOR':      'super_admin',
+    'ADMIN':              'super_admin',
+    'LIDER TI':           'super_admin',
+    'LIDER DE PROYECTOS': 'super_admin',
+    'GESTOR ACTIVOS':     'gestor_activos',
+    'GESTOR_ACTIVOS':     'gestor_activos',
+    'GESTOR IT':          'gestor_activos',
+    'COORDINADOR TI':     'gestor_activos',
+    'GESTOR':             'gestor_activos',
+    'TECNICO':            'tecnico',
+    'TÉCNICO':            'tecnico',
+    'CONSULTA':           'consulta',
+    'VISITANTE':          'visitante',
   },
   
   /** "SUPER ADMIN" -> "super_admin" (clave interna canónica para can()/PERMISSIONS) */

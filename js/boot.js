@@ -90,9 +90,31 @@ const BootstrapManager = (() => {
 
   // ── Paso 3: Cargar usuarios del sistema y resolver rol ───────────────────
   async function _loadUsersAndResolveRole(userEmail) {
+    // QA-06.1: Sin escalamiento automático. Usuarios_Sistema es la única fuente.
 
-    const users = await _loadTable(TableRegistry.USUARIOS);
+    let users = [];
+    let usersUnavailable = false;
+
+    try {
+      users = await _loadTable(TableRegistry.USUARIOS);
+    } catch (e) {
+      // Error de red / Graph / tabla inexistente → modo seguro
+      usersUnavailable = true;
+    }
+
+    // Tabla vacía == indistinguible de tabla inexistente == modo seguro
+    if (!users.length) usersUnavailable = true;
+
     window.SYSTEM_USERS = users;
+
+    if (usersUnavailable) {
+      // Task 4: log único, sin stack trace
+      console.warn('[AUTH] Usuarios_Sistema unavailable → Role: visitante');
+      // Task 3: señal para mostrar banner
+      window._AUTH_USERS_UNAVAILABLE = true;
+    } else {
+      window._AUTH_USERS_UNAVAILABLE = false;
+    }
 
     // Normalizar usuarios — campos mínimos
     users.forEach(u => {
@@ -100,8 +122,13 @@ const BootstrapManager = (() => {
       u.rol    = u.rol || u.role || 'visitante';
     });
 
-    // Resolver rol usando la función existente (lee SYSTEM_USERS)
+    // Resolver rol: exclusivamente desde Usuarios_Sistema
     const role = F7_resolveRole(userEmail);
+
+    if (role === 'visitante' && users.length > 0) {
+      // Usuario autenticado pero no configurado en Usuarios_Sistema
+      console.warn('[AUTH] Usuario no encontrado en Usuarios_Sistema → Role: visitante');
+    }
 
     return { users, role };
   }
@@ -261,6 +288,11 @@ async function boot() {
 
   // ── RC2.6: Cuando Bootstrap completa → cargar datos de negocio ──────────
   EventBus.subscribe('bootstrap.completed', async ({ role, user: _authUser }) => {
+  // QA-06.1 Task 3: mostrar banner si Usuarios_Sistema no disponible
+  if (window._AUTH_USERS_UNAVAILABLE) {
+    var bannerEl = document.getElementById('auth-warn-banner');
+    if (bannerEl) bannerEl.style.display = 'flex';
+  }
   const payload = { role, user: _authUser };
 
     if (loadingEl) loadingEl.style.display = 'flex';
