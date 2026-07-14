@@ -150,3 +150,55 @@ window.HBT = (function() {
   return _state;
 })();
 
+
+// ── RC-01 P1: Mapeo campo interno → columna Excel (CamelCase)
+// Usado por WorkbookWriter cuando la columna Excel NO está en lowercase-underscore.
+// Si el Excel usa UPPERCASE_UNDERSCORE (EQ_NVO_TIPO), este alias no se activa
+// porque ExcelFieldName.toLowerCase() coincide directamente con el campo interno.
+// Si el Excel usa CamelCase (EqNvoTipo), este alias permite encontrar la columna.
+window.FIELD_COLUMN_ALIASES = {
+  // Equipo nuevo
+  'eq_nvo_tipo':     'EqNvoTipo',
+  'eq_nvo_marca':    'EqNvoMarca',
+  'eq_nvo_modelo':   'EqNvoModelo',
+  'eq_nvo_serial':   'EqNvoSerial',
+  'eq_nvo_placa':    'EqNvoPlaca',
+  'eq_nvo_hostname': 'EqNvoHostname',
+  'eq_nvo_procesador': 'EqNvoProcesador',
+  'eq_nvo_ram':      'EqNvoRam',
+  'eq_nvo_disco':    'EqNvoDisco',
+  'eq_nvo_so':       'EqNvoSO',
+  'dato_maestro':    'DatoMaestro',
+  // Equipo anterior
+  'eq_ant_tipo':     'EqAntTipo',
+  'eq_ant_marca':    'EqAntMarca',
+  'eq_ant_modelo':   'EqAntModelo',
+  'eq_ant_serial':   'EqAntSerial',
+  'eq_ant_af':       'EqAntAF',
+  'eq_ant_placa':    'EqAntPlaca',
+  'eq_ant_hostname': 'EqAntHostname',
+  'eq_ant_procesador': 'EqAntProcesador',
+  'eq_ant_memoria':  'EqAntRam',
+  'eq_ant_disco':    'EqAntDisco',
+  'eq_ant_so':       'EqAntSO',
+  // Registro
+  'ceco':            'CentroCostos',
+  'registro':        'Nivel',
+  // Estado y seguimiento
+  'estado_entrega_equipo_nuevo': 'EstadoEntregaEquipoNuevo',
+  'caso_envio':      'CasoEnvio',
+  'fecha_envio':     'FechaEnvio',
+  'fecha_entrega':   'FechaAsignacion',
+  'fecha_envio_acta': 'FechaEnvioActa',
+  'fecha_firma_acta': 'FechaFirmaActa',
+  'fecha_solicitud_devolucion': 'FechaSolicitudDevolucion',
+  'fecha_transito':  'FechaTransito',
+  'fecha_recepcion_bodega': 'FechaRecepcionBodega',
+  // Documentos
+  'acta_entrega_url':  'ActaEntregaUrl',
+  'nombre_archivo':    'NombreArchivo',
+  'disposicion_final': 'DisposicionFinal',
+  // Feedback y evidencia
+  'feedback':          'Feedback',
+  'evidencia_adjunta': 'EvidenciaAdjunta',
+};

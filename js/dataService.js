@@ -6,6 +6,46 @@
 
 function normalizeRecord_F3(r) {
   if (!r) return r;
+
+  // RC-01 T9+T13: Normalizar nombres de campo en lectura desde Excel.
+  // Si las columnas del Excel usan CamelCase (EqNvoTipo → eqnvotipo),
+  // ExcelMapper.toJson produce campos sin guiones. Este bloque remapea
+  // esos campos al formato interno con guiones (eq_nvo_tipo).
+  var LOAD_ALIASES = {
+    // Columna nombre: Excel puede usar 'NombreCompleto' o 'Title'
+    'nombrecompleto': 'nombre', 'title': 'nombre',
+    'eqnvotipo': 'eq_nvo_tipo', 'eqnvomarca': 'eq_nvo_marca',
+    'eqnvomodelo': 'eq_nvo_modelo', 'eqnvoserial': 'eq_nvo_serial',
+    'eqnvoplaca': 'eq_nvo_placa', 'eqnvohostname': 'eq_nvo_hostname',
+    'eqnvoprocesador': 'eq_nvo_procesador', 'eqnvoram': 'eq_nvo_ram',
+    'eqnvodisco': 'eq_nvo_disco', 'eqnvoso': 'eq_nvo_so',
+    'datomaestro': 'dato_maestro',
+    'eqanttipo': 'eq_ant_tipo', 'eqantmarca': 'eq_ant_marca',
+    'eqantmodelo': 'eq_ant_modelo', 'eqantserial': 'eq_ant_serial',
+    'eqantaf': 'eq_ant_af', 'eqantplaca': 'eq_ant_placa',
+    'eqanthostname': 'eq_ant_hostname', 'eqantprocesador': 'eq_ant_procesador',
+    'eqantram': 'eq_ant_ram', 'eqantdisco': 'eq_ant_disco', 'eqantso': 'eq_ant_so',
+    'centrocostos': 'ceco', 'nivel': 'registro',
+    'estadoentregaequiponuevo': 'estado_entrega_equipo_nuevo',
+    'casoenvio': 'caso_envio',
+    'fechaenvio': 'fecha_envio', 'fechaasignacion': 'fecha_entrega',
+    'fechaenvioacta': 'fecha_envio_acta', 'fechafirmaacta': 'fecha_firma_acta',
+    'fechasolicituddevolucion': 'fecha_solicitud_devolucion',
+    'fechatransito': 'fecha_transito', 'fecharecepcionbodega': 'fecha_recepcion_bodega',
+    'actaentregaurl': 'acta_entrega_url', 'nombrearchivo': 'nombre_archivo',
+    'disposicionfinal': 'disposicion_final',
+    'feedbackrecibido': 'feedback', 'evidenciaadjunta': 'evidencia_adjunta',
+    'bloqueado': 'blocked', 'categoriabloqueo': 'block_category',
+    'estadoanteriorbloqueo': 'block_previous_state',
+  };
+  Object.keys(LOAD_ALIASES).forEach(function(src) {
+    var dst = LOAD_ALIASES[src];
+    if (r[src] !== undefined && r[dst] === undefined) {
+      r[dst] = r[src];
+      // No eliminar src — puede ser necesario para compatibilidad
+    }
+  });
+
   
   // ── Normalizar estado uppercase → canonical
   r.estado = StateMachine.normalize(r.estado || 'Pendiente');

@@ -620,8 +620,38 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Disco duro (ant.)</label><input type="text" class="form-input" id="m-eq_ant_disco" value="' + esc(u.eq_ant_disco) + '"></div>' +
       '<div class="form-group full"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_ant_so" value="' + esc(u.eq_ant_so) + '"></div>' +
     '</div>' +
-      renderObsolescencePanelHTML(u) +
+  '</div>' +
+  '<div class="form-section" id="raee-section">' +
+    '<div class="form-section-head">Motor de Clasificación RAEE</div>' +
+    '<div id="m-raee-result-block" style="padding:4px 0">' +
+      (function() {
+        var r   = u.recomendacion_raee || '';
+        var mot = u.motivo_raee || '';
+        var ver = u.motor_raee_version || '';
+        if (!r) {
+          return '<p style="font-size:12px;color:var(--text-3);margin:0;padding:4px 0">' +
+            'Sin clasificación — completa la evaluación física en la sección 6 para obtener la recomendación automática.</p>';
+        }
+        var colorMap = {
+          'RAEE':            { bg:'#FFEBEE', fg:'#C00000', icon:'⚠' },
+          'Reasignable':     { bg:'#E8F5E9', fg:'#2E7D32', icon:'↩' },
+          'Donacion':        { bg:'#FFF3E0', fg:'#E65100', icon:'♻' },
+          'Venta interna':   { bg:'#E3F2FD', fg:'#1565C0', icon:'$' },
+          'Revisión manual': { bg:'#F5F5F5', fg:'#616161', icon:'?' },
+        };
+        var cc   = colorMap[r] || { bg:'#F5F5F5', fg:'#616161', icon:'·' };
+        return '<div style="display:flex;align-items:flex-start;gap:14px;padding:10px 14px;' +
+               'background:' + cc.bg + ';border-left:4px solid ' + cc.fg + ';border-radius:0 6px 6px 0">' +
+          '<span style="font-size:22px;flex-shrink:0;line-height:1.2">' + cc.icon + '</span>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:14px;font-weight:700;color:' + cc.fg + ';margin-bottom:3px">' + esc(r) + '</div>' +
+            (mot ? '<div style="font-size:11px;color:var(--text-2);line-height:1.4">' + esc(mot) + '</div>' : '') +
+            (ver ? '<div style="font-size:10px;color:var(--text-3);margin-top:4px">Motor v' + esc(ver) + '</div>' : '') +
+          '</div>' +
+        '</div>';
+      })() +
     '</div>' +
+  '</div>' +
     
     
     '<div class="form-section"><div class="form-section-head">3 · Equipo nuevo asignado</div><div class="form-grid">' +
@@ -646,7 +676,7 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Caso envío (mensajería)</label><input type="text" class="form-input" id="m-caso_envio" value="' + esc(u.caso_envio) + '" placeholder="Guía de mensajería"></div>' +
       '<div class="form-group"><label class="form-label">F. Envío</label><input type="date" class="form-input" id="m-fecha_envio" value="' + esc(u.fecha_envio) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. Entrega</label><input type="date" class="form-input" id="m-fecha_entrega" value="' + esc(u.fecha_entrega) + '"></div>' +
-      '<div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
+      '<div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;padding:14px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
         '<div class="form-group" style="margin:0"><label class="form-label">F. envío acta</label><input type="date" class="form-input" id="m-fecha_envio_acta" value="' + esc(u.fecha_envio_acta) + '"></div>' +
         '<div class="form-group"><label class="form-label">URL del acta (SharePoint)</label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url || '') + '" placeholder="https://app.pandadoc.com/..."></div>' +
         '<div class="form-group" style="margin:0"><label class="form-label">F. firma acta</label><input type="date" class="form-input" id="m-fecha_firma_acta" value="' + esc(u.fecha_firma_acta) + '"></div>' +
@@ -695,11 +725,21 @@ function openEditModal(id) {
     '</div>' +
   '</div>' +
 '</div>' +
-'<div class="form-section" id="audit-section" style="margin-top:4px;padding:12px 16px 8px;background:var(--bg-subtle);border-radius:var(--r-md)">' +
-  '<div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Última actualización</div>' +
-  '<div style="display:flex;gap:16px;align-items:baseline">' +
-    '<span id="m-audit-date" style="font-family:Inter Tight;font-size:13px;font-weight:700;color:var(--text-1)">' + esc(u.updated_at ? formatDateEs(u.updated_at) : '—') + '</span>' +
-    '<span id="m-audit-by" style="font-size:12px;color:var(--text-2)">' + esc(u.updated_by || '—') + '</span>' +
+'<div class="form-section" id="audit-section">' +
+  '<div class="form-section-head">Auditoría</div>' +
+  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">' +
+    '<div>' +
+      '<div style="font-size:9px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Última actualización</div>' +
+      '<div id="m-audit-date" style="font-size:13px;font-weight:700;color:var(--text-1)">' + (u.updated_at ? formatDateEs(u.updated_at) : '—') + '</div>' +
+    '</div>' +
+    '<div>' +
+      '<div style="font-size:9px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Actualizado por</div>' +
+      '<div id="m-audit-by" style="font-size:13px;color:var(--text-2)">' + esc(u.updated_by || '—') + '</div>' +
+    '</div>' +
+    '<div>' +
+      '<div style="font-size:9px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Estado auditoría</div>' +
+      '<div style="font-size:12px;font-weight:700">' + (u.VERSION ? '<span style="color:var(--accent)">v' + u.VERSION + '</span> · Cambios rastreados' : '<span style="color:var(--text-3)">Sin registros</span>') + '</div>' +
+    '</div>' +
   '</div>' +
 '</div>';
   
@@ -961,7 +1001,7 @@ window.actualizarRecomendacion = function() {
   $('modal-bg').classList.add('active');
 
   // QA-05: Inicializar dirty form tracking y validación
-  if (window._initDirtyForm) setTimeout(_initDirtyForm, 50);
+  
   if (window.attachFieldValidation) setTimeout(attachFieldValidation, 50);
 }
 
@@ -1004,10 +1044,7 @@ function setStarRating(value) {
 window.setStarRating = setStarRating;
 
 function closeModal(force) {
-  if (!force && window._hasDirtyForm && window._hasDirtyForm()) {
-    if (!confirm('Hay cambios sin guardar.\n\nPresionar Aceptar para descartar o Cancelar para volver.')) return;
-  }
-  if (window._clearDirty) _clearDirty();
+  // RC-01 T17: DirtyForm eliminado — el usuario decide cuándo guardar
   $('modal-bg').classList.remove('active'); state.editingId = null;
 }
 window.closeModal = closeModal;
@@ -1091,9 +1128,10 @@ function saveRecord() {
     // Se excluyen del sync para evitar console.error('[WorkbookWriter] campo sin columna')
     // Permanecen en changes para que updateRenewal() los guarde en memoria
     // QA-02R: _F7_FIELDS — único campo sin columna en Excel Maestro
-    var _F7_FIELDS = new Set([
-      'estado_entrega_equipo_nuevo', // sin columna en Excel Maestro
-    ]);
+    // RC-01 T12: _F7_FIELDS vacío — estado_entrega_equipo_nuevo
+    // tiene entrada en SP_FIELD_MAP (EstadoEntregaEquipoNuevo).
+    // Si la columna existe en el Excel Maestro, persiste normalmente.
+    var _F7_FIELDS = new Set([]);
     var syncChanges = {};
     Object.keys(changes).forEach(function(k) {
       if (!_F7_FIELDS.has(k)) syncChanges[k] = changes[k];
@@ -1110,11 +1148,16 @@ function saveRecord() {
             return DataService.reloadFromProvider().then(function(ok) {
               if (window.state) state._syncInProgress = false; // Fase 4
               if (ok) {
+                // RC-01 T11: Optimistic update — re-aplicar cambios tras reload
+                // para compensar Graph propagation delay (write exitoso pero
+                // GET inmediato puede retornar caché anterior de la API).
+                var _reloaded = DataService.getRenewal(id);
+                if (_reloaded) DataService.updateRenewal(id, syncChanges, null);
                 // Fase 4: UN ÚNICO render post-sync — datos frescos del Excel
                 renderResumen();
                 renderView(window.state ? state.view : 'resumen');
                 // GH3.37.1 Item 11: confirmación visual
-                toast('✓ Guardado · Sincronizado con Excel', 'success'); if (window._clearDirty) _clearDirty();
+                toast('✓ Guardado · Sincronizado con Excel', 'success');
                 if (window._showSyncStatus) _showSyncStatus('ok');
               }
             });
@@ -1346,61 +1389,7 @@ function attachFieldValidation() {
 }
 window.attachFieldValidation = attachFieldValidation;
 
-// QA-05 Task 9 — Dirty Form: detectar cambios sin guardar
-(function() {
-  var _dirtyFields = new Set();
-  var _original = {};
-
-  window._initDirtyForm = function() {
-    _dirtyFields.clear(); _original = {};
-    document.querySelectorAll('.modal-body input, .modal-body select, .modal-body textarea').forEach(function(el) {
-      if (el.id && el.id.startsWith('m-')) {
-        _original[el.id] = el.type === 'checkbox' ? el.checked : el.value;
-        el.addEventListener('change', function() {
-          var cur = el.type === 'checkbox' ? el.checked : el.value;
-          if (cur !== _original[el.id]) _dirtyFields.add(el.id);
-          else _dirtyFields.delete(el.id);
-          _startAutoSave();
-        });
-      }
-    });
-  };
-
-  window._hasDirtyForm = function() { return _dirtyFields.size > 0; };
-  window._clearDirty   = function() { _dirtyFields.clear(); if (_autoTimer) clearTimeout(_autoTimer); };
-
-  // Task 10 — AutoSave: 5s debounce
-  var _autoTimer = null;
-  function _startAutoSave() {
-    if (_autoTimer) clearTimeout(_autoTimer);
-    _showSaveStatus('Guardando en 5s...');
-    _autoTimer = setTimeout(function() {
-      if (_dirtyFields.size > 0) {
-        _showSaveStatus('Guardando...');
-        try {
-          saveRecord();
-          _showSaveStatus('Guardado ✓');
-          window._clearDirty();
-          setTimeout(function() { _showSaveStatus(''); }, 3000);
-        } catch(e) { _showSaveStatus('Error al guardar'); }
-      }
-    }, 5000);
-  }
-
-  function _showSaveStatus(msg) {
-    var el = document.getElementById('autosave-status');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'autosave-status';
-      el.style.cssText = 'position:sticky;bottom:0;left:0;right:0;padding:6px 16px;background:var(--accent-l);color:var(--accent);font-size:11px;font-weight:600;text-align:center;z-index:5;transition:opacity .3s';
-      var mb = document.getElementById('modal-body');
-      if (mb) mb.parentNode.insertBefore(el, mb.nextSibling);
-    }
-    el.textContent = msg;
-    el.style.display = msg ? '' : 'none';
-  }
-
-})();
+// RC-01 T16+T17: AutoSave y DirtyForm eliminados
 
 // QA-04 Task 5 — Filtros del panel ejecutivo
 window.PANEL_FILTERS = {};
