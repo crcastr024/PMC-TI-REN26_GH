@@ -994,6 +994,7 @@
   z-index: 20;
   background: var(--bg-elev, #fff);
   margin-bottom: 0 !important;
+<<<<<<< HEAD
   padding: 10px 24px 12px;
   border-bottom: 1px solid var(--border, #E2E2E2);
   box-shadow: 0 2px 6px rgba(0,0,0,.07);
@@ -1065,6 +1066,12 @@
   color: var(--accent, #A51C2B);
   font-weight: 700;
 }
+=======
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border, #E2E2E2);
+  box-shadow: 0 2px 6px rgba(0,0,0,.07);
+}
+>>>>>>> e30ee006da0dd0484ecf4c5d498f29eba90c6171
 
 /* ── RC-06 FIXES: sb-hamburger en sb-head ── */
 .sb-head {
@@ -1118,8 +1125,15 @@
   transition: margin-left .25s;
 }
 body:not(.sb-collapsed) #app-footer {
+<<<<<<< HEAD
   margin-left: var(--sidebar-w, 264px);
 }
 body.sb-collapsed #app-footer {
   margin-left: 60px;
+=======
+  margin-left: var(--sb-width, 240px);
+}
+body.sb-collapsed #app-footer {
+  margin-left: var(--sb-collapsed-width, 60px);
+>>>>>>> e30ee006da0dd0484ecf4c5d498f29eba90c6171
 }

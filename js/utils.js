@@ -862,7 +862,11 @@ const AuthorizationService = {
   // GH3.39.1 FC-11: permisos actualizados — Técnico puede ver Panel Ejecutivo, Ciudades, Técnicos, Devoluciones
   _PERMISSIONS: {
     super_admin:    ['*'],
+<<<<<<< HEAD
     gestor_activos: ['resumen','usuarios','reportes','actividad','configuracion','aprobaciones','panel-ejecutivo','panel','ciudades','tecnico','devoluciones'],
+=======
+    gestor_activos: ['resumen','usuarios','reportes','actividad','configuracion','aprobaciones','panel-ejecutivo','ciudades','tecnico','devoluciones'],
+>>>>>>> e30ee006da0dd0484ecf4c5d498f29eba90c6171
     tecnico:        ['usuarios','actividad','panel-ejecutivo','ciudades','tecnico','devoluciones','mi-cola','resumen'],
     consulta:       ['usuarios','resumen'],
     visitante:      ['resumen'],
