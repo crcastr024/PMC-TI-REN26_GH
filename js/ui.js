@@ -842,15 +842,15 @@ window.updateSectionVisibility = updateSectionVisibility;
         var grp = el.closest ? el.closest('.form-group') : null;
         if (grp) grp.style.opacity = checked ? '1' : '0.4';
       });
-      // RC-04 T3: las secciones 6 y 7 solo tienen sentido después de recolectar el equipo
-      ['seccion-eval-fisica','seccion-raee-tecnologico'].forEach(function(id) {
-        var sec = document.getElementById(id);
-        if (!sec) return;
-        sec.style.opacity = checked ? '1' : '0.4';
-        sec.querySelectorAll('input,select,textarea').forEach(function(el) {
+      // Sección 7 (Evaluación Física) depende de lista_recoleccion
+      // Sección 3 (Clasificación Tecnológica) es display-only (Motor A) — siempre habilitada
+      var evalFis = document.getElementById('seccion-eval-fisica');
+      if (evalFis) {
+        evalFis.style.opacity = checked ? '1' : '0.4';
+        evalFis.querySelectorAll('input,select,textarea').forEach(function(el) {
           el.disabled = !checked;
         });
-      });
+      }
     }
     var listaEl = $('m-lista_recoleccion');
     if (listaEl) {
