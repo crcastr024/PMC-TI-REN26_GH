@@ -96,7 +96,7 @@ const PERMISSIONS = {
     'admin.view': true, 'admin.config': false,           // config global solo super_admin
     'system.users.crud': false, 'system.roles.crud': false, 'system.config': false,
     'data.restore': false, 'data.master': false,
-    'panel.view': false, 'panel.preview': true,          // puede previsualizar Panel Ejecutivo
+    'panel.view': false, 'panel.preview': true,          // puede previsualizar Vista de Seguimiento
     'audit.view': true, 'audit.export': true,
     'report.view': true, 'kpi.view': true, 'timeline.view': true,
   },
@@ -120,7 +120,7 @@ const PERMISSIONS = {
     'admin.view': false, 'admin.config': false,
     'system.users.crud': false, 'system.roles.crud': false, 'system.config': false,
     'data.restore': false, 'data.master': false,
-    'panel.view': true,      // único rol con Panel Ejecutivo en sidebar
+    'panel.view': true,      // único rol con Vista de Seguimiento en sidebar
     'panel.preview': false,
     'audit.view': false, 'audit.export': false,
     // F3.7 · Permisos de lectura extendidos para visitante
@@ -846,7 +846,7 @@ const VIEW_TITLES = {
   resumen: 'Resumen', usuarios: 'Usuarios', tecnicos: 'Por técnico',
   'tecnico-detail': 'Detalle del técnico',
   'aprobaciones': 'Aprobaciones',
-  'panel': 'Panel Ejecutivo',
+  'panel': 'Vista de Seguimiento',
   'home-tecnico': 'Mi Cola · Técnico',
   ciudades: 'Por ciudad', devoluciones: 'Devoluciones', reportes: 'Reportes',
   actividad: 'Actividad', ajustes: 'Ajustes'
@@ -859,10 +859,10 @@ const VIEW_TITLES = {
 // ════════════════════════════════════════════════════════════════════
 const AuthorizationService = {
   // Vistas accesibles por rol (incluye substrings del view id)
-  // GH3.39.1 FC-11: permisos actualizados — Técnico puede ver Panel Ejecutivo, Ciudades, Técnicos, Devoluciones
+  // GH3.39.1 FC-11: permisos actualizados — Técnico puede ver Vista de Seguimiento, Ciudades, Técnicos, Devoluciones
   _PERMISSIONS: {
     super_admin:    ['*'],
-    gestor_activos: ['resumen','usuarios','reportes','actividad','configuracion','aprobaciones','panel-ejecutivo','ciudades','tecnico','devoluciones'],
+    gestor_activos: ['resumen','usuarios','reportes','actividad','configuracion','aprobaciones','panel-ejecutivo','panel','ciudades','tecnico','devoluciones'],
     tecnico:        ['usuarios','actividad','panel-ejecutivo','ciudades','tecnico','devoluciones','mi-cola','resumen'],
     consulta:       ['usuarios','resumen'],
     visitante:      ['resumen'],
@@ -889,6 +889,10 @@ function goView(id) {
   $('crumb-view').textContent = VIEW_TITLES[id];
   scrollMainTop();
   renderView(id);
+  // STAB Item 6: mostrar KPI header solo en vistas que lo definen
+  var kpiViews = { resumen: true, panel: true };
+  var kpiStrip = document.querySelector('.panel-kpi-strip') || document.getElementById('kpi-header');
+  if (kpiStrip) kpiStrip.style.display = kpiViews[id] ? '' : 'none';
 }
 window.goView = goView;
 

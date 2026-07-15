@@ -94,7 +94,11 @@
         <span>Devoluciones</span>
       </div>
 
-      <div class="sb-section-title">Reportes</div>
+      <div class="sb-item" data-view="panel" id="sb-panel" style="display:none" data-tip="Vista de seguimiento">
+        <div class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+        <span>Vista de seguimiento</span>
+      </div>
+
       <div class="sb-item" data-view="reportes">
         <div class="sb-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
         <span>Reportes</span>
@@ -133,21 +137,19 @@
         <span class="sb-badge" id="b-home-tecnico">—</span>
       </div>
 
-      <div class="sb-item" data-view="panel" id="sb-panel" style="display:none">
-        <div class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-        <span>Panel ejecutivo</span>
-      </div>
 
-            <div class="sb-section-title">Reportes</div>
-      
-    </div>
+            <div class="sb-item" data-view="panel" id="sb-panel" style="display:none">
+        <div class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+        <span>Vista de seguimiento</span>
+      </div>
+      <div class="sb-section-title">Reportes</div>
+
+
   </aside>
 
   <!-- ════════════════════════ TOPBAR ════════════════════════ -->
   <header class="topbar">
-    <button class="tb-toggle" id="tb-toggle" onclick="toggleSidebar()" title="Contraer/expandir menú">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
+    
     <div class="tb-crumb">
       <span class="tb-crumb-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
       <span class="tb-crumb-text">PMC-TI-REN26 · <strong id="crumb-view">Resumen</strong></span>
@@ -1005,7 +1007,7 @@
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn" id="modal-block-btn" onclick="openBlockModal()">🚧 Bloquear</button>
       <button class="btn" id="modal-validate-btn" onclick="openValidationModal()" style="background:var(--amber-l);color:var(--amber);border-color:var(--amber)">Solicitar validación de cierre</button>
-      <button class="btn btn-primary" onclick="confirmarGuardado()">Guardar cambios</button>
+      <button class="btn btn-primary" onclick="ejecutarGuardado()">Guardar cambios</button>
     </div>
   </div>
 </div>

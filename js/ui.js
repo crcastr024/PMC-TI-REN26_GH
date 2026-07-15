@@ -388,13 +388,13 @@ window.enterDashboard = enterDashboard;
 // ═══ PREVIEW VISITANTE (botón para super_admin / gestor_activos) ═══
 function previewVisitante() {
   if (!can('panel.preview')) {
-    toast('Sin permisos para previsualizar el Panel Ejecutivo', 'warning');
+    toast('Sin permisos para previsualizar el Vista de Seguimiento', 'warning');
     return;
   }
   notify({
     level: 'info', category: 'system',
-    title: 'Panel Ejecutivo · Vista previa',
-    message: 'El Panel Ejecutivo (modo Visitante) estará disponible en la siguiente fase de desarrollo.'
+    title: 'Vista de Seguimiento · Vista previa',
+    message: 'El Vista de Seguimiento (modo Visitante) estará disponible en la siguiente fase de desarrollo.'
   });
 }
 window.previewVisitante = previewVisitante;
@@ -573,7 +573,6 @@ function openEditModal(id) {
   state.editingId = id;
   $('modal-eyebrow').textContent = isBackup(u) ? 'BACKUP ' + u.empresa : (u.empresa + ' · ' + (u.tipo || 'EQUIPO') + ' · ID ' + u.id);
   $('modal-title').textContent = (u.nombre || ('BACKUP ' + u.empresa)) + (u.serial ? ' · ' + u.serial : '');
-  
   const projects = Array.from(new Set(DataService.getRenewals({}).map(x => x.proyecto).filter(p => p))).sort();
   const projectOpts = '<option value="">—</option>' + projects.map(p => '<option' + (u.proyecto === p ? ' selected' : '') + '>' + esc(p) + '</option>').join('');
   // F3.5 · Niveles desde ConfigService (no hardcodeados en componente UI)
@@ -640,59 +639,84 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Disco duro (ant.)</label><input type="text" class="form-input" id="m-eq_ant_disco" value="' + esc(u.eq_ant_disco) + '"></div>' +
       '<div class="form-group full"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_ant_so" value="' + esc(u.eq_ant_so) + '"></div>' +
     '</div>' +
-  '</div>';'</div>' +
+  '</div>' + '</div>' +
 
     '<div class="form-section" id="seccion-raee-tecnologico"><div class="form-section-head">3 · Clasificación Tecnológica</div>' +
     (function() {
-      // Motor A — ObsolescenceService — clasifica por procesador y generación de CPU
-      var cls   = u.estado_eq_ant             || '';
-      var gen   = u.generacion_cpu             || '';
-      var proc  = u.eq_ant_procesador          || '';
-      var obs   = u.clasificacion_obsolescencia || cls;
-      var accion = u.accion_requerida          || '';
-      var detalle = u.accion_detalle           || '';
+      // Motor A — ObsolescenceService — diseño renovado (RC-07)
+      var cls    = u.estado_eq_ant             || '';
+      var gen    = u.generacion_cpu             || '';
+      var proc   = u.eq_ant_procesador          || '';
+      var accion = u.accion_requerida           || '';
+      var detalle = u.accion_detalle            || '';
       var vendor = (u._obsolescence_meta && u._obsolescence_meta.vendor) || '';
       var family = (u._obsolescence_meta && u._obsolescence_meta.family) || '';
 
-      var MOTOR_COLORS = {
-        'RAEE':          { bg:'#FFEBEE', border:'#C00000', fg:'#C00000', icon:'⛔' },
-        'Reasignable':   { bg:'#E8F5E9', border:'#2E7D32', fg:'#2E7D32', icon:'↩' },
-        'Revisión manual':{ bg:'#FFF8E1', border:'#F57F17', fg:'#E65100', icon:'🔍' },
+      var MOTOR_SCHEME = {
+        'RAEE':            { bg:'#FFEBEE', border:'#C00000', fg:'#C00000', ic:'⛔', acBg:'#FFEBEE' },
+        'Reasignable':     { bg:'#F0FDF4', border:'#16A34A', fg:'#166534', ic:'↩',  acBg:'#DCFCE7' },
+        'Revisión manual': { bg:'#FFFBEB', border:'#D97706', fg:'#92400E', ic:'?',  acBg:'#FEF3C7' },
       };
-      var cc = MOTOR_COLORS[cls] || { bg:'#F5F5F5', border:'#BDBDBD', fg:'#757575', icon:'⏳' };
+      var ms = MOTOR_SCHEME[cls] || { bg:'#FAFAFA', border:'#9CA3AF', fg:'#6B7280', ic:'—', acBg:'#F3F4F6' };
 
       if (!proc) {
-        return '<div style="padding:12px 14px;background:#FAFAFA;border-radius:6px;border:1px dashed #E0E0E0">' +
-          '<div style="font-size:12px;color:var(--text-3)">⏳ Sin procesador registrado — el motor se ejecutará automáticamente al ingresar el equipo anterior.</div>' +
-          '</div>';
+        var noProc = ms;
+        return '<div style="background:' + noProc.bg + ';border:1px solid ' + noProc.border + ';border-radius:10px;padding:14px 16px">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+            '<div style="width:34px;height:34px;border-radius:50%;background:' + noProc.border + ';display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0">' + noProc.ic + '</div>' +
+            '<div>' +
+              '<div style="font-size:13px;font-weight:700;color:' + noProc.fg + '">' + (cls || 'Sin clasificar') + '</div>' +
+              '<div style="font-size:11px;color:#6B7280">Procesador no registrado</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px;margin-bottom:10px">' +
+            '<div style="flex:1;background:#fff;border:1px solid ' + noProc.border + ';border-radius:6px;padding:6px 10px">' +
+              '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + noProc.fg + ';margin-bottom:2px">Clasificación</div>' +
+              '<div style="font-size:11px;font-weight:700;color:' + noProc.fg + '">' + (cls || 'Sin clasificar') + '</div>' +
+            '</div>' +
+            '<div style="flex:1;background:#fff;border:1px solid ' + noProc.border + ';border-radius:6px;padding:6px 10px">' +
+              '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + noProc.fg + ';margin-bottom:2px">Generación</div>' +
+              '<div style="font-size:11px;font-weight:700;color:' + noProc.fg + '">Sin determinar</div>' +
+            '</div>' +
+            '<div style="flex:1;background:#fff;border:1px solid ' + noProc.border + ';border-radius:6px;padding:6px 10px">' +
+              '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + noProc.fg + ';margin-bottom:2px">Acción</div>' +
+              '<div style="font-size:11px;font-weight:700;color:' + noProc.fg + '">' + (accion || 'Revisar') + '</div>' +
+            '</div>' +
+          '</div>' +
+          (detalle ? '<div style="font-size:11px;color:#4B5563;margin-bottom:6px">' + esc(detalle) + '</div>' : '') +
+          '<div style="font-size:10px;color:#9CA3AF;font-style:italic">Clasificación generada automáticamente por el motor de obsolescencia a partir del procesador del equipo anterior · no editable manualmente</div>' +
+        '</div>';
       }
 
-      var html = '<div style="border:2px solid ' + cc.border + ';border-radius:8px;overflow:hidden">' +
-        '<div style="background:' + cc.border + ';padding:10px 16px;display:flex;align-items:center;gap:10px">' +
-          '<span style="font-size:22px">' + cc.icon + '</span>' +
-          '<div style="flex:1">' +
-            '<div style="font-size:13px;font-weight:700;color:#fff">' + esc(cls || 'Sin clasificar') + '</div>' +
-            (obs && obs !== cls ? '<div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:1px">' + esc(obs) + '</div>' : '') +
+      // Procesador registrado — renderizar tarjeta completa
+      var procLabel = proc + (vendor ? ' · ' + vendor : '') + (family ? ' ' + family : '');
+      var genLabel  = gen ? 'Gen ' + gen : 'Sin determinar';
+      var html =
+        '<div style="background:' + ms.bg + ';border:1px solid ' + ms.border + ';border-radius:10px;padding:14px 16px">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
+            '<div style="width:34px;height:34px;border-radius:50%;background:' + ms.border + ';display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0">' + ms.ic + '</div>' +
+            '<div>' +
+              '<div style="font-size:13px;font-weight:700;color:' + ms.fg + '">' + esc(cls || 'Sin clasificar') + '</div>' +
+              '<div style="font-size:11px;color:#6B7280">' + esc(procLabel) + '</div>' +
+            '</div>' +
           '</div>' +
-          (accion ? '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.85);background:rgba(0,0,0,.18);padding:3px 9px;border-radius:10px">' + esc(accion) + '</div>' : '') +
-        '</div>' +
-        '<div style="background:' + cc.bg + ';padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
-          '<div>' +
-            '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + cc.fg + ';margin-bottom:3px">Procesador detectado</div>' +
-            '<div style="font-size:12px;color:var(--text-1);font-weight:600">' + esc(proc) + '</div>' +
-            (vendor || family ? '<div style="font-size:10px;color:var(--text-3);margin-top:2px">' + esc((vendor + ' ' + family).trim()) + '</div>' : '') +
+          '<div style="display:flex;gap:6px;margin-bottom:10px">' +
+            '<div style="flex:1;background:#fff;border:1px solid ' + ms.border + ';border-radius:6px;padding:6px 10px">' +
+              '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + ms.fg + ';margin-bottom:2px">Clasificación</div>' +
+              '<div style="font-size:11px;font-weight:700;color:' + ms.fg + '">' + esc(cls) + '</div>' +
+            '</div>' +
+            '<div style="flex:1;background:#fff;border:1px solid ' + ms.border + ';border-radius:6px;padding:6px 10px">' +
+              '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + ms.fg + ';margin-bottom:2px">Generación</div>' +
+              '<div style="font-size:11px;font-weight:700;color:' + ms.fg + '">' + esc(genLabel) + '</div>' +
+            '</div>' +
+            '<div style="flex:1;background:#fff;border:1px solid ' + ms.border + ';border-radius:6px;padding:6px 10px">' +
+              '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + ms.fg + ';margin-bottom:2px">Acción</div>' +
+              '<div style="font-size:11px;font-weight:700;color:' + ms.fg + '">' + esc(accion || '—') + '</div>' +
+            '</div>' +
           '</div>' +
-          '<div>' +
-            '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + cc.fg + ';margin-bottom:3px">Generación</div>' +
-            (gen ? '<div style="font-size:20px;font-weight:900;color:' + cc.fg + ';line-height:1">' + esc(String(gen)) + '<sup style="font-size:10px">ª gen</sup></div>' : '<div style="font-size:12px;color:var(--text-3)">No determinada</div>') +
-          '</div>' +
-        '</div>' +
-        (detalle ? '<div style="background:rgba(0,0,0,.04);padding:8px 16px;font-size:11px;color:var(--text-2);line-height:1.4">' + esc(detalle) + '</div>' : '') +
-        '<div style="background:rgba(0,0,0,.04);padding:5px 14px;font-size:9px;color:var(--text-3);display:flex;justify-content:space-between">' +
-          '<span>Motor ObsolescenceService · Política Intel ≤ gen 10 = RAEE</span>' +
-          '<span>' + (u._obsolescence_meta && u._obsolescence_meta.auto_classified ? 'Automático' : u._obsolescence_meta && u._obsolescence_meta.manual_override ? 'Manual' : '') + '</span>' +
-        '</div>' +
-      '</div>';
+          (detalle ? '<div style="font-size:11px;color:#4B5563;margin-bottom:6px">' + esc(detalle) + '</div>' : '') +
+          '<div style="font-size:10px;color:#9CA3AF;font-style:italic">Clasificación generada automáticamente por el motor de obsolescencia a partir del procesador del equipo anterior · no editable manualmente</div>' +
+        '</div>';
       return html;
     })() +
     '</div>' +
@@ -713,7 +737,7 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Técnico asignado</label><select class="form-select" id="m-tecnico">' + '<option value="">— Sin asignar —</option>' + (window.CONFIG.technicians || []).map(function(t){ return '<option value="' + esc(t) + '"' + ((u.tecnico||'').toLowerCase()===t.toLowerCase()?' selected':'') + '>' + esc(t) + '</option>'; }).join('') + '</select></div>' +
       '<div class="form-group"><label class="form-label">Estado proceso REN26</label><select class="form-select" id="m-estado">' + estadoOpts + '</select></div>' +
       // F3.6 · estado_entrega_equipo_nuevo: entidad física independiente del estado del proceso
-      '<div class="form-group"><label class="form-label">Estado entrega equipo nuevo <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><select class="form-select" id="m-estado_entrega_equipo_nuevo">' + entregaEqNvoOpts + '</select></div>' +
+
       '<div class="form-group"><label class="form-label">Notas de alistamiento</label><input type="text" class="form-input" id="m-notas_alistamiento" value="' + esc(u.notas_alistamiento) + '" placeholder="Notas de alistamiento"></div>' +
       '<div class="form-group"><label class="form-label">Caso envío (mensajería)</label><input type="text" class="form-input" id="m-caso_envio" value="' + esc(u.caso_envio) + '" placeholder="Guía de mensajería"></div>' +
       '<div class="form-group"><label class="form-label">F. Envío</label><input type="date" class="form-input" id="m-fecha_envio" value="' + toDateInput(u.fecha_envio) + '"></div>' +
@@ -842,15 +866,15 @@ window.updateSectionVisibility = updateSectionVisibility;
         var grp = el.closest ? el.closest('.form-group') : null;
         if (grp) grp.style.opacity = checked ? '1' : '0.4';
       });
-      // RC-04 T3: las secciones 6 y 7 solo tienen sentido después de recolectar el equipo
-      ['seccion-eval-fisica','seccion-raee-tecnologico'].forEach(function(id) {
-        var sec = document.getElementById(id);
-        if (!sec) return;
-        sec.style.opacity = checked ? '1' : '0.4';
-        sec.querySelectorAll('input,select,textarea').forEach(function(el) {
+      // Sección 7 (Evaluación Física) depende de lista_recoleccion
+      // Sección 3 (Clasificación Tecnológica) es display-only (Motor A) — siempre habilitada
+      var evalFis = document.getElementById('seccion-eval-fisica');
+      if (evalFis) {
+        evalFis.style.opacity = checked ? '1' : '0.4';
+        evalFis.querySelectorAll('input,select,textarea').forEach(function(el) {
           el.disabled = !checked;
         });
-      });
+      }
     }
     var listaEl = $('m-lista_recoleccion');
     if (listaEl) {
@@ -867,9 +891,11 @@ window.updateSectionVisibility = updateSectionVisibility;
       'Recibida en bodega': 'm-fecha_recepcion_bodega',
     };
     function updateDevDates(val) {
+      // Solo habilitar fechas si lista_recoleccion está marcada
+      var listaChecked = $('m-lista_recoleccion') && $('m-lista_recoleccion').checked;
       ['m-fecha_solicitud_devolucion','m-fecha_transito','m-fecha_recepcion_bodega'].forEach(function(id) {
         var el = $(id); if (!el) return;
-        var active = DATE_MAP[val] === id;
+        var active = listaChecked && DATE_MAP[val] === id;
         el.disabled = !active;
         var grp = el.closest ? el.closest('.form-group') : null;
         if (grp) grp.style.opacity = active ? '1' : '0.5';
@@ -1009,7 +1035,7 @@ window.updateSectionVisibility = updateSectionVisibility;
       for (var k in u) tempU[k] = u[k];
       tempU.estado = _estadoEl.value;
       _tlContainer.innerHTML = renderTimelineHTML(tempU);
-      // GH3.37.1 Item 8: actualizar KPIs y Panel Ejecutivo sin cerrar el modal
+      // GH3.37.1 Item 8: actualizar KPIs y Vista de Seguimiento sin cerrar el modal
       if (window.renderResumen) setTimeout(renderResumen, 0);
     });
   })();
@@ -1060,102 +1086,186 @@ window.actualizarRecomendacion = function() {
   if (window.attachFieldValidation) setTimeout(attachFieldValidation, 50);
 }
 
-// GH3.37.1 Item 11 — Indicador visual de sincronización con Excel
+
+// ── STAB: Renderers restaurados (renderAprobaciones, renderPanelEjecutivo, renderHomeTecnico) ──
+
+function renderAprobaciones() {
+  var records = window.DataService ? DataService.getRenewals({}) : [];
+  var pendientes = records.filter(function(r) { return r.estado === 'Pendiente aprobación'; });
+  var el = document.getElementById('aprob-count');
+  if (el) el.textContent = pendientes.length + ' registro' + (pendientes.length !== 1 ? 's' : '') + ' pendientes';
+  var content = document.getElementById('aprob-content');
+  if (!content) return;
+  if (!pendientes.length) {
+    content.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-3)">No hay aprobaciones pendientes.</div>';
+    return;
+  }
+  var rows = pendientes.map(function(r) {
+    var id = String(r.id).replace(/'/g, '');
+    return '<tr style="border-bottom:1px solid var(--border)">' +
+      '<td style="padding:8px 10px;font-weight:600">' + esc(r.nombre || '—') + '</td>' +
+      '<td style="padding:8px 10px;text-align:center">' + esc(r.empresa || '—') + '</td>' +
+      '<td style="padding:8px 10px;text-align:center">' + esc(r.tecnico || '—') + '</td>' +
+      '<td style="padding:8px 10px;text-align:center"><span style="background:var(--amber-l);color:var(--amber);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">Pendiente</span></td>' +
+      '<td style="padding:8px 10px;text-align:center"><button class="btn" style="font-size:10px;padding:4px 10px" data-id="' + id + '" onclick="openEditModal(this.dataset.id)">Revisar</button></td>' +
+      '</tr>';
+  }).join('');
+  content.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--accent);color:#fff">' +
+    '<th style="padding:8px 10px;text-align:left">Nombre</th><th style="padding:8px 10px">Empresa</th>' +
+    '<th style="padding:8px 10px">Técnico</th><th style="padding:8px 10px">Estado</th><th style="padding:8px 10px">Acción</th>' +
+    '</tr></thead><tbody>' + rows + '</tbody></table>';
+}
+window.renderAprobaciones = renderAprobaciones;
+
+function renderPanelEjecutivo() {
+  var role = window.state && state.user && (state.user.role || state.user.rol);
+  var allowed = ['super_admin', 'gestor_activos', 'director_ti', 'gerencia'];
+  if (role && allowed.indexOf(role) < 0) {
+    var vp = document.getElementById('view-panel');
+    if (vp) vp.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-3)">Vista no disponible para este rol.</div>';
+    return;
+  }
+  var records = window.DataService ? DataService.getRenewals({}) : [];
+  var total = records.length;
+  var done  = records.filter(function(r) { return r.estado === 'Renovación completada' || r.estado === 'Cerrado'; }).length;
+  var proc  = records.filter(function(r) { return r.estado !== 'Pendiente' && r.estado !== 'Renovación completada' && r.estado !== 'Cerrado'; }).length;
+  var pend  = records.filter(function(r) { return r.estado === 'Pendiente'; }).length;
+  var actas = records.filter(function(r) { return !!r.acta_entrega_url; }).length;
+  var aprob = records.filter(function(r) { return r.estado === 'Pendiente aprobación'; }).length;
+  var pct   = total ? Math.round(done / total * 100) : 0;
+  var set = function(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
+  set('pe-total', total); set('pe-completados', done); set('pe-proceso', proc);
+  set('pe-pendientes', pend); set('pe-actas', actas); set('pe-aprobaciones', aprob);
+  var pf = document.getElementById('pe-prog-fill'); if (pf) pf.style.width = pct + '%';
+  set('pe-prog-pct', pct + '%');
+  var hbt = records.filter(function(r) { return r.empresa === 'HBT'; }).length;
+  var hgs = records.filter(function(r) { return r.empresa === 'HGS'; }).length;
+  set('pe-hbt-n', hbt); set('pe-hgs-n', hgs);
+  if (total) { set('pe-hbt-pct', Math.round(hbt/total*100)+'%'); set('pe-hgs-pct', Math.round(hgs/total*100)+'%'); }
+  var ptEl = document.getElementById('pe-por-tecnico');
+  if (ptEl) {
+    var byTec = {};
+    records.forEach(function(r) { var t = r.tecnico || 'Sin asignar'; byTec[t] = (byTec[t] || 0) + 1; });
+    ptEl.innerHTML = Object.keys(byTec).sort().map(function(t) {
+      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span>' + esc(t) + '</span><strong>' + byTec[t] + '</strong></div>';
+    }).join('');
+  }
+  set('pe-destino-raee',    records.filter(function(r) { return r.recomendacion_raee === 'RAEE'; }).length);
+  set('pe-destino-venta',   records.filter(function(r) { return r.recomendacion_raee === 'Venta interna'; }).length);
+  set('pe-destino-reasign', records.filter(function(r) { return r.recomendacion_raee === 'Reasignacion'; }).length);
+  set('pe-destino-donacion',records.filter(function(r) { return r.recomendacion_raee === 'Donacion'; }).length);
+}
+window.renderPanelEjecutivo = renderPanelEjecutivo;
+
+function renderHomeTecnico() {
+  var user = window.state && state.user;
+  var tecName = user ? (user.name || user.displayName || '—') : '—';
+  var av = document.getElementById('ht-avatar');
+  if (av) {
+    var parts = tecName.split(' ').filter(Boolean);
+    av.textContent = parts.length >= 2 ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase() : tecName.slice(0,2).toUpperCase();
+  }
+  var set = function(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
+  set('ht-nombre', tecName);
+  set('ht-meta', 'Técnico REN26 · PMC-TI');
+  var records = window.DataService ? DataService.getRenewals({}) : [];
+  var first = tecName.split(' ')[0].toLowerCase();
+  var mios = first ? records.filter(function(r) { return r.tecnico && r.tecnico.toLowerCase().indexOf(first) >= 0; }) : [];
+  var pend = mios.filter(function(r) { return r.estado === 'Pendiente' || r.estado === 'Alistamiento'; }).length;
+  var proc = mios.filter(function(r) { return r.estado !== 'Pendiente' && r.estado !== 'Alistamiento' && r.estado !== 'Renovación completada' && r.estado !== 'Cerrado'; }).length;
+  var list = mios.filter(function(r) { return r.estado === 'Renovación completada' || r.estado === 'Cerrado'; }).length;
+  set('ht-pendientes', pend); set('ht-proceso', proc); set('ht-listos', list); set('ht-total', mios.length);
+  var colaEl = document.getElementById('ht-cola-list');
+  var cntEl  = document.getElementById('ht-cola-count');
+  if (colaEl) {
+    var activos = mios.filter(function(r) { return r.estado !== 'Cerrado'; });
+    if (cntEl) cntEl.textContent = activos.length;
+    colaEl.innerHTML = activos.length ? activos.map(function(r) {
+      var id = String(r.id).replace(/'/g, '');
+      return '<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:12px">' +
+        '<div><strong>' + esc(r.nombre||'—') + '</strong><br><span style="color:var(--text-3)">' + esc(r.empresa||'—') + ' · ' + esc(r.ciudad||'—') + '</span></div>' +
+        '<button class="btn" style="font-size:10px;padding:4px 10px" data-id="' + id + '" onclick="openEditModal(this.dataset.id)">Abrir</button></div>';
+    }).join('') : '<div style="padding:20px;text-align:center;color:var(--text-3)">No hay registros asignados.</div>';
+  }
+}
+window.renderHomeTecnico = renderHomeTecnico;
+
+// ── RESTAURACIÓN STAB: funciones truncadas por accidente en este sprint ──────
+
+// closeModal
+function closeModal(force) {
+  // RC-01 T17: DirtyForm eliminado
+  var bg = document.getElementById('modal-bg');
+  if (bg) bg.classList.remove('active');
+  if (window.state) state.editingId = null;
+}
+window.closeModal = closeModal;
+
+// _showSyncStatus
 function _showSyncStatus(status) {
   var indicator = document.getElementById('sync-status-indicator');
   if (!indicator) {
     indicator = document.createElement('div');
     indicator.id = 'sync-status-indicator';
-    indicator.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;z-index:9999;transition:opacity 0.4s;opacity:0';
+    indicator.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;z-index:9999;transition:opacity .4s';
     document.body.appendChild(indicator);
   }
   if (status === 'ok') {
-    indicator.textContent = '✓ Sincronizado con Excel';
-    indicator.style.background = '#2E7D32';
-    indicator.style.color = '#fff';
-  } else if (status === 'conflict') {
-    indicator.textContent = '⚠ Conflicto · Recargando...';
-    indicator.style.background = '#F57F17';
-    indicator.style.color = '#fff';
+    indicator.textContent = '✓ Sincronizado';
+    indicator.style.background = 'var(--grn-l, #E8F5E9)';
+    indicator.style.color = 'var(--grn, #2E7D32)';
+    indicator.style.opacity = '1';
+    setTimeout(function() { indicator.style.opacity = '0'; }, 3000);
+  } else if (status === 'error') {
+    indicator.textContent = '⚠ Error de sincronización';
+    indicator.style.background = 'var(--red-l, #FFEBEE)';
+    indicator.style.color = 'var(--red, #C00000)';
+    indicator.style.opacity = '1';
   }
-  indicator.style.opacity = '1';
-  setTimeout(function(){ indicator.style.opacity = '0'; }, 3000);
 }
 window._showSyncStatus = _showSyncStatus;
 
-window.openEditModal = openEditModal;
-
-function setStarRating(value) {
-  const widget = $('m-feedback-stars');
-  if (!widget) return;
-  widget.dataset.value = value;
-  widget.querySelectorAll('.star').forEach(s => {
-    const n = parseInt(s.dataset.star);
-    s.classList.toggle('active', n <= value);
-  });
-  const label = $('m-feedback-label');
-  if (label) label.textContent = value > 0 ? value + ' / 5' : 'Sin encuesta';
-}
-window.setStarRating = setStarRating;
-
-function closeModal(force) {
-  // RC-01 T17: DirtyForm eliminado — el usuario decide cuándo guardar
-  $('modal-bg').classList.remove('active'); state.editingId = null;
-}
-window.closeModal = closeModal;
-
+// saveRecord
 function saveRecord() {
-  const id = state.editingId;
+  var id = window.state && state.editingId;
   if (id == null) return;
-  const u = DataService.getRenewal(id);
+  var u = window.DataService ? DataService.getRenewal(id) : null;
   if (!u) return;
-  
-  // Snapshot del estado anterior para detectar cambios
-  const before = {
-    estado: u.estado, estado_entrega_equipo_nuevo: u.estado_entrega_equipo_nuevo,
-    acta_firmada: u.acta_firmada,
-    recibido_bodega: u.recibido_bodega, equipo_reasignable: u.equipo_reasignable,
-    nombre: u.nombre,
-  };
-  
-  // Construir objeto de cambios desde el formulario
-  const fields = [
+
+  var fields = [
     'empresa','nombre','cedula','usuario','correo','ciudad','ceco','proyecto','cargo','gerente','registro',
-    'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname','eq_ant_procesador','eq_ant_memoria','eq_ant_disco','eq_ant_so',
-    'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname','eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco','eq_nvo_so',
-    'tecnico','estado','estado_entrega_equipo_nuevo','notas_alistamiento','caso_envio','fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta','nombre_archivo',
+    'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname',
+    'eq_ant_procesador','eq_ant_memoria','eq_ant_disco','eq_ant_so',
+    'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname',
+    'eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco','eq_nvo_so',
+    'tecnico','estado','estado_entrega_equipo_nuevo','notas_alistamiento','caso_envio',
+    'fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta','nombre_archivo',
     'estado_devolucion','disposicion_final','fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega',
-    // GH3.28: campos evaluación física y motor RAEE
+    'observaciones_devolucion',
     'lista_recoleccion','eval_bateria','eval_teclado','eval_touchpad','eval_estetico'
-    // GH3.29: USUARIO_EVALUACION_RAEE se asigna automáticamente en el bloque RAEEEngine de saveRecord
   ];
-  const changes = {};
-  fields.forEach(f => {
-    const el = $('m-' + f);
+  var changes = {};
+  fields.forEach(function(f) {
+    var el = document.getElementById('m-' + f);
     if (!el) return;
-    const val = el.value;
-    // GH3.24: Para 'tecnico', si el select quedó vacío (sin selección)
-    // mantener el valor original del registro — nunca sobrescribir con ''
+    var val = el.type === 'checkbox' ? el.checked : el.value;
     if (f === 'tecnico' && val === '') {
       changes[f] = u.tecnico || '';
     } else {
       changes[f] = val;
     }
   });
-  changes.acta_entrega_url = ($('m-acta_entrega_url') ? $('m-acta_entrega_url').value.trim() : '') || '';
-  // F3.6 · recibido_bodega y equipo_reasignable se derivan de los selects
-  // (única fuente de verdad — no son checkboxes manuales)
-  changes.recibido_bodega    = changes.estado_devolucion === 'Recibida en Bodega';
+  var acEl = document.getElementById('m-acta_entrega_url');
+  changes.acta_entrega_url = (acEl ? acEl.value.trim() : '') || '';
+  changes.recibido_bodega    = changes.estado_devolucion === 'Recibida en bodega';
   changes.equipo_reasignable = changes.disposicion_final === 'Reasignación interna';
   changes.equipo_devuelto    = changes.recibido_bodega;
-  const fbStars = $('m-feedback-stars');
+  var fbStars = document.getElementById('m-feedback-stars');
   changes.feedback = fbStars ? parseInt(fbStars.dataset.value || '0') : 0;
-  // GH3.45: campos sin control forEach — asignación explícita
-  changes.nombre_archivo   = ($('m-nombre_archivo')   ? $('m-nombre_archivo').value.trim()   : '') || (u.nombre_archivo   || '');
-  
-  // Persistir vía DataService (registra auditoría automáticamente)
+  var naEl = document.getElementById('m-nombre_archivo');
+  changes.nombre_archivo = (naEl ? naEl.value.trim() : '') || (u.nombre_archivo || '');
+
   try {
-    // GH3.28: Si hay evaluación física completa, calcular con RAEEEngine y agregar a changes
     if (changes.eval_bateria && changes.eval_teclado && changes.eval_touchpad && changes.eval_estetico) {
       if (typeof RAEEEngine !== 'undefined') {
         var _raeeResult = RAEEEngine.calcular(
@@ -1163,67 +1273,51 @@ function saveRecord() {
           changes.eval_touchpad, changes.eval_estetico
         );
         if (_raeeResult) {
-          changes.recomendacion_raee    = _raeeResult.recomendacion;
-          changes.motivo_raee           = _raeeResult.motivo;
-          changes.motor_raee_version    = _raeeResult.version;
-          changes.fecha_evaluacion_raee = _raeeResult.fechaEvaluacion;
-          // GH3.29: auditoría del evaluador
-          changes.usuario_evaluacion_raee = (state.user && state.user.name) || (state.user && state.user.id) || 'sistema';
+          changes.recomendacion_raee     = _raeeResult.recomendacion;
+          changes.motivo_raee            = _raeeResult.motivo;
+          changes.motor_raee_version     = _raeeResult.version;
+          changes.fecha_evaluacion_raee  = _raeeResult.fechaEvaluacion;
+          changes.usuario_evaluacion_raee = (window.state && state.user && state.user.name) ||
+                                            (window.state && state.user && state.user.id) || '';
         }
       }
     }
-    DataService.updateRenewal(id, changes, state.user);
-    // GH3.39.1 P1: validar que el registro fue actualizado correctamente en memoria
-    var updatedRecord = DataService.getRenewal(id);
-    if (!updatedRecord) {
-      console.error('[saveRecord] updatedRecord not found for id:', id);
-      return;
-    }
-    // GH3.39.8 Task 3+4: campos F7 — existen en ALLOWED pero no tienen columna en Excel
-    // Se excluyen del sync para evitar console.error('[WorkbookWriter] campo sin columna')
-    // Permanecen en changes para que updateRenewal() los guarde en memoria
-    // QA-02R: _F7_FIELDS — único campo sin columna en Excel Maestro
+
+    if (window.DataService) DataService.updateRenewal(id, changes, window.state && state.user);
+    if (window.DataService) DataService.updateRenewal(id, changes, window.state && state.user);
+    // RC-07 Fix 2: cerrar modal y refrescar inmediatamente
+    if (window.closeModal) closeModal(true);
+    if (window.renderResumen) renderResumen();
     // RC-01 T12: _F7_FIELDS vacío — estado_entrega_equipo_nuevo
     // tiene entrada en SP_FIELD_MAP (EstadoEntregaEquipoNuevo).
-    // Si la columna existe en el Excel Maestro, persiste normalmente.
     var _F7_FIELDS = new Set([]);
     var syncChanges = {};
     Object.keys(changes).forEach(function(k) {
       if (!_F7_FIELDS.has(k)) syncChanges[k] = changes[k];
     });
-    // MVP P5 · Escribir al Excel Maestro (async, no bloquea la UI)
-    if (DataService.syncToProvider) {
-      // GH3.39.3 Fase 4: flag para suprimir renders del subscriber durante el sync
+
+    if (window.DataService && DataService.syncToProvider) {
       if (window.state) state._syncInProgress = true;
-      // GH3.25 P2: Después de escribir → recargar desde Excel → re-render
       DataService.syncToProvider(id, syncChanges)
         .then(function() {
-          // Recarga desde el workbook real (no reutilizar objeto local)
-          if (DataService.reloadFromProvider) {
+          if (window.DataService && DataService.reloadFromProvider) {
             return DataService.reloadFromProvider().then(function(ok) {
-              if (window.state) state._syncInProgress = false; // Fase 4
+              if (window.state) state._syncInProgress = false;
               if (ok) {
-                // RC-01 T11: Optimistic update — re-aplicar cambios tras reload
-                // para compensar Graph propagation delay (write exitoso pero
-                // GET inmediato puede retornar caché anterior de la API).
-                var _reloaded = DataService.getRenewal(id);
-                if (_reloaded) DataService.updateRenewal(id, syncChanges, null);
-                // Fase 4: UN ÚNICO render post-sync — datos frescos del Excel
-                renderResumen();
-                renderView(window.state ? state.view : 'resumen');
-                // GH3.37.1 Item 11: confirmación visual
-                toast('✓ Guardado · Sincronizado con Excel', 'success');
+                if (window.closeModal) closeModal(true);
+                if (window.renderResumen) renderResumen();
+                if (window.renderView && window.state) renderView(state.view || 'resumen');
+                if (window.toast) toast('✓ Guardado · Sincronizado con Excel', 'success');
                 if (window._showSyncStatus) _showSyncStatus('ok');
               }
             });
           }
         })
         .catch(function(err) {
-          if (window.state) state._syncInProgress = false; // Fase 4
+          if (window.state) state._syncInProgress = false;
           if (err && err.graphCode === 'CONFLICT') {
-            // GH3.37.1 Item 11: recargar automáticamente en conflicto
-            DataService.reloadFromProvider && DataService.reloadFromProvider();
-            toast('Conflicto detectado. Recargando datos...', 'warning');
+            if (window.DataService && DataService.reloadFromProvider) DataService.reloadFromProvider();
+            if (window.toast) toast('Conflicto detectado. Recargando datos...', 'warning');
           } else {
             console.error('[SYNC ERROR]', err && err.message);
           }
@@ -1231,109 +1325,81 @@ function saveRecord() {
     }
   } catch(e) {
     console.error('[saveRecord]', e);
-    toast('Error al guardar: ' + e.message, 'critical');
+    if (window.toast) toast('Error al guardar: ' + e.message, 'critical');
     return;
-  }
-  
-  // Highlight de fila recientemente actualizada
-  state.recentlyUpdatedId = u.id;
-  setTimeout(() => { state.recentlyUpdatedId = null; if (state.view === 'usuarios') renderUsuarios(); }, 3500);
-  
-  closeModal();
-  
-  // ═══ DETECTAR Y NOTIFICAR CAMBIOS RELEVANTES ═══
-  const userLabel = u.nombre || ('ID ' + u.id);
-  
-  if (before.estado !== u.estado) {
-    const level = (u.estado === 'Entregado' || u.estado === 'Completado') ? 'warning' : 'info';
-    notify({
-      level: level, category: 'state',
-      title: 'Cambio de estado',
-      message: userLabel + ': ' + before.estado + ' → ' + u.estado,
-      recordId: u.id,
-    });
-  }
-  if (!before.acta_firmada && u.acta_firmada) {
-    notify({
-      level: 'info', category: 'acta',
-      title: 'Acta firmada',
-      message: userLabel + ' firmó el acta de entrega (PandaDoc)',
-      recordId: u.id,
-    });
-  }
-  if (!before.recibido_bodega && u.recibido_bodega) {
-    notify({
-      level: 'info', category: 'bodega',
-      title: 'Equipo recibido en bodega',
-      message: 'Equipo anterior de ' + userLabel + ' recibido físicamente',
-      recordId: u.id,
-    });
-  }
-  // Si no hubo eventos específicos, notificar como edición genérica
-  if (before.estado === u.estado && before.acta_firmada === u.acta_firmada && before.recibido_bodega === u.recibido_bodega) {
-    notify({
-      level: 'info', category: 'edit',
-      title: 'Registro actualizado',
-      message: userLabel + ' · cambios guardados',
-      recordId: u.id,
-    });
-  }
-  
-  // GH3.39.3 Fase 4: render único post-sync — el subscriber 'record.updated' y
-  // reloadFromProvider.then() manejan el render cuando corresponde
-  if (window.EventBus) {
-    EventBus.publish('record.updated', { id: id, changes: changes, record: updatedRecord });
   }
 }
 window.saveRecord = saveRecord;
 
-// GH3.27 CAMBIO 6: Diálogo de confirmación de guardado
-window.confirmarGuardado = function() {
-  // GH3.28: validar evaluacion fisica si se llenaron campos parcialmente
-  var bat = ($('m-eval_bateria')  || {}).value || '';
-  var tec = ($('m-eval_teclado')  || {}).value || '';
-  var tou = ($('m-eval_touchpad') || {}).value || '';
-  var est = ($('m-eval_estetico') || {}).value || '';
-  if ((bat || tec || tou || est) && typeof RAEEEngine !== 'undefined') {
-    var val = RAEEEngine.validar(bat, tec, tou, est);
-    if (!val.ok) {
-      alert('Evaluacion fisica incompleta. Por favor complete: ' + val.faltante.join(', '));
-      return;
-    }
+// F7_resolveRole — resolución de rol por email en SYSTEM_USERS
+// Mapeo rol legible → clave interna
+var _ROL_MAP = {
+  'SUPER ADMIN':    'super_admin',
+  'SUPERADMIN':     'super_admin',
+  'SUPER_ADMIN':    'super_admin',
+  'GESTOR ACTIVOS': 'gestor_activos',
+  'GESTORACTIVOS':  'gestor_activos',
+  'GESTOR_ACTIVOS': 'gestor_activos',
+  'TECNICO':        'tecnico',
+  'TÉCNICO':        'tecnico',
+  'CONSULTA':       'consulta',
+  'VISITANTE':      'visitante',
+};
+function F7_resolveRole(email) {
+  if (!email || typeof email !== 'string' || email.trim() === '') return 'visitante';
+  var users = window.SYSTEM_USERS || [];
+  if (!users.length) return 'visitante';
+  var lower = email.toLowerCase().trim();
+  var match = null;
+  for (var i = 0; i < users.length; i++) {
+    var u = users[i];
+    // Soportar campo correo o email
+    var userEmail = (u && (u.correo || u.email || '')) + '';
+    if (userEmail.toLowerCase().trim() === lower) { match = u; break; }
   }
+  if (!match) return 'visitante';
+  var raw = (match.role || match.rol || '').toUpperCase().trim();
+  return _ROL_MAP[raw] || raw.toLowerCase().replace(/\s+/g,'_') || 'visitante';
+}
+window.F7_resolveRole = F7_resolveRole;
 
-  var dlg = document.getElementById('confirm-dialog');
-  var sum = document.getElementById('confirm-summary');
-  if (!dlg || !sum) { saveRecord(); return; }
+// applyPanelFilter / clearPanelFilters
+window.PANEL_FILTERS = {};
+function applyPanelFilter(field, value) {
+  window.PANEL_FILTERS = window.PANEL_FILTERS || {};
+  if (value) { window.PANEL_FILTERS[field] = value; }
+  else { delete window.PANEL_FILTERS[field]; }
+  if (window.renderPanelEjecutivo) renderPanelEjecutivo();
+}
+window.applyPanelFilter = applyPanelFilter;
 
-  // Leer valores del modal
-  var estadoEl = $('m-estado');
-  var tecnicoEl = $('m-tecnico');
-  var recomEl = document.getElementById('m-recomendacion-display');
+function clearPanelFilters() {
+  window.PANEL_FILTERS = {};
+  document.querySelectorAll('.panel-filter-sel').forEach(function(s) { s.value = ''; });
+  if (window.renderPanelEjecutivo) renderPanelEjecutivo();
+}
+window.clearPanelFilters = clearPanelFilters;
 
-  var lines = [];
-  if (estadoEl)   lines.push('<b>Estado:</b> ' + (estadoEl.value || '—'));
-  if (tecnicoEl)  lines.push('<b>Tecnico:</b> ' + (tecnicoEl.value || '—'));
-  if (recomEl && recomEl.style.display !== 'none')
-    lines.push('<b>' + recomEl.textContent + '</b>');
+// confirmarGuardado / cancelarGuardado / ejecutarGuardado — modal de confirmación de guardado
+function confirmarGuardado() {
+  var bg = document.getElementById('confirm-save-bg');
+  if (bg) bg.classList.add('active');
+}
+window.confirmarGuardado = confirmarGuardado;
 
-  sum.innerHTML = lines.join('<br>') + '<br><br>¿Confirma que desea guardar estos cambios?';
-  dlg.style.display = 'flex';
-};
+function cancelarGuardado() {
+  var bg = document.getElementById('confirm-save-bg');
+  if (bg) bg.classList.remove('active');
+}
+window.cancelarGuardado = cancelarGuardado;
 
-window.cancelarGuardado = function() {
-  var dlg = document.getElementById('confirm-dialog');
-  if (dlg) dlg.style.display = 'none';
-};
-
-window.ejecutarGuardado = function() {
+function ejecutarGuardado() {
   cancelarGuardado();
-  saveRecord();
-};
+  if (window.saveRecord) saveRecord();
+}
+window.ejecutarGuardado = ejecutarGuardado;
 
-
-
-// QA-04 Task 1 — Sidebar colapsable
+// toggleSidebar — contraer/expandir sidebar
 function toggleSidebar() {
   var app     = document.querySelector('.app');
   var sidebar = document.querySelector('.sidebar');
@@ -1342,7 +1408,7 @@ function toggleSidebar() {
   app.classList.toggle('sb-collapsed', collapsed);
   // RC-06 item 11: body class para que footer reaccione
   document.body.classList.toggle('sb-collapsed', collapsed);
-  try { localStorage.setItem('sb_state', collapsed ? 'collapsed' : 'expanded'); } catch(e) { /* privado / sin Storage */ }
+  try { localStorage.setItem('sb_state', collapsed ? 'collapsed' : 'expanded'); } catch(e) { /* privado */ }
 }
 window.toggleSidebar = toggleSidebar;
 
@@ -1356,225 +1422,24 @@ window.toggleSidebar = toggleSidebar;
     });
   }, 100);
   try {
-    var state = localStorage.getItem('sb_state');
-    if (state === 'collapsed') {
+    var savedState = localStorage.getItem('sb_state');
+    if (savedState === 'collapsed') {
       var app     = document.querySelector('.app');
       var sidebar = document.querySelector('.sidebar');
-      if (app && sidebar) {
-        sidebar.classList.add('collapsed');
-        app.classList.add('sb-collapsed');
-      }
+      if (app)     app.classList.add('sb-collapsed');
+      if (sidebar) sidebar.classList.add('collapsed');
+      document.body.classList.add('sb-collapsed');
     }
-  } catch(e) { /* privado / sin Storage */ }
+  } catch(e) { /* sin acceso a localStorage */ }
 })();
 
-
-
-
-// QA-05 Task 5 — Acciones rápidas
-function copyRecord(id) {
-  var u = DataService.getRenewal(id);
-  if (!u) return;
-  var text = [
-    'ID: ' + u.id,
-    'Nombre: ' + (u.nombre || '—'),
-    'Empresa: ' + (u.empresa || '—'),
-    'Serial: ' + (u.eq_ant_serial || u.eq_nvo_serial || '—'),
-    'Estado: ' + (u.estado || '—'),
-    'Técnico: ' + (u.tecnico || '—'),
-  ].join('\n');
-  try {
-    navigator.clipboard.writeText(text);
-    toast('Info copiada al portapapeles', 'info');
-  } catch(e) { /* clipboard no disponible */ }
-}
-window.copyRecord = copyRecord;
-
-function showHistory(id) {
-  var u = DataService.getRenewal(id);
-  if (!u) return;
-  openEditModal(id);
-  // El stepper ya está en la sección 6 del modal
-  setTimeout(function() {
-    var tlEl = document.getElementById('m-timeline-container');
-    if (tlEl) tlEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 150);
-}
-window.showHistory = showHistory;
-
-// QA-05 Task 3 — Stats bar siempre visible
-function updateStatsBar() {
-  var real = getReal ? getReal() : (window.USERS || []).filter(u => !isBackup(u));
-  if (!real || !real.length) return;
-  var STATES_PROCESO = ['Alistamiento','Programado'];
-  var STATES_ENVIADO = ['En tránsito equipo nuevo','Entregado equipo nuevo'];
-  var STATES_CERRADO = ['Renovación completada','Cerrado'];
-  var pendientes  = real.filter(u => u.estado === 'Pendiente').length;
-  var proceso     = real.filter(u => STATES_PROCESO.includes(u.estado)).length;
-  var enviados    = real.filter(u => STATES_ENVIADO.includes(u.estado)).length;
-  var completados = real.filter(u => STATES_CERRADO.includes(u.estado)).length;
-  var bar = document.getElementById('stats-bar');
-  if (!bar) return;
-  bar.style.display = 'flex';
-  var setText2 = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
-  setText2('sb-total',      real.length);
-  setText2('sb-pendientes', pendientes);
-  setText2('sb-proceso',    proceso);
-  setText2('sb-enviados',   enviados);
-  setText2('sb-completados',completados);
-}
-window.updateStatsBar = updateStatsBar;
-
-
-// QA-05 Task 8 — Validación visual en tiempo real
-function attachFieldValidation() {
-  var REQUIRED = ['m-nombre','m-empresa','m-estado'];
-  REQUIRED.forEach(function(id) {
-    var el = document.getElementById(id);
-    if (!el) return;
+// attachFieldValidation — validación de campos del formulario
+window.attachFieldValidation = function() {
+  // validación básica de campos requeridos en el modal
+  document.querySelectorAll('#modal-body [required]').forEach(function(el) {
     el.addEventListener('blur', function() {
-      var empty = !this.value.trim();
-      this.style.borderColor = empty ? '#dc2626' : '';
-      var msg = this.parentNode.querySelector('.field-error');
-      if (empty) {
-        if (!msg) {
-          msg = document.createElement('div');
-          msg.className = 'field-error';
-          msg.style.cssText = 'color:#dc2626;font-size:10px;margin-top:2px;font-weight:600';
-          msg.textContent = 'Campo requerido';
-          this.parentNode.appendChild(msg);
-        }
-      } else if (msg) {
-        msg.remove();
-        this.style.borderColor = '';
-      }
+      var grp = el.closest('.form-group');
+      if (grp) grp.classList.toggle('has-error', !el.value.trim());
     });
   });
-}
-window.attachFieldValidation = attachFieldValidation;
-
-// RC-01 T16+T17: AutoSave y DirtyForm eliminados
-
-// QA-04 Task 5 — Filtros del panel ejecutivo
-window.PANEL_FILTERS = {};
-function applyPanelFilter(field, value) {
-  window.PANEL_FILTERS = window.PANEL_FILTERS || {};
-  if (value) {
-    window.PANEL_FILTERS[field] = value;
-  } else {
-    delete window.PANEL_FILTERS[field];
-  }
-  if (window.renderPanelEjecutivo) renderPanelEjecutivo();
-}
-window.applyPanelFilter = applyPanelFilter;
-
-function clearPanelFilters() {
-  window.PANEL_FILTERS = {};
-  ['empresa','ciudad','proyecto','tecnico','estado','feedback'].forEach(function(f) {
-    var sel = document.getElementById('pf-' + f);
-    if (sel) { sel.value = ''; sel._populated = false; }
-  });
-  if (window.renderPanelEjecutivo) renderPanelEjecutivo();
-}
-window.clearPanelFilters = clearPanelFilters;
-
-// QA-04: openCreateModal eliminado — REN26 no crea colaboradores
-
-// ═══ BOOT ═══
-// ═══════════════════════════════════════════════════════════════════
-// F7.1 · F7_resolveRole — resolutor de roles para Azure AD
-// Mapea username/email de Azure AD → role interno canónico.
-// Es la única fuente de verdad para la resolución de roles en modo MSAL.
-// Fuente: window.SYSTEM_USERS (usuarios_sistema.json) normalizado por DataMapper.
-// ═══════════════════════════════════════════════════════════════════
-function F7_resolveRole(username) {
-  // QA-06.1: Resolución exclusivamente desde Usuarios_Sistema.
-  // Sin fallbacks por dominio, empresa, sufijo ni wildcard.
-  if (!username) return 'visitante';
-
-  const lower = String(username).trim().toLowerCase();
-
-  // 1. Coincidencia exacta por correo
-  const byEmail = (window.SYSTEM_USERS || []).find(u =>
-    u.correo && u.correo.toLowerCase() === lower
-  );
-  if (byEmail) return DataMapper.toInternalRole(byEmail.rol);
-
-  // 2. Coincidencia por prefijo de correo (parte antes del @)
-  const prefix = lower.split('@')[0];
-  const byPrefix = (window.SYSTEM_USERS || []).find(u => {
-    const userPrefix = (u.correo || '').toLowerCase().split('@')[0];
-    return userPrefix === prefix;
-  });
-  if (byPrefix) return DataMapper.toInternalRole(byPrefix.rol);
-
-  // 3. Coincidencia por nombre de usuario
-  const byName = (window.SYSTEM_USERS || []).find(u =>
-    u.nombre && u.nombre.toLowerCase().includes(prefix)
-  );
-  if (byName) return DataMapper.toInternalRole(byName.rol);
-
-  // 4. Visitante — mínimo privilegio. Sin excepciones.
-  return 'visitante';
-}
-window.F7_resolveRole = F7_resolveRole;
-
-// ═══════════════════════════════════════════════════════════════════
-// F7.1 · SessionManager
-// Mantiene la sesión del dashboard: quién está logueado, cuándo,
-// con qué rol y permisos. Completamente independiente de Graph.
-// ═══════════════════════════════════════════════════════════════════
-
-// ════════════════════════════════════════════════════════════════════
-// GH3.39.2 P9/P10 — Subscriber global de 'record.updated'
-// Actualiza automáticamente TODOS los dashboards sin recargar la página
-// ════════════════════════════════════════════════════════════════════
-(function() {
-  if (!window.EventBus) return;
-
-  EventBus.subscribe('record.updated', function(payload) {
-    // Fase 4: no renderizar si un sync está en curso — el .then() lo hará
-    if (window.state && state._syncInProgress) return;
-    var view = window.state && state.view;
-
-    // Refrescar KPIs (resumen principal)
-    if (window.renderResumen) renderResumen();
-
-    // Refrescar la vista actual si es diferente al resumen
-    if (view && view !== 'resumen' && window.renderView) {
-      renderView(view);
-    }
-
-    // Módulos específicos que requieren actualización
-    var viewRenderers = {
-      'panel-ejecutivo': window.renderPanelEjecutivo,
-      'home-tecnico':    window.renderHomeTecnico,
-      'por-ciudad':      window.renderPorCiudad,
-      'por-tecnico':     window.renderPorTecnico,
-      'actividad':       window.renderActividad,
-      'estados':         window.renderEstados,
-    };
-
-    Object.keys(viewRenderers).forEach(function(v) {
-      if (viewRenderers[v] && v !== view) {
-        // Los paneles no visibles se marcan como stale — se recargarán al navegar
-        // Solo re-renderizar los que están activos
-      }
-    });
-
-    // Si el Timeline del modal está abierto, actualizarlo
-    var tlContainer = document.getElementById('m-timeline-container');
-    var editingId = window.state && state.editingId;
-    if (tlContainer && editingId && payload && payload.id === editingId) {
-      var rec = DataService.getRenewal(editingId);
-      if (rec && window.renderTimelineHTML) {
-        tlContainer.innerHTML = renderTimelineHTML(rec);
-      }
-    }
-  });
-
-  // También suscribirse al evento de provider para actualizar después de PATCH exitoso
-  EventBus.subscribe('provider.write.success', function(payload) {
-    if (window.renderResumen) renderResumen();
-  });
-})();
+};
