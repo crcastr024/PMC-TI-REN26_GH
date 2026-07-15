@@ -223,49 +223,9 @@ function renderTimelineHTML(record) {
       (record._missing_items ? ' · falta: ' + record._missing_items.join(', ') : '') + '</div>';
   }
 
-  // ── Historial vertical
-  let historyHTML = '<div class="tl-history">';
-  if (timeline.length === 0) {
-    historyHTML += '<div class="tl-empty">Sin eventos registrados</div>';
-  } else {
-    const sorted = timeline.slice().sort((a, b) => b.at.localeCompare(a.at));
-    sorted.forEach((ev, idx) => {
-      const isFirst = idx === 0;
-      historyHTML += '<div class="tl-event' + (isFirst ? ' tl-event-current' : '') + '">' +
-        '<div class="tl-event-dot"></div>' +
-        '<div class="tl-event-body">' +
-          '<div class="tl-event-head">' +
-            '<strong>' + esc(ev.to || '—') + '</strong>' +
-            (ev.from ? ' <span class="tl-event-from">desde ' + esc(ev.from) + '</span>' : '') +
-          '</div>' +
-          '<div class="tl-event-meta">' + formatDateEs(ev.at) + ' · ' + esc(ev.by || 'sistema') + '</div>' +
-          (ev.note ? '<div class="tl-event-note">' + esc(ev.note) + '</div>' : '') +
-        '</div>' +
-      '</div>';
-    });
-  }
-  historyHTML += '</div>';
+  let historyHTML = ''; // RC-07: historial eliminado del formulario
 
-  // GH3.28: Panel RAEE
-  var raeePanel = '';
-  if (record.recomendacion_raee) {
-    var raeeColor = {
-      'RAEE': '#C00000', 'Donacion': '#E65100',
-      'Venta interna': '#2E7D32', 'Reasignacion': '#1565C0'
-    }[record.recomendacion_raee] || '#555';
-    var motorVer  = record.motor_raee_version   || 'v1';
-    var evalDate  = record.fecha_evaluacion_raee ? formatDateEs(record.fecha_evaluacion_raee) : '—';
-    var evalUser  = record.usuario_evaluacion_raee || '—';
-    raeePanel =
-      '<div style="margin-top:8px;padding:8px 14px;border-radius:var(--r-sm);background:#FFF7ED;border-left:3px solid ' + raeeColor + '">' +
-        '<div style="font-size:10px;color:' + raeeColor + ';font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Clasificación RAEE · ' + esc(motorVer) + '</div>' +
-        '<strong style="color:' + raeeColor + '">' + esc(record.recomendacion_raee) + '</strong>' +
-        (record.motivo_raee ? '<div style="font-size:11px;color:#777;margin-top:4px">' + esc(record.motivo_raee) + '</div>' : '') +
-        '<div style="font-size:10px;color:#999;margin-top:6px">Evaluado: ' + evalDate + ' · ' + esc(evalUser) + '</div>' +
-      '</div>';
-  }
-
-  return progressHTML + historyHTML + raeePanel;
+  return progressHTML;
 }
 window.renderTimelineHTML  = renderTimelineHTML;
 window.normalizeRecord_F3  = normalizeRecord_F3;  // Exportado para tests y sync.js

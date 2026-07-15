@@ -1053,6 +1053,11 @@ window.actualizarRecomendacion = function() {
   if (!bat && !tec && !tou && !est) { disp.style.display = 'none'; if (motdisp) motdisp.style.display='none'; return; }
   var resultado = (typeof RAEEEngine !== 'undefined') ? RAEEEngine.calcular(bat, tec, tou, est) : null;
   if (!resultado) { disp.style.display = 'none'; return; }
+  // RC-07 T3: Si Motor A clasifica como Reasignable → Motor B debe ser Reasignacion
+  if (window._currentRecord && window._currentRecord.estado_eq_ant === 'Reasignable') {
+    resultado.recomendacion = 'Reasignacion';
+    resultado.motivo = 'Motor A: procesador de generación reciente — equipo apto para reasignación.';
+  }
   var colors = { 'RAEE': { bg: '#FFEBEE', fg: '#C00000' }, 'Donacion': { bg: '#FFF3E0', fg: '#E65100' },
     'Venta interna': { bg: '#E8F5E9', fg: '#2E7D32' }, 'Reasignacion': { bg: '#E3F2FD', fg: '#1565C0' } };
   var c = colors[resultado.recomendacion] || { bg: '#F5F5F5', fg: '#555' };
@@ -1272,6 +1277,11 @@ function saveRecord() {
           changes.eval_bateria, changes.eval_teclado,
           changes.eval_touchpad, changes.eval_estetico
         );
+        // RC-07 T3: Si Motor A Reasignable → forzar Reasignacion en Motor B
+        if (_raeeResult && u.estado_eq_ant === 'Reasignable') {
+          _raeeResult.recomendacion = 'Reasignacion';
+          _raeeResult.motivo = 'Motor A: procesador de generación reciente — reasignación.';
+        }
         if (_raeeResult) {
           changes.recomendacion_raee     = _raeeResult.recomendacion;
           changes.motivo_raee            = _raeeResult.motivo;
