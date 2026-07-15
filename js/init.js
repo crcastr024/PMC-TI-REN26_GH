@@ -184,26 +184,27 @@ window.FIELD_COLUMN_ALIASES = {
   'eq_ant_disco':    'EqAntDisco',
   'eq_ant_so':       'EqAntSO',
   // Devolución
-  'lista_recoleccion': 'ListaRecoleccion',   // guard CamelCase
+  'lista_recoleccion': 'LISTA_RECOLECCION',   // guard CamelCase
   'observaciones_devolucion': 'ObservacionesDevolucion',
   // Registro
   'ceco':            'CentroCostos',
-  'registro':        'Nivel',
+  'registro':        'NIVEL_USUARIO',
   // Estado y seguimiento
   'estado_entrega_equipo_nuevo': 'EstadoEntregaEquipoNuevo',
+  'estado':           'ESTADO_RENOVACION',  // Excel: ESTADO_RENOVACION
   'caso_envio':      'CasoEnvio',
   'fecha_envio':     'FechaEnvio',
   'fecha_entrega':   'FechaAsignacion',
-  'fecha_envio_acta': 'FechaEnvioActa',
-  'fecha_firma_acta': 'FechaFirmaActa',
+  'fecha_envio_acta': 'FECHA_ACTA_ENVIADA',
+  'fecha_firma_acta': 'FECHA_ACTA_FIRMADA',
   'fecha_solicitud_devolucion': 'FechaSolicitudDevolucion',
   'fecha_transito':  'FechaTransito',
   'fecha_recepcion_bodega': 'FechaRecepcionBodega',
   // Documentos
   'acta_entrega_url':  'ActaEntregaUrl',
-  'nombre_archivo':    'NombreArchivo',
+  'nombre_archivo':    'NOMBRE_ARCHIVO_ACTA',
   'disposicion_final': 'DisposicionFinal',
   // Feedback y evidencia
-  'feedback':          'Feedback',
+  'feedback':          'CALIFICACION_FEEDBACK',
   'evidencia_adjunta': 'EvidenciaAdjunta',
 };

@@ -586,13 +586,11 @@ function openEditModal(id) {
        'Entregado equipo nuevo','Pendiente devolución equipo anterior',
        'En tránsito equipo anterior','Equipo anterior recibido',
        'Renovación completada','Pendiente aprobación','Cerrado','BACKUP'];
-  var _validNext = (typeof StateMachine !== 'undefined' && u.estado)
-    ? (StateMachine.TRANSITIONS[u.estado] || []).concat([u.estado])
-    : _allEstados;
-  // Si el estado actual no tiene transiciones definidas, mostrar todos
-  if (_validNext.length <= 1) _validNext = _allEstados;
-  var estados = _validNext.filter(function(s){ return _allEstados.indexOf(s) >= 0; });
-  const estadoOpts = estados.map(e => '<option' + (u.estado === e ? ' selected' : '') + '>' + e + '</option>').join('');
+  // RC-07: mostrar TODOS los estados disponibles (no restringir transiciones en el form)
+  var estados = _allEstados.slice();
+  // Asegurar que el estado actual esté en la lista aunque no esté en _allEstados
+  if (u.estado && estados.indexOf(u.estado) < 0) estados.unshift(u.estado);
+  const estadoOpts = estados.map(e => '<option value="' + esc(e) + '"' + (u.estado === e ? ' selected' : '') + '>' + esc(e) + '</option>').join('');
   // F3.3 fix: la UI consume EXCLUSIVAMENTE el modelo normalizado (equipoNuevo),
   // nunca los campos planos legacy (u.marca/u.modelo/...) que nunca se completan.
   const eqNvo = u.equipoNuevo || {};
@@ -748,7 +746,7 @@ function openEditModal(id) {
         '<div class="form-group" style="margin:0"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo||'') + '" placeholder="Ej: acta_juan_garcia.pdf"></div>' +
         '<div class="form-group" style="margin:0"><label class="form-label">URL del acta (SharePoint)</label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url||'') + '" placeholder="https://..."></div>' +
       '</div>' +
-      '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:underline">📄 Ver acta firmada</a>' : '<span style="font-size:11px;color:var(--text-3)">No existe un acta registrada.</span>') + '</div>' +
+      '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<div style="text-align:center;margin-top:8px"><a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" class="btn" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:8px 18px">📄 Ver acta firmada</a></div>' : '') +
     '</div></div>' +
     '<div class="form-section" id="seccion-devolucion"><div class="form-section-head">6 · Devolución del equipo anterior</div>' +
     '<div style="padding:8px 0 10px;border-bottom:1px dashed var(--border);margin-bottom:10px">' +

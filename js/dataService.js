@@ -37,6 +37,13 @@ function normalizeRecord_F3(r) {
     'feedbackrecibido': 'feedback', 'evidenciaadjunta': 'evidencia_adjunta',
     'bloqueado': 'blocked', 'categoriabloqueo': 'block_category',
     'estadoanteriorbloqueo': 'block_previous_state',
+    // Excel UPPERCASE_UNDERSCORE aliases
+    'nivel_usuario':       'registro',
+    'estado_renovacion':   'estado',
+    'nombre_archivo_acta': 'nombre_archivo',
+    'fecha_acta_enviada':  'fecha_envio_acta',
+    'fecha_acta_firmada':  'fecha_firma_acta',
+    'calificacion_feedback': 'feedback',
   };
   Object.keys(LOAD_ALIASES).forEach(function(src) {
     var dst = LOAD_ALIASES[src];
@@ -76,7 +83,12 @@ function normalizeRecord_F3(r) {
   if (r.eq_ant_disco == null) r.eq_ant_disco = '';  // GH3.26: EQ_ANT_DISCO — col U
   // GH3.28/GH3.29: campos Motor RAEE — solo inicializar, NUNCA recalcular
   // (GH3.29: RAEEEngine.calcular() PROHIBIDO fuera de saveRecord)
-  if (r.lista_recoleccion   == null) r.lista_recoleccion   = false;
+  if (r.lista_recoleccion == null) {
+    r.lista_recoleccion = false;
+  } else if (typeof r.lista_recoleccion === 'string') {
+    var _lr = r.lista_recoleccion.toUpperCase().trim();
+    r.lista_recoleccion = _lr === 'TRUE' || _lr === 'SI' || _lr === '1' || _lr === 'YES';
+  } else { r.lista_recoleccion = !!r.lista_recoleccion; }
   if (r.eval_bateria        == null) r.eval_bateria        = '';
   if (r.eval_teclado        == null) r.eval_teclado        = '';
   if (r.eval_touchpad       == null) r.eval_touchpad       = '';
