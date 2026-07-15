@@ -1199,31 +1199,7 @@ function _showSyncStatus(status) {
 }
 window._showSyncStatus = _showSyncStatus;
 
-<<<<<<< HEAD
 // saveRecord
-=======
-window.openEditModal = openEditModal;
-
-function setStarRating(value) {
-  const widget = $('m-feedback-stars');
-  if (!widget) return;
-  widget.dataset.value = value;
-  widget.querySelectorAll('.star').forEach(s => {
-    const n = parseInt(s.dataset.star);
-    s.classList.toggle('active', n <= value);
-  });
-  const label = $('m-feedback-label');
-  if (label) label.textContent = value > 0 ? value + ' / 5' : 'Sin encuesta';
-}
-window.setStarRating = setStarRating;
-
-function closeModal(force) {
-  // RC-01 T17: DirtyForm eliminado — el usuario decide cuándo guardar
-  $('modal-bg').classList.remove('active'); state.editingId = null;
-}
-window.closeModal = closeModal;
-
->>>>>>> e30ee006da0dd0484ecf4c5d498f29eba90c6171
 function saveRecord() {
   var id = window.state && state.editingId;
   if (id == null) return;
@@ -1232,18 +1208,12 @@ function saveRecord() {
 
   var fields = [
     'empresa','nombre','cedula','usuario','correo','ciudad','ceco','proyecto','cargo','gerente','registro',
-<<<<<<< HEAD
     'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname',
     'eq_ant_procesador','eq_ant_memoria','eq_ant_disco','eq_ant_so',
     'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname',
     'eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco','eq_nvo_so',
     'tecnico','estado','estado_entrega_equipo_nuevo','notas_alistamiento','caso_envio',
     'fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta','nombre_archivo',
-=======
-    'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname','eq_ant_procesador','eq_ant_memoria','eq_ant_disco','eq_ant_so',
-    'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname','eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco','eq_nvo_so',
-    'tecnico','estado','estado_entrega_equipo_nuevo','notas_alistamiento','caso_envio','fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta','nombre_archivo',
->>>>>>> e30ee006da0dd0484ecf4c5d498f29eba90c6171
     'estado_devolucion','disposicion_final','fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega',
     'observaciones_devolucion',
     'lista_recoleccion','eval_bateria','eval_teclado','eval_touchpad','eval_estetico'
@@ -1286,28 +1256,11 @@ function saveRecord() {
         }
       }
     }
-<<<<<<< HEAD
 
     if (window.DataService) DataService.updateRenewal(id, changes, window.state && state.user);
 
     // RC-01 T12: _F7_FIELDS vacío — estado_entrega_equipo_nuevo
     // tiene entrada en SP_FIELD_MAP (EstadoEntregaEquipoNuevo).
-=======
-    DataService.updateRenewal(id, changes, state.user);
-    // GH3.39.1 P1: validar que el registro fue actualizado correctamente en memoria
-    var updatedRecord = DataService.getRenewal(id);
-    if (!updatedRecord) {
-      console.error('[saveRecord] updatedRecord not found for id:', id);
-      return;
-    }
-    // GH3.39.8 Task 3+4: campos F7 — existen en ALLOWED pero no tienen columna en Excel
-    // Se excluyen del sync para evitar console.error('[WorkbookWriter] campo sin columna')
-    // Permanecen en changes para que updateRenewal() los guarde en memoria
-    // QA-02R: _F7_FIELDS — único campo sin columna en Excel Maestro
-    // RC-01 T12: _F7_FIELDS vacío — estado_entrega_equipo_nuevo
-    // tiene entrada en SP_FIELD_MAP (EstadoEntregaEquipoNuevo).
-    // Si la columna existe en el Excel Maestro, persiste normalmente.
->>>>>>> e30ee006da0dd0484ecf4c5d498f29eba90c6171
     var _F7_FIELDS = new Set([]);
     var syncChanges = {};
     Object.keys(changes).forEach(function(k) {
@@ -1322,22 +1275,9 @@ function saveRecord() {
             return DataService.reloadFromProvider().then(function(ok) {
               if (window.state) state._syncInProgress = false;
               if (ok) {
-<<<<<<< HEAD
                 if (window.renderResumen) renderResumen();
                 if (window.renderView && window.state) renderView(state.view || 'resumen');
                 if (window.toast) toast('✓ Guardado · Sincronizado con Excel', 'success');
-=======
-                // RC-01 T11: Optimistic update — re-aplicar cambios tras reload
-                // para compensar Graph propagation delay (write exitoso pero
-                // GET inmediato puede retornar caché anterior de la API).
-                var _reloaded = DataService.getRenewal(id);
-                if (_reloaded) DataService.updateRenewal(id, syncChanges, null);
-                // Fase 4: UN ÚNICO render post-sync — datos frescos del Excel
-                renderResumen();
-                renderView(window.state ? state.view : 'resumen');
-                // GH3.37.1 Item 11: confirmación visual
-                toast('✓ Guardado · Sincronizado con Excel', 'success');
->>>>>>> e30ee006da0dd0484ecf4c5d498f29eba90c6171
                 if (window._showSyncStatus) _showSyncStatus('ok');
               }
             });
@@ -1375,7 +1315,6 @@ var _ROL_MAP = {
   'CONSULTA':       'consulta',
   'VISITANTE':      'visitante',
 };
-<<<<<<< HEAD
 function F7_resolveRole(email) {
   if (!email || typeof email !== 'string' || email.trim() === '') return 'visitante';
   var users = window.SYSTEM_USERS || [];
@@ -1395,144 +1334,6 @@ function F7_resolveRole(email) {
 window.F7_resolveRole = F7_resolveRole;
 
 // applyPanelFilter / clearPanelFilters
-=======
-
-window.cancelarGuardado = function() {
-  var dlg = document.getElementById('confirm-dialog');
-  if (dlg) dlg.style.display = 'none';
-};
-
-window.ejecutarGuardado = function() {
-  cancelarGuardado();
-  saveRecord();
-};
-
-
-
-// QA-04 Task 1 — Sidebar colapsable
-function toggleSidebar() {
-  var app     = document.querySelector('.app');
-  var sidebar = document.querySelector('.sidebar');
-  if (!app || !sidebar) return;
-  var collapsed = sidebar.classList.toggle('collapsed');
-  app.classList.toggle('sb-collapsed', collapsed);
-  // RC-06 item 11: body class para que footer reaccione
-  document.body.classList.toggle('sb-collapsed', collapsed);
-  try { localStorage.setItem('sb_state', collapsed ? 'collapsed' : 'expanded'); } catch(e) { /* privado / sin Storage */ }
-}
-window.toggleSidebar = toggleSidebar;
-
-// Restaurar estado del sidebar al cargar
-(function initSidebarState() {
-  // RC-06 item 10: poblar data-tip para tooltips con sidebar contraído
-  setTimeout(function() {
-    document.querySelectorAll('.sb-item').forEach(function(item) {
-      var span = item.querySelector('span:first-of-type');
-      if (span && !item.dataset.tip) item.setAttribute('data-tip', span.textContent.trim());
-    });
-  }, 100);
-  try {
-    var state = localStorage.getItem('sb_state');
-    if (state === 'collapsed') {
-      var app     = document.querySelector('.app');
-      var sidebar = document.querySelector('.sidebar');
-      if (app && sidebar) {
-        sidebar.classList.add('collapsed');
-        app.classList.add('sb-collapsed');
-      }
-    }
-  } catch(e) { /* privado / sin Storage */ }
-})();
-
-
-
-
-// QA-05 Task 5 — Acciones rápidas
-function copyRecord(id) {
-  var u = DataService.getRenewal(id);
-  if (!u) return;
-  var text = [
-    'ID: ' + u.id,
-    'Nombre: ' + (u.nombre || '—'),
-    'Empresa: ' + (u.empresa || '—'),
-    'Serial: ' + (u.eq_ant_serial || u.eq_nvo_serial || '—'),
-    'Estado: ' + (u.estado || '—'),
-    'Técnico: ' + (u.tecnico || '—'),
-  ].join('\n');
-  try {
-    navigator.clipboard.writeText(text);
-    toast('Info copiada al portapapeles', 'info');
-  } catch(e) { /* clipboard no disponible */ }
-}
-window.copyRecord = copyRecord;
-
-function showHistory(id) {
-  var u = DataService.getRenewal(id);
-  if (!u) return;
-  openEditModal(id);
-  // El stepper ya está en la sección 6 del modal
-  setTimeout(function() {
-    var tlEl = document.getElementById('m-timeline-container');
-    if (tlEl) tlEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 150);
-}
-window.showHistory = showHistory;
-
-// QA-05 Task 3 — Stats bar siempre visible
-function updateStatsBar() {
-  var real = getReal ? getReal() : (window.USERS || []).filter(u => !isBackup(u));
-  if (!real || !real.length) return;
-  var STATES_PROCESO = ['Alistamiento','Programado'];
-  var STATES_ENVIADO = ['En tránsito equipo nuevo','Entregado equipo nuevo'];
-  var STATES_CERRADO = ['Renovación completada','Cerrado'];
-  var pendientes  = real.filter(u => u.estado === 'Pendiente').length;
-  var proceso     = real.filter(u => STATES_PROCESO.includes(u.estado)).length;
-  var enviados    = real.filter(u => STATES_ENVIADO.includes(u.estado)).length;
-  var completados = real.filter(u => STATES_CERRADO.includes(u.estado)).length;
-  var bar = document.getElementById('stats-bar');
-  if (!bar) return;
-  bar.style.display = 'flex';
-  var setText2 = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
-  setText2('sb-total',      real.length);
-  setText2('sb-pendientes', pendientes);
-  setText2('sb-proceso',    proceso);
-  setText2('sb-enviados',   enviados);
-  setText2('sb-completados',completados);
-}
-window.updateStatsBar = updateStatsBar;
-
-
-// QA-05 Task 8 — Validación visual en tiempo real
-function attachFieldValidation() {
-  var REQUIRED = ['m-nombre','m-empresa','m-estado'];
-  REQUIRED.forEach(function(id) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('blur', function() {
-      var empty = !this.value.trim();
-      this.style.borderColor = empty ? '#dc2626' : '';
-      var msg = this.parentNode.querySelector('.field-error');
-      if (empty) {
-        if (!msg) {
-          msg = document.createElement('div');
-          msg.className = 'field-error';
-          msg.style.cssText = 'color:#dc2626;font-size:10px;margin-top:2px;font-weight:600';
-          msg.textContent = 'Campo requerido';
-          this.parentNode.appendChild(msg);
-        }
-      } else if (msg) {
-        msg.remove();
-        this.style.borderColor = '';
-      }
-    });
-  });
-}
-window.attachFieldValidation = attachFieldValidation;
-
-// RC-01 T16+T17: AutoSave y DirtyForm eliminados
-
-// QA-04 Task 5 — Filtros del panel ejecutivo
->>>>>>> e30ee006da0dd0484ecf4c5d498f29eba90c6171
 window.PANEL_FILTERS = {};
 function applyPanelFilter(field, value) {
   window.PANEL_FILTERS = window.PANEL_FILTERS || {};
