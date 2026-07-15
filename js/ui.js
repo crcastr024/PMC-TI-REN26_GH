@@ -388,13 +388,13 @@ window.enterDashboard = enterDashboard;
 // ═══ PREVIEW VISITANTE (botón para super_admin / gestor_activos) ═══
 function previewVisitante() {
   if (!can('panel.preview')) {
-    toast('Sin permisos para previsualizar el Panel Ejecutivo', 'warning');
+    toast('Sin permisos para previsualizar el Vista de Seguimiento', 'warning');
     return;
   }
   notify({
     level: 'info', category: 'system',
-    title: 'Panel Ejecutivo · Vista previa',
-    message: 'El Panel Ejecutivo (modo Visitante) estará disponible en la siguiente fase de desarrollo.'
+    title: 'Vista de Seguimiento · Vista previa',
+    message: 'El Vista de Seguimiento (modo Visitante) estará disponible en la siguiente fase de desarrollo.'
   });
 }
 window.previewVisitante = previewVisitante;
@@ -575,7 +575,7 @@ function openEditModal(id) {
   $('modal-title').textContent = (u.nombre || ('BACKUP ' + u.empresa)) + (u.serial ? ' · ' + u.serial : '');
   // RC-07 Fix 1: mover #seccion-timeline al strip fijo fuera del área de scroll
   setTimeout(function() {
-    var _tlNode  = document.getElementById('seccion-timeline');
+    var _tlNode  = document.querySelector('#modal-body #seccion-timeline');
     var _tlStrip = document.getElementById('modal-timeline-strip');
     if (_tlNode && _tlStrip) {
       _tlStrip.innerHTML = '';
@@ -1044,7 +1044,7 @@ window.updateSectionVisibility = updateSectionVisibility;
       for (var k in u) tempU[k] = u[k];
       tempU.estado = _estadoEl.value;
       _tlContainer.innerHTML = renderTimelineHTML(tempU);
-      // GH3.37.1 Item 8: actualizar KPIs y Panel Ejecutivo sin cerrar el modal
+      // GH3.37.1 Item 8: actualizar KPIs y Vista de Seguimiento sin cerrar el modal
       if (window.renderResumen) setTimeout(renderResumen, 0);
     });
   })();
@@ -1203,10 +1203,13 @@ window.renderHomeTecnico = renderHomeTecnico;
 
 // closeModal
 function closeModal(force) {
-  // RC-01 T17: DirtyForm eliminado — el usuario decide cuándo guardar
+  // RC-01 T17: DirtyForm eliminado
   var bg = document.getElementById('modal-bg');
   if (bg) bg.classList.remove('active');
   if (window.state) state.editingId = null;
+  // RC-07: limpiar strip del timeline al cerrar
+  var strip = document.getElementById('modal-timeline-strip');
+  if (strip) { strip.innerHTML = ''; strip.style.display = 'none'; }
 }
 window.closeModal = closeModal;
 
