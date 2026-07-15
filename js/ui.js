@@ -573,17 +573,6 @@ function openEditModal(id) {
   state.editingId = id;
   $('modal-eyebrow').textContent = isBackup(u) ? 'BACKUP ' + u.empresa : (u.empresa + ' · ' + (u.tipo || 'EQUIPO') + ' · ID ' + u.id);
   $('modal-title').textContent = (u.nombre || ('BACKUP ' + u.empresa)) + (u.serial ? ' · ' + u.serial : '');
-  // RC-07 Fix 1: mover #seccion-timeline al strip fijo fuera del área de scroll
-  setTimeout(function() {
-    var _tlNode  = document.querySelector('#modal-body #seccion-timeline');
-    var _tlStrip = document.getElementById('modal-timeline-strip');
-    if (_tlNode && _tlStrip) {
-      _tlStrip.innerHTML = '';
-      _tlStrip.appendChild(_tlNode);
-      _tlStrip.style.display = '';
-    }
-  }, 0);
-  
   const projects = Array.from(new Set(DataService.getRenewals({}).map(x => x.proyecto).filter(p => p))).sort();
   const projectOpts = '<option value="">—</option>' + projects.map(p => '<option' + (u.proyecto === p ? ' selected' : '') + '>' + esc(p) + '</option>').join('');
   // F3.5 · Niveles desde ConfigService (no hardcodeados en componente UI)
@@ -748,7 +737,7 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Técnico asignado</label><select class="form-select" id="m-tecnico">' + '<option value="">— Sin asignar —</option>' + (window.CONFIG.technicians || []).map(function(t){ return '<option value="' + esc(t) + '"' + ((u.tecnico||'').toLowerCase()===t.toLowerCase()?' selected':'') + '>' + esc(t) + '</option>'; }).join('') + '</select></div>' +
       '<div class="form-group"><label class="form-label">Estado proceso REN26</label><select class="form-select" id="m-estado">' + estadoOpts + '</select></div>' +
       // F3.6 · estado_entrega_equipo_nuevo: entidad física independiente del estado del proceso
-      '<div class="form-group"><label class="form-label">Estado entrega equipo nuevo <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><select class="form-select" id="m-estado_entrega_equipo_nuevo">' + entregaEqNvoOpts + '</select></div>' +
+
       '<div class="form-group"><label class="form-label">Notas de alistamiento</label><input type="text" class="form-input" id="m-notas_alistamiento" value="' + esc(u.notas_alistamiento) + '" placeholder="Notas de alistamiento"></div>' +
       '<div class="form-group"><label class="form-label">Caso envío (mensajería)</label><input type="text" class="form-input" id="m-caso_envio" value="' + esc(u.caso_envio) + '" placeholder="Guía de mensajería"></div>' +
       '<div class="form-group"><label class="form-label">F. Envío</label><input type="date" class="form-input" id="m-fecha_envio" value="' + toDateInput(u.fecha_envio) + '"></div>' +
@@ -902,9 +891,11 @@ window.updateSectionVisibility = updateSectionVisibility;
       'Recibida en bodega': 'm-fecha_recepcion_bodega',
     };
     function updateDevDates(val) {
+      // Solo habilitar fechas si lista_recoleccion está marcada
+      var listaChecked = $('m-lista_recoleccion') && $('m-lista_recoleccion').checked;
       ['m-fecha_solicitud_devolucion','m-fecha_transito','m-fecha_recepcion_bodega'].forEach(function(id) {
         var el = $(id); if (!el) return;
-        var active = DATE_MAP[val] === id;
+        var active = listaChecked && DATE_MAP[val] === id;
         el.disabled = !active;
         var grp = el.closest ? el.closest('.form-group') : null;
         if (grp) grp.style.opacity = active ? '1' : '0.5';
@@ -1207,9 +1198,6 @@ function closeModal(force) {
   var bg = document.getElementById('modal-bg');
   if (bg) bg.classList.remove('active');
   if (window.state) state.editingId = null;
-  // RC-07: limpiar strip del timeline al cerrar
-  var strip = document.getElementById('modal-timeline-strip');
-  if (strip) { strip.innerHTML = ''; strip.style.display = 'none'; }
 }
 window.closeModal = closeModal;
 

@@ -987,16 +987,8 @@
 .auth-warn-close:hover { color: #78350f; }
 
 /* ── RC-06: Timeline sticky dentro del scroll del modal ── */
-#seccion-timeline {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: #ffffff;
-  margin-bottom: 0 !important;
-  padding: 10px 24px 14px;
-  border-bottom: 2px solid var(--border, #E2E2E2);
-  box-shadow: 0 3px 8px rgba(0,0,0,.10);
-}
+/* RC-07: #seccion-timeline sticky eliminado — scrollea con el contenido */
+#seccion-timeline { padding: 0; }
 .tl-progress {
   display: flex;
   align-items: flex-start;
