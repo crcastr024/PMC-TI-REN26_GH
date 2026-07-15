@@ -22,7 +22,7 @@
   position: sticky; top: 0; left: 0;
   height: calc(100vh - var(--topbar-h, 56px));
   overflow-y: auto;
-  align-self: start;
+  align-self: stretch;
   display: flex; flex-direction: column;
   z-index: 10; /* reducido: 20 tapaba contenido en scroll */
   overflow-y: auto; overflow-x: hidden; /* scroll vertical, clip horizontal */
@@ -1122,3 +1122,6 @@ body:not(.sb-collapsed) #app-footer {
 body.sb-collapsed #app-footer {
   margin-left: 60px;
 }
+
+/* RC-07 Fix 1: Timeline strip fuera del scroll */
+#modal-timeline-strip { flex-shrink: 0; }

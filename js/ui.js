@@ -573,6 +573,16 @@ function openEditModal(id) {
   state.editingId = id;
   $('modal-eyebrow').textContent = isBackup(u) ? 'BACKUP ' + u.empresa : (u.empresa + ' · ' + (u.tipo || 'EQUIPO') + ' · ID ' + u.id);
   $('modal-title').textContent = (u.nombre || ('BACKUP ' + u.empresa)) + (u.serial ? ' · ' + u.serial : '');
+  // RC-07 Fix 1: mover #seccion-timeline al strip fijo fuera del área de scroll
+  setTimeout(function() {
+    var _tlNode  = document.getElementById('seccion-timeline');
+    var _tlStrip = document.getElementById('modal-timeline-strip');
+    if (_tlNode && _tlStrip) {
+      _tlStrip.innerHTML = '';
+      _tlStrip.appendChild(_tlNode);
+      _tlStrip.style.display = '';
+    }
+  }, 0);
   
   const projects = Array.from(new Set(DataService.getRenewals({}).map(x => x.proyecto).filter(p => p))).sort();
   const projectOpts = '<option value="">—</option>' + projects.map(p => '<option' + (u.proyecto === p ? ' selected' : '') + '>' + esc(p) + '</option>').join('');
@@ -644,55 +654,80 @@ function openEditModal(id) {
 
     '<div class="form-section" id="seccion-raee-tecnologico"><div class="form-section-head">3 · Clasificación Tecnológica</div>' +
     (function() {
-      // Motor A — ObsolescenceService — clasifica por procesador y generación de CPU
-      var cls   = u.estado_eq_ant             || '';
-      var gen   = u.generacion_cpu             || '';
-      var proc  = u.eq_ant_procesador          || '';
-      var obs   = u.clasificacion_obsolescencia || cls;
-      var accion = u.accion_requerida          || '';
-      var detalle = u.accion_detalle           || '';
+      // Motor A — ObsolescenceService — diseño renovado (RC-07)
+      var cls    = u.estado_eq_ant             || '';
+      var gen    = u.generacion_cpu             || '';
+      var proc   = u.eq_ant_procesador          || '';
+      var accion = u.accion_requerida           || '';
+      var detalle = u.accion_detalle            || '';
       var vendor = (u._obsolescence_meta && u._obsolescence_meta.vendor) || '';
       var family = (u._obsolescence_meta && u._obsolescence_meta.family) || '';
 
-      var MOTOR_COLORS = {
-        'RAEE':          { bg:'#FFEBEE', border:'#C00000', fg:'#C00000', icon:'⛔' },
-        'Reasignable':   { bg:'#E8F5E9', border:'#2E7D32', fg:'#2E7D32', icon:'↩' },
-        'Revisión manual':{ bg:'#FFF8E1', border:'#F57F17', fg:'#E65100', icon:'🔍' },
+      var MOTOR_SCHEME = {
+        'RAEE':            { bg:'#FFEBEE', border:'#C00000', fg:'#C00000', ic:'⛔', acBg:'#FFEBEE' },
+        'Reasignable':     { bg:'#F0FDF4', border:'#16A34A', fg:'#166534', ic:'↩',  acBg:'#DCFCE7' },
+        'Revisión manual': { bg:'#FFFBEB', border:'#D97706', fg:'#92400E', ic:'?',  acBg:'#FEF3C7' },
       };
-      var cc = MOTOR_COLORS[cls] || { bg:'#F5F5F5', border:'#BDBDBD', fg:'#757575', icon:'⏳' };
+      var ms = MOTOR_SCHEME[cls] || { bg:'#FAFAFA', border:'#9CA3AF', fg:'#6B7280', ic:'—', acBg:'#F3F4F6' };
 
       if (!proc) {
-        return '<div style="padding:12px 14px;background:#FAFAFA;border-radius:6px;border:1px dashed #E0E0E0">' +
-          '<div style="font-size:12px;color:var(--text-3)">⏳ Sin procesador registrado — el motor se ejecutará automáticamente al ingresar el equipo anterior.</div>' +
-          '</div>';
+        var noProc = ms;
+        return '<div style="background:' + noProc.bg + ';border:1px solid ' + noProc.border + ';border-radius:10px;padding:14px 16px">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+            '<div style="width:34px;height:34px;border-radius:50%;background:' + noProc.border + ';display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0">' + noProc.ic + '</div>' +
+            '<div>' +
+              '<div style="font-size:13px;font-weight:700;color:' + noProc.fg + '">' + (cls || 'Sin clasificar') + '</div>' +
+              '<div style="font-size:11px;color:#6B7280">Procesador no registrado</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px;margin-bottom:10px">' +
+            '<div style="flex:1;background:#fff;border:1px solid ' + noProc.border + ';border-radius:6px;padding:6px 10px">' +
+              '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + noProc.fg + ';margin-bottom:2px">Clasificación</div>' +
+              '<div style="font-size:11px;font-weight:700;color:' + noProc.fg + '">' + (cls || 'Sin clasificar') + '</div>' +
+            '</div>' +
+            '<div style="flex:1;background:#fff;border:1px solid ' + noProc.border + ';border-radius:6px;padding:6px 10px">' +
+              '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + noProc.fg + ';margin-bottom:2px">Generación</div>' +
+              '<div style="font-size:11px;font-weight:700;color:' + noProc.fg + '">Sin determinar</div>' +
+            '</div>' +
+            '<div style="flex:1;background:#fff;border:1px solid ' + noProc.border + ';border-radius:6px;padding:6px 10px">' +
+              '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + noProc.fg + ';margin-bottom:2px">Acción</div>' +
+              '<div style="font-size:11px;font-weight:700;color:' + noProc.fg + '">' + (accion || 'Revisar') + '</div>' +
+            '</div>' +
+          '</div>' +
+          (detalle ? '<div style="font-size:11px;color:#4B5563;margin-bottom:6px">' + esc(detalle) + '</div>' : '') +
+          '<div style="font-size:10px;color:#9CA3AF;font-style:italic">Clasificación generada automáticamente por el motor de obsolescencia a partir del procesador del equipo anterior · no editable manualmente</div>' +
+        '</div>';
       }
 
-      var html = '<div style="border:2px solid ' + cc.border + ';border-radius:8px;overflow:hidden">' +
-        '<div style="background:' + cc.border + ';padding:10px 16px;display:flex;align-items:center;gap:10px">' +
-          '<span style="font-size:22px">' + cc.icon + '</span>' +
-          '<div style="flex:1">' +
-            '<div style="font-size:13px;font-weight:700;color:#fff">' + esc(cls || 'Sin clasificar') + '</div>' +
-            (obs && obs !== cls ? '<div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:1px">' + esc(obs) + '</div>' : '') +
+      // Procesador registrado — renderizar tarjeta completa
+      var procLabel = proc + (vendor ? ' · ' + vendor : '') + (family ? ' ' + family : '');
+      var genLabel  = gen ? 'Gen ' + gen : 'Sin determinar';
+      var html =
+        '<div style="background:' + ms.bg + ';border:1px solid ' + ms.border + ';border-radius:10px;padding:14px 16px">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
+            '<div style="width:34px;height:34px;border-radius:50%;background:' + ms.border + ';display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0">' + ms.ic + '</div>' +
+            '<div>' +
+              '<div style="font-size:13px;font-weight:700;color:' + ms.fg + '">' + esc(cls || 'Sin clasificar') + '</div>' +
+              '<div style="font-size:11px;color:#6B7280">' + esc(procLabel) + '</div>' +
+            '</div>' +
           '</div>' +
-          (accion ? '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.85);background:rgba(0,0,0,.18);padding:3px 9px;border-radius:10px">' + esc(accion) + '</div>' : '') +
-        '</div>' +
-        '<div style="background:' + cc.bg + ';padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
-          '<div>' +
-            '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + cc.fg + ';margin-bottom:3px">Procesador detectado</div>' +
-            '<div style="font-size:12px;color:var(--text-1);font-weight:600">' + esc(proc) + '</div>' +
-            (vendor || family ? '<div style="font-size:10px;color:var(--text-3);margin-top:2px">' + esc((vendor + ' ' + family).trim()) + '</div>' : '') +
+          '<div style="display:flex;gap:6px;margin-bottom:10px">' +
+            '<div style="flex:1;background:#fff;border:1px solid ' + ms.border + ';border-radius:6px;padding:6px 10px">' +
+              '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + ms.fg + ';margin-bottom:2px">Clasificación</div>' +
+              '<div style="font-size:11px;font-weight:700;color:' + ms.fg + '">' + esc(cls) + '</div>' +
+            '</div>' +
+            '<div style="flex:1;background:#fff;border:1px solid ' + ms.border + ';border-radius:6px;padding:6px 10px">' +
+              '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + ms.fg + ';margin-bottom:2px">Generación</div>' +
+              '<div style="font-size:11px;font-weight:700;color:' + ms.fg + '">' + esc(genLabel) + '</div>' +
+            '</div>' +
+            '<div style="flex:1;background:#fff;border:1px solid ' + ms.border + ';border-radius:6px;padding:6px 10px">' +
+              '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + ms.fg + ';margin-bottom:2px">Acción</div>' +
+              '<div style="font-size:11px;font-weight:700;color:' + ms.fg + '">' + esc(accion || '—') + '</div>' +
+            '</div>' +
           '</div>' +
-          '<div>' +
-            '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + cc.fg + ';margin-bottom:3px">Generación</div>' +
-            (gen ? '<div style="font-size:20px;font-weight:900;color:' + cc.fg + ';line-height:1">' + esc(String(gen)) + '<sup style="font-size:10px">ª gen</sup></div>' : '<div style="font-size:12px;color:var(--text-3)">No determinada</div>') +
-          '</div>' +
-        '</div>' +
-        (detalle ? '<div style="background:rgba(0,0,0,.04);padding:8px 16px;font-size:11px;color:var(--text-2);line-height:1.4">' + esc(detalle) + '</div>' : '') +
-        '<div style="background:rgba(0,0,0,.04);padding:5px 14px;font-size:9px;color:var(--text-3);display:flex;justify-content:space-between">' +
-          '<span>Motor ObsolescenceService · Política Intel ≤ gen 10 = RAEE</span>' +
-          '<span>' + (u._obsolescence_meta && u._obsolescence_meta.auto_classified ? 'Automático' : u._obsolescence_meta && u._obsolescence_meta.manual_override ? 'Manual' : '') + '</span>' +
-        '</div>' +
-      '</div>';
+          (detalle ? '<div style="font-size:11px;color:#4B5563;margin-bottom:6px">' + esc(detalle) + '</div>' : '') +
+          '<div style="font-size:10px;color:#9CA3AF;font-style:italic">Clasificación generada automáticamente por el motor de obsolescencia a partir del procesador del equipo anterior · no editable manualmente</div>' +
+        '</div>';
       return html;
     })() +
     '</div>' +
@@ -1258,7 +1293,10 @@ function saveRecord() {
     }
 
     if (window.DataService) DataService.updateRenewal(id, changes, window.state && state.user);
-
+    if (window.DataService) DataService.updateRenewal(id, changes, window.state && state.user);
+    // RC-07 Fix 2: cerrar modal y refrescar inmediatamente
+    if (window.closeModal) closeModal(true);
+    if (window.renderResumen) renderResumen();
     // RC-01 T12: _F7_FIELDS vacío — estado_entrega_equipo_nuevo
     // tiene entrada en SP_FIELD_MAP (EstadoEntregaEquipoNuevo).
     var _F7_FIELDS = new Set([]);
