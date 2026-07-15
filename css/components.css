@@ -20,9 +20,8 @@
   background: var(--bg-elev);
   border-right: 1px solid var(--border);
   position: sticky; top: 0; left: 0;
-  /* QA-06 T3: height auto — no desborda sobre el footer */
-  height: auto;
-  min-height: calc(100vh - var(--topbar-h, 56px));
+  height: calc(100vh - var(--topbar-h, 56px));
+  overflow-y: auto;
   align-self: start;
   display: flex; flex-direction: column;
   z-index: 10; /* reducido: 20 tapaba contenido en scroll */
@@ -991,12 +990,12 @@
 #seccion-timeline {
   position: sticky;
   top: 0;
-  z-index: 20;
-  background: var(--bg-elev, #fff);
+  z-index: 100;
+  background: #ffffff;
   margin-bottom: 0 !important;
-  padding: 10px 24px 12px;
-  border-bottom: 1px solid var(--border, #E2E2E2);
-  box-shadow: 0 2px 6px rgba(0,0,0,.07);
+  padding: 10px 24px 14px;
+  border-bottom: 2px solid var(--border, #E2E2E2);
+  box-shadow: 0 3px 8px rgba(0,0,0,.10);
 }
 .tl-progress {
   display: flex;

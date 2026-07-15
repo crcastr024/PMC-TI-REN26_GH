@@ -640,7 +640,7 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Disco duro (ant.)</label><input type="text" class="form-input" id="m-eq_ant_disco" value="' + esc(u.eq_ant_disco) + '"></div>' +
       '<div class="form-group full"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_ant_so" value="' + esc(u.eq_ant_so) + '"></div>' +
     '</div>' +
-  '</div>';'</div>' +
+  '</div>' + '</div>' +
 
     '<div class="form-section" id="seccion-raee-tecnologico"><div class="form-section-head">3 · Clasificación Tecnológica</div>' +
     (function() {
@@ -1275,6 +1275,7 @@ function saveRecord() {
             return DataService.reloadFromProvider().then(function(ok) {
               if (window.state) state._syncInProgress = false;
               if (ok) {
+                if (window.closeModal) closeModal(true);
                 if (window.renderResumen) renderResumen();
                 if (window.renderView && window.state) renderView(state.view || 'resumen');
                 if (window.toast) toast('✓ Guardado · Sincronizado con Excel', 'success');
