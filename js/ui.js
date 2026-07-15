@@ -546,6 +546,26 @@ function renderActivityLog() {
 
 // ═══ MODAL: openEditModal con todas las secciones ═══
 var _currentRecord = null;  // GH3.28: record activo del modal
+// RC-03 T2: Convierte valor de fecha a formato yyyy-MM-dd para <input type="date">
+// Acepta: serial Excel (46209), ISO string, yyyy-MM-dd, null, vacío
+function toDateInput(val) {
+  if (val === null || val === undefined || val === '') return '';
+  // Número: serial Excel (días desde 1900-01-01)
+  var n = Number(val);
+  if (!isNaN(n) && n > 40000 && n < 100000) {
+    // Offset 25569 = días entre 1900-01-01 y 1970-01-01 (epoch Unix)
+    var d = new Date((n - 25569) * 86400000);
+    return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+  }
+  // String: tomar solo la parte yyyy-MM-dd
+  var s = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  // Intentar parsear como fecha
+  var d2 = new Date(s);
+  return isNaN(d2.getTime()) ? '' : d2.toISOString().slice(0, 10);
+}
+window.toDateInput = toDateInput;
+
 function openEditModal(id) {
   const u = DataService.getRenewal(id);
   _currentRecord = u;  // GH3.28
@@ -590,7 +610,7 @@ function openEditModal(id) {
   const dispFinalOpts = dispFinalOpts_.map(d => '<option value="' + d + '"' + (u.disposicion_final === d ? ' selected' : '') + '>' + (d || '—') + '</option>').join('');
   
   $('modal-body').innerHTML = 
-'<div class="form-section"><div class="form-section-head">6 · Timeline del proceso</div>' +
+'<div class="form-section" id="seccion-timeline"><div class="form-section-head">Timeline REN26</div>' +
       '<div id="m-timeline-container">' + renderTimelineHTML(u) + '</div>' +
     '</div>' +
 '<div class="form-section"><div class="form-section-head">1 · Datos del usuario</div><div class="form-grid">' +
@@ -620,11 +640,63 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Disco duro (ant.)</label><input type="text" class="form-input" id="m-eq_ant_disco" value="' + esc(u.eq_ant_disco) + '"></div>' +
       '<div class="form-group full"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_ant_so" value="' + esc(u.eq_ant_so) + '"></div>' +
     '</div>' +
-      renderObsolescencePanelHTML(u) +
+  '</div>';'</div>' +
+
+    '<div class="form-section" id="seccion-raee-tecnologico"><div class="form-section-head">3 · Clasificación Tecnológica</div>' +
+    (function() {
+      // Motor A — ObsolescenceService — clasifica por procesador y generación de CPU
+      var cls   = u.estado_eq_ant             || '';
+      var gen   = u.generacion_cpu             || '';
+      var proc  = u.eq_ant_procesador          || '';
+      var obs   = u.clasificacion_obsolescencia || cls;
+      var accion = u.accion_requerida          || '';
+      var detalle = u.accion_detalle           || '';
+      var vendor = (u._obsolescence_meta && u._obsolescence_meta.vendor) || '';
+      var family = (u._obsolescence_meta && u._obsolescence_meta.family) || '';
+
+      var MOTOR_COLORS = {
+        'RAEE':          { bg:'#FFEBEE', border:'#C00000', fg:'#C00000', icon:'⛔' },
+        'Reasignable':   { bg:'#E8F5E9', border:'#2E7D32', fg:'#2E7D32', icon:'↩' },
+        'Revisión manual':{ bg:'#FFF8E1', border:'#F57F17', fg:'#E65100', icon:'🔍' },
+      };
+      var cc = MOTOR_COLORS[cls] || { bg:'#F5F5F5', border:'#BDBDBD', fg:'#757575', icon:'⏳' };
+
+      if (!proc) {
+        return '<div style="padding:12px 14px;background:#FAFAFA;border-radius:6px;border:1px dashed #E0E0E0">' +
+          '<div style="font-size:12px;color:var(--text-3)">⏳ Sin procesador registrado — el motor se ejecutará automáticamente al ingresar el equipo anterior.</div>' +
+          '</div>';
+      }
+
+      var html = '<div style="border:2px solid ' + cc.border + ';border-radius:8px;overflow:hidden">' +
+        '<div style="background:' + cc.border + ';padding:10px 16px;display:flex;align-items:center;gap:10px">' +
+          '<span style="font-size:22px">' + cc.icon + '</span>' +
+          '<div style="flex:1">' +
+            '<div style="font-size:13px;font-weight:700;color:#fff">' + esc(cls || 'Sin clasificar') + '</div>' +
+            (obs && obs !== cls ? '<div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:1px">' + esc(obs) + '</div>' : '') +
+          '</div>' +
+          (accion ? '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.85);background:rgba(0,0,0,.18);padding:3px 9px;border-radius:10px">' + esc(accion) + '</div>' : '') +
+        '</div>' +
+        '<div style="background:' + cc.bg + ';padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+          '<div>' +
+            '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + cc.fg + ';margin-bottom:3px">Procesador detectado</div>' +
+            '<div style="font-size:12px;color:var(--text-1);font-weight:600">' + esc(proc) + '</div>' +
+            (vendor || family ? '<div style="font-size:10px;color:var(--text-3);margin-top:2px">' + esc((vendor + ' ' + family).trim()) + '</div>' : '') +
+          '</div>' +
+          '<div>' +
+            '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:' + cc.fg + ';margin-bottom:3px">Generación</div>' +
+            (gen ? '<div style="font-size:20px;font-weight:900;color:' + cc.fg + ';line-height:1">' + esc(String(gen)) + '<sup style="font-size:10px">ª gen</sup></div>' : '<div style="font-size:12px;color:var(--text-3)">No determinada</div>') +
+          '</div>' +
+        '</div>' +
+        (detalle ? '<div style="background:rgba(0,0,0,.04);padding:8px 16px;font-size:11px;color:var(--text-2);line-height:1.4">' + esc(detalle) + '</div>' : '') +
+        '<div style="background:rgba(0,0,0,.04);padding:5px 14px;font-size:9px;color:var(--text-3);display:flex;justify-content:space-between">' +
+          '<span>Motor ObsolescenceService · Política Intel ≤ gen 10 = RAEE</span>' +
+          '<span>' + (u._obsolescence_meta && u._obsolescence_meta.auto_classified ? 'Automático' : u._obsolescence_meta && u._obsolescence_meta.manual_override ? 'Manual' : '') + '</span>' +
+        '</div>' +
+      '</div>';
+      return html;
+    })() +
     '</div>' +
-    
-    
-    '<div class="form-section"><div class="form-section-head">3 · Equipo nuevo asignado</div><div class="form-grid">' +
+    '<div class="form-section"><div class="form-section-head">4 · Equipo nuevo asignado</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="m-eq_nvo_tipo"><option value="">—</option><option' + ((eqNvo.tipo || '').toUpperCase() === 'PORTATIL' ? ' selected' : '') + '>PORTATIL</option><option' + ((eqNvo.tipo || '').toUpperCase() === 'TORRE' ? ' selected' : '') + '>TORRE</option></select></div>' +
       '<div class="form-group"><label class="form-label">Marca</label><input type="text" class="form-input" id="m-eq_nvo_marca" value="' + esc(eqNvo.marca) + '"></div>' +
       '<div class="form-group"><label class="form-label">Modelo</label><input type="text" class="form-input" id="m-eq_nvo_modelo" value="' + esc(eqNvo.modelo) + '"></div>' +
@@ -637,72 +709,66 @@ function openEditModal(id) {
       '<div class="form-group full"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_nvo_so" value="' + esc(u.eq_nvo_so) + '" placeholder="Ej: Windows 11 Pro"></div>' +
       '<div class="form-group full"><label class="form-label">Dato maestro SAP (AF) <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="text" class="form-input" id="m-eq_nvo_af" value="' + esc(eqNvo.af) + '" placeholder="Código AF / dato maestro SAP"></div>' +
     '</div></div>' +
-    '<div class="form-section"><div class="form-section-head">4 · Estado y seguimiento</div><div class="form-grid">' +
+    '<div class="form-section"><div class="form-section-head">5 · Estado REN26</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Técnico asignado</label><select class="form-select" id="m-tecnico">' + '<option value="">— Sin asignar —</option>' + (window.CONFIG.technicians || []).map(function(t){ return '<option value="' + esc(t) + '"' + ((u.tecnico||'').toLowerCase()===t.toLowerCase()?' selected':'') + '>' + esc(t) + '</option>'; }).join('') + '</select></div>' +
       '<div class="form-group"><label class="form-label">Estado proceso REN26</label><select class="form-select" id="m-estado">' + estadoOpts + '</select></div>' +
       // F3.6 · estado_entrega_equipo_nuevo: entidad física independiente del estado del proceso
       '<div class="form-group"><label class="form-label">Estado entrega equipo nuevo <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><select class="form-select" id="m-estado_entrega_equipo_nuevo">' + entregaEqNvoOpts + '</select></div>' +
       '<div class="form-group"><label class="form-label">Notas de alistamiento</label><input type="text" class="form-input" id="m-notas_alistamiento" value="' + esc(u.notas_alistamiento) + '" placeholder="Notas de alistamiento"></div>' +
       '<div class="form-group"><label class="form-label">Caso envío (mensajería)</label><input type="text" class="form-input" id="m-caso_envio" value="' + esc(u.caso_envio) + '" placeholder="Guía de mensajería"></div>' +
-      '<div class="form-group"><label class="form-label">F. Envío</label><input type="date" class="form-input" id="m-fecha_envio" value="' + esc(u.fecha_envio) + '"></div>' +
-      '<div class="form-group"><label class="form-label">F. Entrega</label><input type="date" class="form-input" id="m-fecha_entrega" value="' + esc(u.fecha_entrega) + '"></div>' +
+      '<div class="form-group"><label class="form-label">F. Envío</label><input type="date" class="form-input" id="m-fecha_envio" value="' + toDateInput(u.fecha_envio) + '"></div>' +
+      '<div class="form-group"><label class="form-label">F. Entrega</label><input type="date" class="form-input" id="m-fecha_entrega" value="' + toDateInput(u.fecha_entrega) + '"></div>' +
       '<div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px;background:var(--bg-subtle);border-radius:var(--r-sm)">' +
-        '<div class="form-group" style="margin:0"><label class="form-label">F. envío acta</label><input type="date" class="form-input" id="m-fecha_envio_acta" value="' + esc(u.fecha_envio_acta) + '"></div>' +
-        '<div class="form-group"><label class="form-label">URL del acta (SharePoint)</label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url || '') + '" placeholder="https://app.pandadoc.com/..."></div>' +
-        '<div class="form-group" style="margin:0"><label class="form-label">F. firma acta</label><input type="date" class="form-input" id="m-fecha_firma_acta" value="' + esc(u.fecha_firma_acta) + '"></div>' +
+        '<div class="form-group" style="margin:0"><label class="form-label">F. envío acta</label><input type="date" class="form-input" id="m-fecha_envio_acta"' + (u.fecha_envio_acta ? ' value="' + toDateInput(u.fecha_envio_acta) + '"' : '') + '></div>' +
+        '<div class="form-group" style="margin:0"><label class="form-label">F. firma acta</label><input type="date" class="form-input" id="m-fecha_firma_acta"' + (u.fecha_firma_acta ? ' value="' + toDateInput(u.fecha_firma_acta) + '"' : '') + '></div>' +
+        '<div class="form-group" style="margin:0"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo||'') + '" placeholder="Ej: acta_juan_garcia.pdf"></div>' +
+        '<div class="form-group" style="margin:0"><label class="form-label">URL del acta (SharePoint)</label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url||'') + '" placeholder="https://..."></div>' +
       '</div>' +
-      '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;font-size:12px">Acta de entrega</a>' : '') + '</div>' +
-      '<hr style="border:none;border-top:1px dashed var(--border);margin:8px 0">' +
-      '<div class="form-group"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo) + '" placeholder="Ej: Acta_Juan_Perez.pdf"></div>' +
+      '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:underline">📄 Ver acta firmada</a>' : '<span style="font-size:11px;color:var(--text-3)">No existe un acta registrada.</span>') + '</div>' +
     '</div></div>' +
-    
-    
-'<div class="form-section" id="seccion-devolucion"><div class="form-section-head">5 · Devolución del equipo anterior</div>' +
+    '<div class="form-section" id="seccion-devolucion"><div class="form-section-head">6 · Devolución del equipo anterior</div>' +
     '<div style="padding:8px 0 10px;border-bottom:1px dashed var(--border);margin-bottom:10px">' +
             '<label class="form-check"><input type="checkbox" id="m-lista_recoleccion"' + (u.lista_recoleccion ? ' checked' : '') + '> Equipo agregado a lista de recoleccion</label>' +
     '</div>' +
     '<div id="dev-campos">' +
       '<div class="form-group"><label class="form-label">Estado de devolución</label><select class="form-select" id="m-estado_devolucion">' + devEstadoOpts + '</select></div>' +
       '<div class="form-group"><label class="form-label">Disposición final del equipo</label><select class="form-select" id="m-disposicion_final">' + dispFinalOpts + '</select></div>' +
-      '<div class="form-group"><label class="form-label">F. Solicitud devolución</label><input type="date" class="form-input" id="m-fecha_solicitud_devolucion" value="' + esc(u.fecha_solicitud_devolucion) + '"></div>' +
-      '<div class="form-group"><label class="form-label">F. en tránsito</label><input type="date" class="form-input" id="m-fecha_transito" value="' + esc(u.fecha_transito) + '"></div>' +
-      '<div class="form-group"><label class="form-label">F. Recepción en Bodega</label><input type="date" class="form-input" id="m-fecha_recepcion_bodega" value="' + esc(u.fecha_recepcion_bodega) + '"></div>' +
-      '<p class="full" style="font-size:11px;color:var(--text-3);margin:0">La disposición final queda registrada en auditoría (usuario, fecha, valor anterior/nuevo) al guardar.</p>' +
+      '<div class="form-group"><label class="form-label">F. Solicitud devolución</label><input type="date" class="form-input" id="m-fecha_solicitud_devolucion" value="' + toDateInput(u.fecha_solicitud_devolucion) + '"></div>' +
+      '<div class="form-group"><label class="form-label">F. en tránsito</label><input type="date" class="form-input" id="m-fecha_transito" value="' + toDateInput(u.fecha_transito) + '"></div>' +
+      '<div class="form-group"><label class="form-label">F. Recepción en Bodega</label><input type="date" class="form-input" id="m-fecha_recepcion_bodega" value="' + toDateInput(u.fecha_recepcion_bodega) + '"></div>' +
+      '<p class="full" style="font-size:11px;color:var(--text-3);margin:0">La disposición final queda registrada en la Lista de Control de Recolecciones SharePoint.</p>' +
+      '<div class="form-group full" style="margin-top:8px"><label class="form-label">Observaciones de devolución</label><textarea class="form-input" id="m-observaciones_devolucion" rows="2" placeholder="Estado del equipo al recibirlo, novedades...">' + esc(u.observaciones_devolucion||'') + '</textarea></div>' +
     '</div>' +
-  '</div>' +
-    
-    '<div class="form-section"><div class="form-section-head">6 · Evaluación del equipo anterior</div>' +
-    '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);padding:8px 0 4px">Evaluacion fisica del equipo</div>' +
+    '<div class="form-section" id="seccion-eval-fisica" style="margin-top:14px;border-top:1px dashed var(--border);padding-top:14px"><div class="form-section-head">7 · Evaluación Física del Equipo</div>' +
+    '<div style="font-size:11px;color:var(--text-3);margin-bottom:10px">Registrar el estado físico del equipo recibido.</div>' +
     '<div class="form-grid">' +
-      '<div class="form-group"><label class="form-label">Bateria</label><select class="form-select" id="m-eval_bateria" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_bateria==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_bateria==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_bateria==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_bateria==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Teclado</label><select class="form-select" id="m-eval_teclado" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_teclado==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_teclado==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_teclado==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_teclado==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Touchpad</label><select class="form-select" id="m-eval_touchpad" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_touchpad==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_touchpad==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_touchpad==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_touchpad==='Malo'?' selected':'') + '>Malo</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Estetico</label><select class="form-select" id="m-eval_estetico" onchange="actualizarRecomendacion()"><option value="">No evaluado</option><option value="Excelente"' + (u.eval_estetico==='Excelente'?' selected':'') + '>Excelente</option><option value="Bueno"' + (u.eval_estetico==='Bueno'?' selected':'') + '>Bueno</option><option value="Regular"' + (u.eval_estetico==='Regular'?' selected':'') + '>Regular</option><option value="Malo"' + (u.eval_estetico==='Malo'?' selected':'') + '>Malo</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Estado batería</label><select class="form-select" id="m-eval_bateria" onchange="actualizarRecomendacion()"><option value="">—</option>' + ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_bateria===o?' selected':'')+'>'+o+'</option>';}).join('') + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Estado teclado</label><select class="form-select" id="m-eval_teclado" onchange="actualizarRecomendacion()"><option value="">—</option>' + ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_teclado===o?' selected':'')+'>'+o+'</option>';}).join('') + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Estado touchpad</label><select class="form-select" id="m-eval_touchpad" onchange="actualizarRecomendacion()"><option value="">—</option>' + ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_touchpad===o?' selected':'')+'>'+o+'</option>';}).join('') + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Estado estético</label><select class="form-select" id="m-eval_estetico" onchange="actualizarRecomendacion()"><option value="">—</option>' + ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_estetico===o?' selected':'')+'>'+o+'</option>';}).join('') + '</select></div>' +
     '</div>' +
-    '<div id="m-recomendacion-display" style="margin-top:8px;padding:8px 14px;border-radius:var(--r-sm);background:#E8F5E9;color:#2E7D32;font-size:12px;font-weight:700;display:none"></div>' +
-    '<div id="m-motivo-raee-display" style="margin-top:4px;padding:4px 14px;font-size:11px;color:#777;display:none"></div>' +
-    '</div>' +
-    
-'<div class="form-section" id="seccion-feedback"><div class="form-section-head">7 · Calificación</div>' +
-  '<div style="text-align:center;padding:16px 0 8px">' +
-    '<p style="font-size:12px;color:var(--text-3);margin:0 0 10px">Solo disponible al completar el proceso</p>' +
-    '<div id="m-feedback-stars" data-value="' + (u.feedback || 0) + '" style="font-size:2.2rem;cursor:pointer;display:inline-flex;gap:6px">' +
-      '<span class="star" data-star="1">' + ((u.feedback||0)>=1?'★':'☆') + '</span>' +
-      '<span class="star" data-star="2">' + ((u.feedback||0)>=2?'★':'☆') + '</span>' +
-      '<span class="star" data-star="3">' + ((u.feedback||0)>=3?'★':'☆') + '</span>' +
-      '<span class="star" data-star="4">' + ((u.feedback||0)>=4?'★':'☆') + '</span>' +
-      '<span class="star" data-star="5">' + ((u.feedback||0)>=5?'★':'☆') + '</span>' +
+    '<div id="m-motor-eval-container" style="margin-top:12px"><div id="m-recomendacion-display" style="display:none"></div><div id="m-motivo-raee-display" style="display:none"></div></div>' +
     '</div>' +
   '</div>' +
-'</div>' +
-'<div class="form-section" id="audit-section" style="margin-top:4px;padding:12px 16px 8px;background:var(--bg-subtle);border-radius:var(--r-md)">' +
-  '<div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Última actualización</div>' +
-  '<div style="display:flex;gap:16px;align-items:baseline">' +
-    '<span id="m-audit-date" style="font-family:Inter Tight;font-size:13px;font-weight:700;color:var(--text-1)">' + esc(u.updated_at ? formatDateEs(u.updated_at) : '—') + '</span>' +
-    '<span id="m-audit-by" style="font-size:12px;color:var(--text-2)">' + esc(u.updated_by || '—') + '</span>' +
   '</div>' +
-'</div>';
-  
+
+'<div class="form-section" id="audit-section">' +
+  '<div class="form-section-head">Auditoría</div>' +
+  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">' +
+    '<div>' +
+      '<div style="font-size:9px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Última actualización</div>' +
+      '<div id="m-audit-date" style="font-size:13px;font-weight:700;color:var(--text-1)">' + (u.updated_at ? formatDateEs(u.updated_at) : '—') + '</div>' +
+    '</div>' +
+    '<div>' +
+      '<div style="font-size:9px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Actualizado por</div>' +
+      '<div id="m-audit-by" style="font-size:13px;color:var(--text-2)">' + esc(u.updated_by || '—') + '</div>' +
+    '</div>' +
+    '<div>' +
+      '<div style="font-size:9px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Estado auditoría</div>' +
+      '<div style="font-size:12px;font-weight:700">' + (u.VERSION ? '<span style="color:var(--accent)">v' + u.VERSION + '</span> · Cambios rastreados' : '<span style="color:var(--text-3)">Sin registros</span>') + '</div>' +
+    '</div>' +
+  '</div>' +
+  '</div>';
 
 // QA-05 Task 2 — Progressive disclosure: secciones por estado
 function updateSectionVisibility(estado) {
@@ -732,17 +798,25 @@ function updateSectionVisibility(estado) {
     var head = sec.querySelector('.form-section-head');
     if (!head) return;
     var t = head.textContent.trim();
-    if (t.indexOf('3 ·') === 0 || t.indexOf('Equipo nuevo') >= 0) {
-      sec.style.display = (idx >= 2 || isBlocked) ? '' : 'none';
-    } else if (t.indexOf('5 ·') === 0 || t.indexOf('Devolución') >= 0) {
-      // Devolución: desde Recolección (idx >= 5)
-      sec.style.display = (idx >= 5 || isBlocked) ? '' : 'none';
-    } else if (t.indexOf('6 ·') === 0 || t.indexOf('Evaluación') >= 0) {
-      // Evaluación RAEE: desde Recibido (idx >= 7)
-      sec.style.display = (idx >= 7 || isBlocked) ? '' : 'none';
-    } else if (t.indexOf('7 ·') === 0 || t.indexOf('Calificación') >= 0) {
-      // Feedback: solo en completada (idx >= 8)
-      sec.style.display = (idx >= 8) ? '' : 'none';
+    // RC-06 T13: Reglas de visibilidad actualizadas
+    if (t.indexOf('3 ·') === 0 || t.indexOf('Clasificación Tecnológica') >= 0) {
+      // Sección 3: Motor tecnológico — siempre visible
+      sec.style.display = '';
+    } else if (t.indexOf('4 ·') === 0 || t.indexOf('Equipo nuevo') >= 0) {
+      // Sección 4: Equipo nuevo — siempre visible
+      sec.style.display = '';
+    } else if (t.indexOf('5 ·') === 0 || t.indexOf('Estado REN26') >= 0) {
+      // Sección 5: Estado — siempre visible
+      sec.style.display = '';
+    } else if (t.indexOf('6 ·') === 0 || t.indexOf('Devolución') >= 0) {
+      // Sección 6: Devolución — siempre visible, gate via checkbox
+      sec.style.display = '';
+    } else if (t.indexOf('7 ·') === 0 || t.indexOf('Evaluación Física') >= 0) {
+      // Sección 7: Evaluación física — siempre visible, gate via updateDevSection
+      sec.style.display = '';
+    } else if (t.indexOf('Calificación') >= 0 || t.indexOf('8 ·') === 0) {
+      // Feedback: fuera del modal principal (RC-06 T12)
+      sec.style.display = 'none';
     }
     // Sect 4 (seguimiento): siempre visible
     // Audit section: siempre visible
@@ -768,6 +842,15 @@ window.updateSectionVisibility = updateSectionVisibility;
         var grp = el.closest ? el.closest('.form-group') : null;
         if (grp) grp.style.opacity = checked ? '1' : '0.4';
       });
+      // RC-04 T3: las secciones 6 y 7 solo tienen sentido después de recolectar el equipo
+      ['seccion-eval-fisica','seccion-raee-tecnologico'].forEach(function(id) {
+        var sec = document.getElementById(id);
+        if (!sec) return;
+        sec.style.opacity = checked ? '1' : '0.4';
+        sec.querySelectorAll('input,select,textarea').forEach(function(el) {
+          el.disabled = !checked;
+        });
+      });
     }
     var listaEl = $('m-lista_recoleccion');
     if (listaEl) {
@@ -777,10 +860,11 @@ window.updateSectionVisibility = updateSectionVisibility;
 
     // ── R2: Estado devolución → habilita solo la fecha relevante ──────────
     var DATE_MAP = {
-      'Pendiente':    'm-fecha_solicitud_devolucion',
-      'En tránsito':  'm-fecha_transito',
-      'Devuelto':     null,
-      'Bodega':       'm-fecha_recepcion_bodega',
+      'Pendiente':          null,
+      'No aplica':          null,
+      'Solicitada':         'm-fecha_solicitud_devolucion',
+      'En tránsito':        'm-fecha_transito',
+      'Recibida en bodega': 'm-fecha_recepcion_bodega',
     };
     function updateDevDates(val) {
       ['m-fecha_solicitud_devolucion','m-fecha_transito','m-fecha_recepcion_bodega'].forEach(function(id) {
@@ -946,9 +1030,20 @@ window.actualizarRecomendacion = function() {
   var colors = { 'RAEE': { bg: '#FFEBEE', fg: '#C00000' }, 'Donacion': { bg: '#FFF3E0', fg: '#E65100' },
     'Venta interna': { bg: '#E8F5E9', fg: '#2E7D32' }, 'Reasignacion': { bg: '#E3F2FD', fg: '#1565C0' } };
   var c = colors[resultado.recomendacion] || { bg: '#F5F5F5', fg: '#555' };
-  disp.textContent = 'Recomendacion: ' + resultado.recomendacion;
-  disp.style.display = ''; disp.style.background = c.bg; disp.style.color = c.fg;
-  if (motdisp) { motdisp.textContent = resultado.motivo; motdisp.style.display = ''; }
+  // RC-06 T10: Motor Evaluación Física — panel enriquecido
+  var container = document.getElementById('m-motor-eval-container');
+  var icons = { 'RAEE': '⚠', 'Donacion': '♻', 'Venta interna': '💼', 'Reasignacion': '↩' };
+  var icon = icons[resultado.recomendacion] || '⏳';
+  disp.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:' + c.bg + ';border-left:4px solid ' + c.fg + ';border-radius:0 6px 6px 0">' +
+    '<span style="font-size:20px">' + icon + '</span>' +
+    '<div><div style="font-size:13px;font-weight:700;color:' + c.fg + '">' + (resultado.recomendacion) + '</div>' +
+    '<div style="font-size:10px;color:#888">Motor RAEEEngine v' + resultado.version + '</div></div></div>';
+  disp.style.display = '';
+  if (motdisp) {
+    motdisp.innerHTML = '<div style="padding:6px 14px;font-size:11px;color:#666;line-height:1.4">' + resultado.motivo + '</div>';
+    motdisp.style.display = '';
+  }
+  if (container) container.style.display = '';
   var tlc = document.getElementById('m-timeline-container');
   if (tlc && _currentRecord) {
     var tmpR = Object.assign({}, _currentRecord, { recomendacion_raee: resultado.recomendacion, motivo_raee: resultado.motivo });
@@ -961,109 +1056,190 @@ window.actualizarRecomendacion = function() {
   $('modal-bg').classList.add('active');
 
   // QA-05: Inicializar dirty form tracking y validación
-  if (window._initDirtyForm) setTimeout(_initDirtyForm, 50);
+  
   if (window.attachFieldValidation) setTimeout(attachFieldValidation, 50);
 }
 
-// GH3.37.1 Item 11 — Indicador visual de sincronización con Excel
+
+// ── STAB: Renderers restaurados (renderAprobaciones, renderPanelEjecutivo, renderHomeTecnico) ──
+
+function renderAprobaciones() {
+  var records = window.DataService ? DataService.getRenewals({}) : [];
+  var pendientes = records.filter(function(r) { return r.estado === 'Pendiente aprobación'; });
+  var el = document.getElementById('aprob-count');
+  if (el) el.textContent = pendientes.length + ' registro' + (pendientes.length !== 1 ? 's' : '') + ' pendientes';
+  var content = document.getElementById('aprob-content');
+  if (!content) return;
+  if (!pendientes.length) {
+    content.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-3)">No hay aprobaciones pendientes.</div>';
+    return;
+  }
+  var rows = pendientes.map(function(r) {
+    var id = String(r.id).replace(/'/g, '');
+    return '<tr style="border-bottom:1px solid var(--border)">' +
+      '<td style="padding:8px 10px;font-weight:600">' + esc(r.nombre || '—') + '</td>' +
+      '<td style="padding:8px 10px;text-align:center">' + esc(r.empresa || '—') + '</td>' +
+      '<td style="padding:8px 10px;text-align:center">' + esc(r.tecnico || '—') + '</td>' +
+      '<td style="padding:8px 10px;text-align:center"><span style="background:var(--amber-l);color:var(--amber);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">Pendiente</span></td>' +
+      '<td style="padding:8px 10px;text-align:center"><button class="btn" style="font-size:10px;padding:4px 10px" data-id="' + id + '" onclick="openEditModal(this.dataset.id)">Revisar</button></td>' +
+      '</tr>';
+  }).join('');
+  content.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--accent);color:#fff">' +
+    '<th style="padding:8px 10px;text-align:left">Nombre</th><th style="padding:8px 10px">Empresa</th>' +
+    '<th style="padding:8px 10px">Técnico</th><th style="padding:8px 10px">Estado</th><th style="padding:8px 10px">Acción</th>' +
+    '</tr></thead><tbody>' + rows + '</tbody></table>';
+}
+window.renderAprobaciones = renderAprobaciones;
+
+function renderPanelEjecutivo() {
+  var role = window.state && state.user && (state.user.role || state.user.rol);
+  var allowed = ['super_admin', 'gestor_activos', 'director_ti', 'gerencia'];
+  if (role && allowed.indexOf(role) < 0) {
+    var vp = document.getElementById('view-panel');
+    if (vp) vp.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-3)">Vista no disponible para este rol.</div>';
+    return;
+  }
+  var records = window.DataService ? DataService.getRenewals({}) : [];
+  var total = records.length;
+  var done  = records.filter(function(r) { return r.estado === 'Renovación completada' || r.estado === 'Cerrado'; }).length;
+  var proc  = records.filter(function(r) { return r.estado !== 'Pendiente' && r.estado !== 'Renovación completada' && r.estado !== 'Cerrado'; }).length;
+  var pend  = records.filter(function(r) { return r.estado === 'Pendiente'; }).length;
+  var actas = records.filter(function(r) { return !!r.acta_entrega_url; }).length;
+  var aprob = records.filter(function(r) { return r.estado === 'Pendiente aprobación'; }).length;
+  var pct   = total ? Math.round(done / total * 100) : 0;
+  var set = function(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
+  set('pe-total', total); set('pe-completados', done); set('pe-proceso', proc);
+  set('pe-pendientes', pend); set('pe-actas', actas); set('pe-aprobaciones', aprob);
+  var pf = document.getElementById('pe-prog-fill'); if (pf) pf.style.width = pct + '%';
+  set('pe-prog-pct', pct + '%');
+  var hbt = records.filter(function(r) { return r.empresa === 'HBT'; }).length;
+  var hgs = records.filter(function(r) { return r.empresa === 'HGS'; }).length;
+  set('pe-hbt-n', hbt); set('pe-hgs-n', hgs);
+  if (total) { set('pe-hbt-pct', Math.round(hbt/total*100)+'%'); set('pe-hgs-pct', Math.round(hgs/total*100)+'%'); }
+  var ptEl = document.getElementById('pe-por-tecnico');
+  if (ptEl) {
+    var byTec = {};
+    records.forEach(function(r) { var t = r.tecnico || 'Sin asignar'; byTec[t] = (byTec[t] || 0) + 1; });
+    ptEl.innerHTML = Object.keys(byTec).sort().map(function(t) {
+      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span>' + esc(t) + '</span><strong>' + byTec[t] + '</strong></div>';
+    }).join('');
+  }
+  set('pe-destino-raee',    records.filter(function(r) { return r.recomendacion_raee === 'RAEE'; }).length);
+  set('pe-destino-venta',   records.filter(function(r) { return r.recomendacion_raee === 'Venta interna'; }).length);
+  set('pe-destino-reasign', records.filter(function(r) { return r.recomendacion_raee === 'Reasignacion'; }).length);
+  set('pe-destino-donacion',records.filter(function(r) { return r.recomendacion_raee === 'Donacion'; }).length);
+}
+window.renderPanelEjecutivo = renderPanelEjecutivo;
+
+function renderHomeTecnico() {
+  var user = window.state && state.user;
+  var tecName = user ? (user.name || user.displayName || '—') : '—';
+  var av = document.getElementById('ht-avatar');
+  if (av) {
+    var parts = tecName.split(' ').filter(Boolean);
+    av.textContent = parts.length >= 2 ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase() : tecName.slice(0,2).toUpperCase();
+  }
+  var set = function(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
+  set('ht-nombre', tecName);
+  set('ht-meta', 'Técnico REN26 · PMC-TI');
+  var records = window.DataService ? DataService.getRenewals({}) : [];
+  var first = tecName.split(' ')[0].toLowerCase();
+  var mios = first ? records.filter(function(r) { return r.tecnico && r.tecnico.toLowerCase().indexOf(first) >= 0; }) : [];
+  var pend = mios.filter(function(r) { return r.estado === 'Pendiente' || r.estado === 'Alistamiento'; }).length;
+  var proc = mios.filter(function(r) { return r.estado !== 'Pendiente' && r.estado !== 'Alistamiento' && r.estado !== 'Renovación completada' && r.estado !== 'Cerrado'; }).length;
+  var list = mios.filter(function(r) { return r.estado === 'Renovación completada' || r.estado === 'Cerrado'; }).length;
+  set('ht-pendientes', pend); set('ht-proceso', proc); set('ht-listos', list); set('ht-total', mios.length);
+  var colaEl = document.getElementById('ht-cola-list');
+  var cntEl  = document.getElementById('ht-cola-count');
+  if (colaEl) {
+    var activos = mios.filter(function(r) { return r.estado !== 'Cerrado'; });
+    if (cntEl) cntEl.textContent = activos.length;
+    colaEl.innerHTML = activos.length ? activos.map(function(r) {
+      var id = String(r.id).replace(/'/g, '');
+      return '<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:12px">' +
+        '<div><strong>' + esc(r.nombre||'—') + '</strong><br><span style="color:var(--text-3)">' + esc(r.empresa||'—') + ' · ' + esc(r.ciudad||'—') + '</span></div>' +
+        '<button class="btn" style="font-size:10px;padding:4px 10px" data-id="' + id + '" onclick="openEditModal(this.dataset.id)">Abrir</button></div>';
+    }).join('') : '<div style="padding:20px;text-align:center;color:var(--text-3)">No hay registros asignados.</div>';
+  }
+}
+window.renderHomeTecnico = renderHomeTecnico;
+
+// ── RESTAURACIÓN STAB: funciones truncadas por accidente en este sprint ──────
+
+// closeModal
+function closeModal(force) {
+  // RC-01 T17: DirtyForm eliminado — el usuario decide cuándo guardar
+  var bg = document.getElementById('modal-bg');
+  if (bg) bg.classList.remove('active');
+  if (window.state) state.editingId = null;
+}
+window.closeModal = closeModal;
+
+// _showSyncStatus
 function _showSyncStatus(status) {
   var indicator = document.getElementById('sync-status-indicator');
   if (!indicator) {
     indicator = document.createElement('div');
     indicator.id = 'sync-status-indicator';
-    indicator.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;z-index:9999;transition:opacity 0.4s;opacity:0';
+    indicator.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;z-index:9999;transition:opacity .4s';
     document.body.appendChild(indicator);
   }
   if (status === 'ok') {
-    indicator.textContent = '✓ Sincronizado con Excel';
-    indicator.style.background = '#2E7D32';
-    indicator.style.color = '#fff';
-  } else if (status === 'conflict') {
-    indicator.textContent = '⚠ Conflicto · Recargando...';
-    indicator.style.background = '#F57F17';
-    indicator.style.color = '#fff';
+    indicator.textContent = '✓ Sincronizado';
+    indicator.style.background = 'var(--grn-l, #E8F5E9)';
+    indicator.style.color = 'var(--grn, #2E7D32)';
+    indicator.style.opacity = '1';
+    setTimeout(function() { indicator.style.opacity = '0'; }, 3000);
+  } else if (status === 'error') {
+    indicator.textContent = '⚠ Error de sincronización';
+    indicator.style.background = 'var(--red-l, #FFEBEE)';
+    indicator.style.color = 'var(--red, #C00000)';
+    indicator.style.opacity = '1';
   }
-  indicator.style.opacity = '1';
-  setTimeout(function(){ indicator.style.opacity = '0'; }, 3000);
 }
 window._showSyncStatus = _showSyncStatus;
 
-window.openEditModal = openEditModal;
-
-function setStarRating(value) {
-  const widget = $('m-feedback-stars');
-  if (!widget) return;
-  widget.dataset.value = value;
-  widget.querySelectorAll('.star').forEach(s => {
-    const n = parseInt(s.dataset.star);
-    s.classList.toggle('active', n <= value);
-  });
-  const label = $('m-feedback-label');
-  if (label) label.textContent = value > 0 ? value + ' / 5' : 'Sin encuesta';
-}
-window.setStarRating = setStarRating;
-
-function closeModal(force) {
-  if (!force && window._hasDirtyForm && window._hasDirtyForm()) {
-    if (!confirm('Hay cambios sin guardar.\n\nPresionar Aceptar para descartar o Cancelar para volver.')) return;
-  }
-  if (window._clearDirty) _clearDirty();
-  $('modal-bg').classList.remove('active'); state.editingId = null;
-}
-window.closeModal = closeModal;
-
+// saveRecord
 function saveRecord() {
-  const id = state.editingId;
+  var id = window.state && state.editingId;
   if (id == null) return;
-  const u = DataService.getRenewal(id);
+  var u = window.DataService ? DataService.getRenewal(id) : null;
   if (!u) return;
-  
-  // Snapshot del estado anterior para detectar cambios
-  const before = {
-    estado: u.estado, estado_entrega_equipo_nuevo: u.estado_entrega_equipo_nuevo,
-    acta_firmada: u.acta_firmada,
-    recibido_bodega: u.recibido_bodega, equipo_reasignable: u.equipo_reasignable,
-    nombre: u.nombre,
-  };
-  
-  // Construir objeto de cambios desde el formulario
-  const fields = [
+
+  var fields = [
     'empresa','nombre','cedula','usuario','correo','ciudad','ceco','proyecto','cargo','gerente','registro',
-    'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname','eq_ant_procesador','eq_ant_memoria','eq_ant_disco','eq_ant_so',
-    'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname','eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco','eq_nvo_so',
-    'tecnico','estado','estado_entrega_equipo_nuevo','notas_alistamiento','caso_envio','fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta',
+    'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname',
+    'eq_ant_procesador','eq_ant_memoria','eq_ant_disco','eq_ant_so',
+    'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname',
+    'eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco','eq_nvo_so',
+    'tecnico','estado','estado_entrega_equipo_nuevo','notas_alistamiento','caso_envio',
+    'fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta','nombre_archivo',
     'estado_devolucion','disposicion_final','fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega',
-    // GH3.28: campos evaluación física y motor RAEE
+    'observaciones_devolucion',
     'lista_recoleccion','eval_bateria','eval_teclado','eval_touchpad','eval_estetico'
-    // GH3.29: USUARIO_EVALUACION_RAEE se asigna automáticamente en el bloque RAEEEngine de saveRecord
   ];
-  const changes = {};
-  fields.forEach(f => {
-    const el = $('m-' + f);
+  var changes = {};
+  fields.forEach(function(f) {
+    var el = document.getElementById('m-' + f);
     if (!el) return;
-    const val = el.value;
-    // GH3.24: Para 'tecnico', si el select quedó vacío (sin selección)
-    // mantener el valor original del registro — nunca sobrescribir con ''
+    var val = el.type === 'checkbox' ? el.checked : el.value;
     if (f === 'tecnico' && val === '') {
       changes[f] = u.tecnico || '';
     } else {
       changes[f] = val;
     }
   });
-  changes.acta_entrega_url = ($('m-acta_entrega_url') ? $('m-acta_entrega_url').value.trim() : '') || '';
-  // F3.6 · recibido_bodega y equipo_reasignable se derivan de los selects
-  // (única fuente de verdad — no son checkboxes manuales)
-  changes.recibido_bodega    = changes.estado_devolucion === 'Recibida en Bodega';
+  var acEl = document.getElementById('m-acta_entrega_url');
+  changes.acta_entrega_url = (acEl ? acEl.value.trim() : '') || '';
+  changes.recibido_bodega    = changes.estado_devolucion === 'Recibida en bodega';
   changes.equipo_reasignable = changes.disposicion_final === 'Reasignación interna';
   changes.equipo_devuelto    = changes.recibido_bodega;
-  const fbStars = $('m-feedback-stars');
+  var fbStars = document.getElementById('m-feedback-stars');
   changes.feedback = fbStars ? parseInt(fbStars.dataset.value || '0') : 0;
-  // GH3.45: campos sin control forEach — asignación explícita
-  changes.nombre_archivo   = ($('m-nombre_archivo')   ? $('m-nombre_archivo').value.trim()   : '') || (u.nombre_archivo   || '');
-  
-  // Persistir vía DataService (registra auditoría automáticamente)
+  var naEl = document.getElementById('m-nombre_archivo');
+  changes.nombre_archivo = (naEl ? naEl.value.trim() : '') || (u.nombre_archivo || '');
+
   try {
-    // GH3.28: Si hay evaluación física completa, calcular con RAEEEngine y agregar a changes
     if (changes.eval_bateria && changes.eval_teclado && changes.eval_touchpad && changes.eval_estetico) {
       if (typeof RAEEEngine !== 'undefined') {
         var _raeeResult = RAEEEngine.calcular(
@@ -1071,61 +1247,47 @@ function saveRecord() {
           changes.eval_touchpad, changes.eval_estetico
         );
         if (_raeeResult) {
-          changes.recomendacion_raee    = _raeeResult.recomendacion;
-          changes.motivo_raee           = _raeeResult.motivo;
-          changes.motor_raee_version    = _raeeResult.version;
-          changes.fecha_evaluacion_raee = _raeeResult.fechaEvaluacion;
-          // GH3.29: auditoría del evaluador
-          changes.usuario_evaluacion_raee = (state.user && state.user.name) || (state.user && state.user.id) || 'sistema';
+          changes.recomendacion_raee     = _raeeResult.recomendacion;
+          changes.motivo_raee            = _raeeResult.motivo;
+          changes.motor_raee_version     = _raeeResult.version;
+          changes.fecha_evaluacion_raee  = _raeeResult.fechaEvaluacion;
+          changes.usuario_evaluacion_raee = (window.state && state.user && state.user.name) ||
+                                            (window.state && state.user && state.user.id) || '';
         }
       }
     }
-    DataService.updateRenewal(id, changes, state.user);
-    // GH3.39.1 P1: validar que el registro fue actualizado correctamente en memoria
-    var updatedRecord = DataService.getRenewal(id);
-    if (!updatedRecord) {
-      console.error('[saveRecord] updatedRecord not found for id:', id);
-      return;
-    }
-    // GH3.39.8 Task 3+4: campos F7 — existen en ALLOWED pero no tienen columna en Excel
-    // Se excluyen del sync para evitar console.error('[WorkbookWriter] campo sin columna')
-    // Permanecen en changes para que updateRenewal() los guarde en memoria
-    // QA-02R: _F7_FIELDS — único campo sin columna en Excel Maestro
-    var _F7_FIELDS = new Set([
-      'estado_entrega_equipo_nuevo', // sin columna en Excel Maestro
-    ]);
+
+    if (window.DataService) DataService.updateRenewal(id, changes, window.state && state.user);
+
+    // RC-01 T12: _F7_FIELDS vacío — estado_entrega_equipo_nuevo
+    // tiene entrada en SP_FIELD_MAP (EstadoEntregaEquipoNuevo).
+    var _F7_FIELDS = new Set([]);
     var syncChanges = {};
     Object.keys(changes).forEach(function(k) {
       if (!_F7_FIELDS.has(k)) syncChanges[k] = changes[k];
     });
-    // MVP P5 · Escribir al Excel Maestro (async, no bloquea la UI)
-    if (DataService.syncToProvider) {
-      // GH3.39.3 Fase 4: flag para suprimir renders del subscriber durante el sync
+
+    if (window.DataService && DataService.syncToProvider) {
       if (window.state) state._syncInProgress = true;
-      // GH3.25 P2: Después de escribir → recargar desde Excel → re-render
       DataService.syncToProvider(id, syncChanges)
         .then(function() {
-          // Recarga desde el workbook real (no reutilizar objeto local)
-          if (DataService.reloadFromProvider) {
+          if (window.DataService && DataService.reloadFromProvider) {
             return DataService.reloadFromProvider().then(function(ok) {
-              if (window.state) state._syncInProgress = false; // Fase 4
+              if (window.state) state._syncInProgress = false;
               if (ok) {
-                // Fase 4: UN ÚNICO render post-sync — datos frescos del Excel
-                renderResumen();
-                renderView(window.state ? state.view : 'resumen');
-                // GH3.37.1 Item 11: confirmación visual
-                toast('✓ Guardado · Sincronizado con Excel', 'success'); if (window._clearDirty) _clearDirty();
+                if (window.renderResumen) renderResumen();
+                if (window.renderView && window.state) renderView(state.view || 'resumen');
+                if (window.toast) toast('✓ Guardado · Sincronizado con Excel', 'success');
                 if (window._showSyncStatus) _showSyncStatus('ok');
               }
             });
           }
         })
         .catch(function(err) {
-          if (window.state) state._syncInProgress = false; // Fase 4
+          if (window.state) state._syncInProgress = false;
           if (err && err.graphCode === 'CONFLICT') {
-            // GH3.37.1 Item 11: recargar automáticamente en conflicto
-            DataService.reloadFromProvider && DataService.reloadFromProvider();
-            toast('Conflicto detectado. Recargando datos...', 'warning');
+            if (window.DataService && DataService.reloadFromProvider) DataService.reloadFromProvider();
+            if (window.toast) toast('Conflicto detectado. Recargando datos...', 'warning');
           } else {
             console.error('[SYNC ERROR]', err && err.message);
           }
@@ -1133,395 +1295,121 @@ function saveRecord() {
     }
   } catch(e) {
     console.error('[saveRecord]', e);
-    toast('Error al guardar: ' + e.message, 'critical');
+    if (window.toast) toast('Error al guardar: ' + e.message, 'critical');
     return;
-  }
-  
-  // Highlight de fila recientemente actualizada
-  state.recentlyUpdatedId = u.id;
-  setTimeout(() => { state.recentlyUpdatedId = null; if (state.view === 'usuarios') renderUsuarios(); }, 3500);
-  
-  closeModal();
-  
-  // ═══ DETECTAR Y NOTIFICAR CAMBIOS RELEVANTES ═══
-  const userLabel = u.nombre || ('ID ' + u.id);
-  
-  if (before.estado !== u.estado) {
-    const level = (u.estado === 'Entregado' || u.estado === 'Completado') ? 'warning' : 'info';
-    notify({
-      level: level, category: 'state',
-      title: 'Cambio de estado',
-      message: userLabel + ': ' + before.estado + ' → ' + u.estado,
-      recordId: u.id,
-    });
-  }
-  if (!before.acta_firmada && u.acta_firmada) {
-    notify({
-      level: 'info', category: 'acta',
-      title: 'Acta firmada',
-      message: userLabel + ' firmó el acta de entrega (PandaDoc)',
-      recordId: u.id,
-    });
-  }
-  if (!before.recibido_bodega && u.recibido_bodega) {
-    notify({
-      level: 'info', category: 'bodega',
-      title: 'Equipo recibido en bodega',
-      message: 'Equipo anterior de ' + userLabel + ' recibido físicamente',
-      recordId: u.id,
-    });
-  }
-  // Si no hubo eventos específicos, notificar como edición genérica
-  if (before.estado === u.estado && before.acta_firmada === u.acta_firmada && before.recibido_bodega === u.recibido_bodega) {
-    notify({
-      level: 'info', category: 'edit',
-      title: 'Registro actualizado',
-      message: userLabel + ' · cambios guardados',
-      recordId: u.id,
-    });
-  }
-  
-  // GH3.39.3 Fase 4: render único post-sync — el subscriber 'record.updated' y
-  // reloadFromProvider.then() manejan el render cuando corresponde
-  if (window.EventBus) {
-    EventBus.publish('record.updated', { id: id, changes: changes, record: updatedRecord });
   }
 }
 window.saveRecord = saveRecord;
 
-// GH3.27 CAMBIO 6: Diálogo de confirmación de guardado
-window.confirmarGuardado = function() {
-  // GH3.28: validar evaluacion fisica si se llenaron campos parcialmente
-  var bat = ($('m-eval_bateria')  || {}).value || '';
-  var tec = ($('m-eval_teclado')  || {}).value || '';
-  var tou = ($('m-eval_touchpad') || {}).value || '';
-  var est = ($('m-eval_estetico') || {}).value || '';
-  if ((bat || tec || tou || est) && typeof RAEEEngine !== 'undefined') {
-    var val = RAEEEngine.validar(bat, tec, tou, est);
-    if (!val.ok) {
-      alert('Evaluacion fisica incompleta. Por favor complete: ' + val.faltante.join(', '));
-      return;
-    }
-  }
-
-  var dlg = document.getElementById('confirm-dialog');
-  var sum = document.getElementById('confirm-summary');
-  if (!dlg || !sum) { saveRecord(); return; }
-
-  // Leer valores del modal
-  var estadoEl = $('m-estado');
-  var tecnicoEl = $('m-tecnico');
-  var recomEl = document.getElementById('m-recomendacion-display');
-
-  var lines = [];
-  if (estadoEl)   lines.push('<b>Estado:</b> ' + (estadoEl.value || '—'));
-  if (tecnicoEl)  lines.push('<b>Tecnico:</b> ' + (tecnicoEl.value || '—'));
-  if (recomEl && recomEl.style.display !== 'none')
-    lines.push('<b>' + recomEl.textContent + '</b>');
-
-  sum.innerHTML = lines.join('<br>') + '<br><br>¿Confirma que desea guardar estos cambios?';
-  dlg.style.display = 'flex';
+// F7_resolveRole — resolución de rol por email en SYSTEM_USERS
+// Mapeo rol legible → clave interna
+var _ROL_MAP = {
+  'SUPER ADMIN':    'super_admin',
+  'SUPERADMIN':     'super_admin',
+  'SUPER_ADMIN':    'super_admin',
+  'GESTOR ACTIVOS': 'gestor_activos',
+  'GESTORACTIVOS':  'gestor_activos',
+  'GESTOR_ACTIVOS': 'gestor_activos',
+  'TECNICO':        'tecnico',
+  'TÉCNICO':        'tecnico',
+  'CONSULTA':       'consulta',
+  'VISITANTE':      'visitante',
 };
-
-window.cancelarGuardado = function() {
-  var dlg = document.getElementById('confirm-dialog');
-  if (dlg) dlg.style.display = 'none';
-};
-
-window.ejecutarGuardado = function() {
-  cancelarGuardado();
-  saveRecord();
-};
-
-
-
-// QA-04 Task 1 — Sidebar colapsable
-function toggleSidebar() {
-  var app     = document.querySelector('.app');
-  var sidebar = document.querySelector('.sidebar');
-  if (!app || !sidebar) return;
-  var collapsed = sidebar.classList.toggle('collapsed');
-  app.classList.toggle('sb-collapsed', collapsed);
-  try { localStorage.setItem('sb_state', collapsed ? 'collapsed' : 'expanded'); } catch(e) { /* privado / sin Storage */ }
-}
-window.toggleSidebar = toggleSidebar;
-
-// Restaurar estado del sidebar al cargar
-(function initSidebarState() {
-  try {
-    var state = localStorage.getItem('sb_state');
-    if (state === 'collapsed') {
-      var app     = document.querySelector('.app');
-      var sidebar = document.querySelector('.sidebar');
-      if (app && sidebar) {
-        sidebar.classList.add('collapsed');
-        app.classList.add('sb-collapsed');
-      }
-    }
-  } catch(e) { /* privado / sin Storage */ }
-})();
-
-
-
-
-// QA-05 Task 5 — Acciones rápidas
-function copyRecord(id) {
-  var u = DataService.getRenewal(id);
-  if (!u) return;
-  var text = [
-    'ID: ' + u.id,
-    'Nombre: ' + (u.nombre || '—'),
-    'Empresa: ' + (u.empresa || '—'),
-    'Serial: ' + (u.eq_ant_serial || u.eq_nvo_serial || '—'),
-    'Estado: ' + (u.estado || '—'),
-    'Técnico: ' + (u.tecnico || '—'),
-  ].join('\n');
-  try {
-    navigator.clipboard.writeText(text);
-    toast('Info copiada al portapapeles', 'info');
-  } catch(e) { /* clipboard no disponible */ }
-}
-window.copyRecord = copyRecord;
-
-function showHistory(id) {
-  var u = DataService.getRenewal(id);
-  if (!u) return;
-  openEditModal(id);
-  // El stepper ya está en la sección 6 del modal
-  setTimeout(function() {
-    var tlEl = document.getElementById('m-timeline-container');
-    if (tlEl) tlEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 150);
-}
-window.showHistory = showHistory;
-
-// QA-05 Task 3 — Stats bar siempre visible
-function updateStatsBar() {
-  var real = getReal ? getReal() : (window.USERS || []).filter(u => !isBackup(u));
-  if (!real || !real.length) return;
-  var STATES_PROCESO = ['Alistamiento','Programado'];
-  var STATES_ENVIADO = ['En tránsito equipo nuevo','Entregado equipo nuevo'];
-  var STATES_CERRADO = ['Renovación completada','Cerrado'];
-  var pendientes  = real.filter(u => u.estado === 'Pendiente').length;
-  var proceso     = real.filter(u => STATES_PROCESO.includes(u.estado)).length;
-  var enviados    = real.filter(u => STATES_ENVIADO.includes(u.estado)).length;
-  var completados = real.filter(u => STATES_CERRADO.includes(u.estado)).length;
-  var bar = document.getElementById('stats-bar');
-  if (!bar) return;
-  bar.style.display = 'flex';
-  var setText2 = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
-  setText2('sb-total',      real.length);
-  setText2('sb-pendientes', pendientes);
-  setText2('sb-proceso',    proceso);
-  setText2('sb-enviados',   enviados);
-  setText2('sb-completados',completados);
-}
-window.updateStatsBar = updateStatsBar;
-
-
-// QA-05 Task 8 — Validación visual en tiempo real
-function attachFieldValidation() {
-  var REQUIRED = ['m-nombre','m-empresa','m-estado'];
-  REQUIRED.forEach(function(id) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('blur', function() {
-      var empty = !this.value.trim();
-      this.style.borderColor = empty ? '#dc2626' : '';
-      var msg = this.parentNode.querySelector('.field-error');
-      if (empty) {
-        if (!msg) {
-          msg = document.createElement('div');
-          msg.className = 'field-error';
-          msg.style.cssText = 'color:#dc2626;font-size:10px;margin-top:2px;font-weight:600';
-          msg.textContent = 'Campo requerido';
-          this.parentNode.appendChild(msg);
-        }
-      } else if (msg) {
-        msg.remove();
-        this.style.borderColor = '';
-      }
-    });
-  });
-}
-window.attachFieldValidation = attachFieldValidation;
-
-// QA-05 Task 9 — Dirty Form: detectar cambios sin guardar
-(function() {
-  var _dirtyFields = new Set();
-  var _original = {};
-
-  window._initDirtyForm = function() {
-    _dirtyFields.clear(); _original = {};
-    document.querySelectorAll('.modal-body input, .modal-body select, .modal-body textarea').forEach(function(el) {
-      if (el.id && el.id.startsWith('m-')) {
-        _original[el.id] = el.type === 'checkbox' ? el.checked : el.value;
-        el.addEventListener('change', function() {
-          var cur = el.type === 'checkbox' ? el.checked : el.value;
-          if (cur !== _original[el.id]) _dirtyFields.add(el.id);
-          else _dirtyFields.delete(el.id);
-          _startAutoSave();
-        });
-      }
-    });
-  };
-
-  window._hasDirtyForm = function() { return _dirtyFields.size > 0; };
-  window._clearDirty   = function() { _dirtyFields.clear(); if (_autoTimer) clearTimeout(_autoTimer); };
-
-  // Task 10 — AutoSave: 5s debounce
-  var _autoTimer = null;
-  function _startAutoSave() {
-    if (_autoTimer) clearTimeout(_autoTimer);
-    _showSaveStatus('Guardando en 5s...');
-    _autoTimer = setTimeout(function() {
-      if (_dirtyFields.size > 0) {
-        _showSaveStatus('Guardando...');
-        try {
-          saveRecord();
-          _showSaveStatus('Guardado ✓');
-          window._clearDirty();
-          setTimeout(function() { _showSaveStatus(''); }, 3000);
-        } catch(e) { _showSaveStatus('Error al guardar'); }
-      }
-    }, 5000);
+function F7_resolveRole(email) {
+  if (!email || typeof email !== 'string' || email.trim() === '') return 'visitante';
+  var users = window.SYSTEM_USERS || [];
+  if (!users.length) return 'visitante';
+  var lower = email.toLowerCase().trim();
+  var match = null;
+  for (var i = 0; i < users.length; i++) {
+    var u = users[i];
+    // Soportar campo correo o email
+    var userEmail = (u && (u.correo || u.email || '')) + '';
+    if (userEmail.toLowerCase().trim() === lower) { match = u; break; }
   }
+  if (!match) return 'visitante';
+  var raw = (match.role || match.rol || '').toUpperCase().trim();
+  return _ROL_MAP[raw] || raw.toLowerCase().replace(/\s+/g,'_') || 'visitante';
+}
+window.F7_resolveRole = F7_resolveRole;
 
-  function _showSaveStatus(msg) {
-    var el = document.getElementById('autosave-status');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'autosave-status';
-      el.style.cssText = 'position:sticky;bottom:0;left:0;right:0;padding:6px 16px;background:var(--accent-l);color:var(--accent);font-size:11px;font-weight:600;text-align:center;z-index:5;transition:opacity .3s';
-      var mb = document.getElementById('modal-body');
-      if (mb) mb.parentNode.insertBefore(el, mb.nextSibling);
-    }
-    el.textContent = msg;
-    el.style.display = msg ? '' : 'none';
-  }
-
-})();
-
-// QA-04 Task 5 — Filtros del panel ejecutivo
+// applyPanelFilter / clearPanelFilters
 window.PANEL_FILTERS = {};
 function applyPanelFilter(field, value) {
   window.PANEL_FILTERS = window.PANEL_FILTERS || {};
-  if (value) {
-    window.PANEL_FILTERS[field] = value;
-  } else {
-    delete window.PANEL_FILTERS[field];
-  }
+  if (value) { window.PANEL_FILTERS[field] = value; }
+  else { delete window.PANEL_FILTERS[field]; }
   if (window.renderPanelEjecutivo) renderPanelEjecutivo();
 }
 window.applyPanelFilter = applyPanelFilter;
 
 function clearPanelFilters() {
   window.PANEL_FILTERS = {};
-  ['empresa','ciudad','proyecto','tecnico','estado','feedback'].forEach(function(f) {
-    var sel = document.getElementById('pf-' + f);
-    if (sel) { sel.value = ''; sel._populated = false; }
-  });
+  document.querySelectorAll('.panel-filter-sel').forEach(function(s) { s.value = ''; });
   if (window.renderPanelEjecutivo) renderPanelEjecutivo();
 }
 window.clearPanelFilters = clearPanelFilters;
 
-// QA-04: openCreateModal eliminado — REN26 no crea colaboradores
-
-// ═══ BOOT ═══
-// ═══════════════════════════════════════════════════════════════════
-// F7.1 · F7_resolveRole — resolutor de roles para Azure AD
-// Mapea username/email de Azure AD → role interno canónico.
-// Es la única fuente de verdad para la resolución de roles en modo MSAL.
-// Fuente: window.SYSTEM_USERS (usuarios_sistema.json) normalizado por DataMapper.
-// ═══════════════════════════════════════════════════════════════════
-function F7_resolveRole(username) {
-  // QA-06.1: Resolución exclusivamente desde Usuarios_Sistema.
-  // Sin fallbacks por dominio, empresa, sufijo ni wildcard.
-  if (!username) return 'visitante';
-
-  const lower = String(username).trim().toLowerCase();
-
-  // 1. Coincidencia exacta por correo
-  const byEmail = (window.SYSTEM_USERS || []).find(u =>
-    u.correo && u.correo.toLowerCase() === lower
-  );
-  if (byEmail) return DataMapper.toInternalRole(byEmail.rol);
-
-  // 2. Coincidencia por prefijo de correo (parte antes del @)
-  const prefix = lower.split('@')[0];
-  const byPrefix = (window.SYSTEM_USERS || []).find(u => {
-    const userPrefix = (u.correo || '').toLowerCase().split('@')[0];
-    return userPrefix === prefix;
-  });
-  if (byPrefix) return DataMapper.toInternalRole(byPrefix.rol);
-
-  // 3. Coincidencia por nombre de usuario
-  const byName = (window.SYSTEM_USERS || []).find(u =>
-    u.nombre && u.nombre.toLowerCase().includes(prefix)
-  );
-  if (byName) return DataMapper.toInternalRole(byName.rol);
-
-  // 4. Visitante — mínimo privilegio. Sin excepciones.
-  return 'visitante';
+// confirmarGuardado / cancelarGuardado / ejecutarGuardado — modal de confirmación de guardado
+function confirmarGuardado() {
+  var bg = document.getElementById('confirm-save-bg');
+  if (bg) bg.classList.add('active');
 }
-window.F7_resolveRole = F7_resolveRole;
+window.confirmarGuardado = confirmarGuardado;
 
-// ═══════════════════════════════════════════════════════════════════
-// F7.1 · SessionManager
-// Mantiene la sesión del dashboard: quién está logueado, cuándo,
-// con qué rol y permisos. Completamente independiente de Graph.
-// ═══════════════════════════════════════════════════════════════════
+function cancelarGuardado() {
+  var bg = document.getElementById('confirm-save-bg');
+  if (bg) bg.classList.remove('active');
+}
+window.cancelarGuardado = cancelarGuardado;
 
-// ════════════════════════════════════════════════════════════════════
-// GH3.39.2 P9/P10 — Subscriber global de 'record.updated'
-// Actualiza automáticamente TODOS los dashboards sin recargar la página
-// ════════════════════════════════════════════════════════════════════
-(function() {
-  if (!window.EventBus) return;
+function ejecutarGuardado() {
+  cancelarGuardado();
+  if (window.saveRecord) saveRecord();
+}
+window.ejecutarGuardado = ejecutarGuardado;
 
-  EventBus.subscribe('record.updated', function(payload) {
-    // Fase 4: no renderizar si un sync está en curso — el .then() lo hará
-    if (window.state && state._syncInProgress) return;
-    var view = window.state && state.view;
+// toggleSidebar — contraer/expandir sidebar
+function toggleSidebar() {
+  var app     = document.querySelector('.app');
+  var sidebar = document.querySelector('.sidebar');
+  if (!app || !sidebar) return;
+  var collapsed = sidebar.classList.toggle('collapsed');
+  app.classList.toggle('sb-collapsed', collapsed);
+  // RC-06 item 11: body class para que footer reaccione
+  document.body.classList.toggle('sb-collapsed', collapsed);
+  try { localStorage.setItem('sb_state', collapsed ? 'collapsed' : 'expanded'); } catch(e) { /* privado */ }
+}
+window.toggleSidebar = toggleSidebar;
 
-    // Refrescar KPIs (resumen principal)
-    if (window.renderResumen) renderResumen();
-
-    // Refrescar la vista actual si es diferente al resumen
-    if (view && view !== 'resumen' && window.renderView) {
-      renderView(view);
-    }
-
-    // Módulos específicos que requieren actualización
-    var viewRenderers = {
-      'panel-ejecutivo': window.renderPanelEjecutivo,
-      'home-tecnico':    window.renderHomeTecnico,
-      'por-ciudad':      window.renderPorCiudad,
-      'por-tecnico':     window.renderPorTecnico,
-      'actividad':       window.renderActividad,
-      'estados':         window.renderEstados,
-    };
-
-    Object.keys(viewRenderers).forEach(function(v) {
-      if (viewRenderers[v] && v !== view) {
-        // Los paneles no visibles se marcan como stale — se recargarán al navegar
-        // Solo re-renderizar los que están activos
-      }
+// Restaurar estado del sidebar al cargar
+(function initSidebarState() {
+  // RC-06 item 10: poblar data-tip para tooltips con sidebar contraído
+  setTimeout(function() {
+    document.querySelectorAll('.sb-item').forEach(function(item) {
+      var span = item.querySelector('span:first-of-type');
+      if (span && !item.dataset.tip) item.setAttribute('data-tip', span.textContent.trim());
     });
-
-    // Si el Timeline del modal está abierto, actualizarlo
-    var tlContainer = document.getElementById('m-timeline-container');
-    var editingId = window.state && state.editingId;
-    if (tlContainer && editingId && payload && payload.id === editingId) {
-      var rec = DataService.getRenewal(editingId);
-      if (rec && window.renderTimelineHTML) {
-        tlContainer.innerHTML = renderTimelineHTML(rec);
-      }
+  }, 100);
+  try {
+    var savedState = localStorage.getItem('sb_state');
+    if (savedState === 'collapsed') {
+      var app     = document.querySelector('.app');
+      var sidebar = document.querySelector('.sidebar');
+      if (app)     app.classList.add('sb-collapsed');
+      if (sidebar) sidebar.classList.add('collapsed');
+      document.body.classList.add('sb-collapsed');
     }
-  });
-
-  // También suscribirse al evento de provider para actualizar después de PATCH exitoso
-  EventBus.subscribe('provider.write.success', function(payload) {
-    if (window.renderResumen) renderResumen();
-  });
+  } catch(e) { /* sin acceso a localStorage */ }
 })();
+
+// attachFieldValidation — validación de campos del formulario
+window.attachFieldValidation = function() {
+  // validación básica de campos requeridos en el modal
+  document.querySelectorAll('#modal-body [required]').forEach(function(el) {
+    el.addEventListener('blur', function() {
+      var grp = el.closest('.form-group');
+      if (grp) grp.classList.toggle('has-error', !el.value.trim());
+    });
+  });
+};

@@ -1,0 +1,43 @@
+# Reglas permanentes para Claude — proyecto PMC-TI-REN26
+
+## Modificación de código
+
+1. Antes de eliminar, mover o refactorizar cualquier función, ejecutar
+   análisis completo de referencias. Comandos:
+     grep -rn "NOMBRE_FUNCION" js/
+     node --check js/ui.js
+
+2. No eliminar código mientras exista al menos una referencia activa.
+
+3. Secuencia obligatoria para sustituir una función:
+   a) Actualizar todos los puntos de invocación
+   b) Verificar con node --check
+   c) Ejecutar suite
+   d) Eliminar implementación anterior
+
+4. Prohibido usar slice/substring/truncate para eliminar bloques.
+   Usar str_replace con texto único y específico.
+
+5. Toda modificación finaliza con:
+     node --check js/ARCHIVO.js
+     cd /home/claude && node test_STAB_v08.js
+   Resultado esperado: 640/640
+
+## Invariante de suite
+
+640/640 antes de cualquier entrega.
+Si la suite baja de 640: no entregar. Investigar y corregir.
+
+## Archivos protegidos (no modificar sin causa justificada)
+
+- js/graph.js      (SP_FIELD_MAP, ALLOWED_FIELDS, RAEEEngine)
+- js/provider.js   (WorkbookWriter, WorkbookLoader)
+- js/dataService.js (normalizeRecord_F3, LOAD_ALIASES)
+- js/config.js     (PRODUCTION_CONFIG)
+- js/sync.js
+
+## Deploy
+
+URL producción: https://dashboardpmc-ren2026.netlify.app
+Build activo:   /home/claude/gh1_build/
+ZIP entrega:    /mnt/user-data/outputs/PMC-TI-REN26_*.zip

@@ -699,7 +699,7 @@
 .modal-bg.active { display: flex; animation: viewEnter 0.2s ease; }
 .modal {
   background: var(--bg-card); border-radius: var(--r-xl);
-  width: 100%; max-width: 920px; max-height: 92vh;
+  width: 100%; max-width: 920px; max-height: 85vh;
   display: flex; flex-direction: column;
   box-shadow: var(--shadow-xl); overflow: hidden; /* GH3.39.1 P4: contener el modal — native selects no son clippeados */
   animation: modalIn 0.35s var(--ease);
@@ -717,7 +717,7 @@
    overflow-y:auto activa el scroll. overflow:visible en .modal no interfiere con esto —
    los native <select> en desktop siempre son popups OS-level, nunca clippeados por CSS. */
 .modal-body {
-  padding: 28px;
+  padding: 22px 24px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -725,17 +725,18 @@
 }
 .modal-foot { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; background: var(--bg-subtle);   flex-shrink: 0; /* GH3.39.1 P4 */
 }
-.form-section { margin-bottom: 28px; }
+.form-section { margin-bottom: 20px; width: 100%; box-sizing: border-box; }
 .form-section:last-child { margin-bottom: 0; }
 .form-section-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .form-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; min-width: 0; overflow: hidden; }
 .form-group.full { grid-column: 1 / -1; }
 .form-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
 .form-input, .form-select, .form-textarea {
   padding: 10px 13px; border: 1px solid var(--border-strong); border-radius: var(--r-sm);
   font-size: 13px; background: var(--bg-elev); color: var(--text-1);
+  box-sizing: border-box; width: 100%;
   transition: all 0.15s; font-family: inherit;
 }
 .form-textarea { resize: vertical; min-height: 60px; }
@@ -985,3 +986,140 @@
   line-height: 1; flex-shrink: 0;
 }
 .auth-warn-close:hover { color: #78350f; }
+
+/* ── RC-06: Timeline sticky dentro del scroll del modal ── */
+#seccion-timeline {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg-elev, #fff);
+  margin-bottom: 0 !important;
+  padding: 10px 24px 12px;
+  border-bottom: 1px solid var(--border, #E2E2E2);
+  box-shadow: 0 2px 6px rgba(0,0,0,.07);
+}
+.tl-progress {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-x: auto;
+  padding: 8px 24px 4px;
+  gap: 0;
+  scrollbar-width: thin;
+}
+.tl-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 72px;
+  position: relative;
+  flex-shrink: 0;
+}
+.tl-step + .tl-step::before {
+  content: '';
+  position: absolute;
+  left: -50%;
+  top: 12px;
+  width: 100%;
+  height: 2px;
+  background: var(--border, #E0E0E0);
+  z-index: 0;
+}
+.tl-step-done + .tl-step::before, .tl-step-current + .tl-step::before {
+  background: var(--accent, #A51C2B);
+}
+.tl-step-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--bg-subtle, #F0F0F0);
+  color: var(--text-3, #999);
+  z-index: 1;
+  position: relative;
+}
+.tl-step-done .tl-step-icon {
+  background: var(--accent, #A51C2B);
+  color: #fff;
+}
+.tl-step-current .tl-step-icon {
+  background: var(--accent, #A51C2B);
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(165,28,43,.25);
+}
+.tl-step-label {
+  font-size: 9px;
+  color: var(--text-3, #999);
+  text-align: center;
+  margin-top: 4px;
+  max-width: 64px;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+}
+.tl-step-done .tl-step-label,
+.tl-step-current .tl-step-label {
+  color: var(--accent, #A51C2B);
+  font-weight: 700;
+}
+
+/* ── RC-06 FIXES: sb-hamburger en sb-head ── */
+.sb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border, #E2E2E2);
+}
+.sb-hamburger {
+  width: 32px; height: 32px;
+  border: none; background: none;
+  cursor: pointer;
+  border-radius: 6px;
+  color: var(--text-2, #6B6B6B);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.sb-hamburger:hover { background: var(--bg-hover, rgba(0,0,0,.06)); }
+.sb-hamburger svg { width: 18px; height: 18px; }
+
+/* ── RC-06 FIXES: Tooltips sidebar contraído ── */
+.sidebar.collapsed .sb-item {
+  position: relative;
+}
+.sidebar.collapsed .sb-item::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border, #E2E2E2);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-1, #1F1F1F);
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+}
+.sidebar.collapsed .sb-item:hover::after { opacity: 1; }
+
+/* ── RC-06 FIXES: Footer respeta sidebar ── */
+#app-footer {
+  transition: margin-left .25s;
+}
+body:not(.sb-collapsed) #app-footer {
+  margin-left: var(--sidebar-w, 264px);
+}
+body.sb-collapsed #app-footer {
+  margin-left: 60px;
+}

@@ -29,6 +29,17 @@ function _applyRBAC(role, userEmail) {
   var displayName = (sysUser && (sysUser.nombre || sysUser.name)) || (userEmail || 'Usuario');
   var nameEl = document.getElementById('user-name');
   if (nameEl) nameEl.textContent = displayName;
+  // RC-06 item 13: actualizar avatar y rol
+  var avatarEl = document.getElementById('user-avatar');
+  if (avatarEl) {
+    var parts = displayName.split(' ').filter(Boolean);
+    avatarEl.textContent = parts.length >= 2
+      ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase()
+      : displayName.slice(0,2).toUpperCase();
+  }
+  var roleEl = document.getElementById('user-role');
+  var roleLabels = { super_admin:'Super Admin',gestor_activos:'Gestor de Activos',tecnico:'Técnico',consulta:'Consulta',visitante:'Visitante' };
+  if (roleEl) roleEl.textContent = (roleLabels[role] || role);
   // Actualizar state.user si no tiene nombre
   if (window.state && state.user && !state.user.nombre) state.user.nombre = displayName;
 
@@ -435,7 +446,13 @@ function _bootCore() {
   updatePreviewButton();
   updateAprobacionesItem();
   updateRoleBadge();
-  updateSidebarByRole();
+  // RC-03 T1: updateSidebarByRole absorbida por _applyRBAC
+  // _applyRBAC ya fue llamada en línea 321 (bootstrap) pero re-ejecutar
+  // aquí garantiza que el sidebar refleja el rol final post-carga.
+  if (window.state && state.user) {
+    _applyRBAC(state.user.role || state.user.rol || 'visitante',
+               state.user.email || state.user.id || '');
+  }
   // GH3.5: timer gestionado para evitar fuga de recursos
   const _approvalTimer = setInterval(updateAprobacionesItem, 5000);
   // El timer se cancela automáticamente cuando el usuario cierra la sesión
@@ -1476,3 +1493,186 @@ window.APP_CONFIG = (() => {
 // ═══════════════════════════════════════════════════════════════════
 // F3 · KPIService (métricas agregadas, dominio puro)
 // ═══════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════
+// DEP-01 — Funciones restauradas: estaban definidas y se perdieron
+// durante refactorizaciones. No son funcionalidad nueva.
+// ════════════════════════════════════════════════════════════════════
+
+// ── DEP-01.1: renderObsolescencePanelHTML ───────────────────────────
+// Renderiza el panel de obsolescencia/RAEE del equipo anterior en el modal.
+// Llamada desde ui.js en la sección 2 (Equipo anterior).
+function renderObsolescencePanelHTML(record) {
+  if (!record) return '';
+  var cls = record.estado_eq_ant || record._obsolescence_class || '';
+  var rec = record.recomendacion_raee || '';
+  if (!cls && !rec) return '';
+  var colorMap = {
+    'RAEE':             '#C00000',
+    'Reasignable':      '#2E7D32',
+    'Venta interna':    '#1565C0',
+    'Donacion':         '#E65100',
+    'Revisión manual':  '#757575',
+  };
+  var color = colorMap[rec] || colorMap[cls] || '#757575';
+  var label = rec || cls;
+  if (!label) return '';
+  return '<div style="margin:8px 0;padding:8px 14px;border-left:3px solid ' + color +
+         ';background:var(--bg-subtle);border-radius:0 var(--r-sm) var(--r-sm) 0">' +
+         '<div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase' +
+         ';letter-spacing:.5px;margin-bottom:2px">Clasificación RAEE</div>' +
+         '<span style="font-size:12px;font-weight:700;color:' + color + '">' +
+         (window.esc ? esc(label) : label) + '</span>' +
+         '</div>';
+}
+window.renderObsolescencePanelHTML = renderObsolescencePanelHTML;
+
+// ── DEP-01.2: updateRoleBadge ────────────────────────────────────────
+// Actualiza el badge de rol en el topbar con el rol activo del usuario.
+function updateRoleBadge() {
+  var role  = window.state && (state.user.role || state.user.rol) || '';
+  var label = {
+    super_admin:   'Super Admin',
+    gestor_activos:'Gestor Activos',
+    tecnico:       'Técnico',
+    consulta:      'Consulta',
+    visitante:     'Visitante',
+  }[role] || role;
+  var dotEl   = document.getElementById('tb-role-dot');
+  var labelEl = document.getElementById('tb-role-label');
+  if (dotEl)   { dotEl.className = 'role-dot ' + role; }
+  if (labelEl) { labelEl.textContent = label || '—'; }
+}
+window.updateRoleBadge = updateRoleBadge;
+
+// ── DEP-01.3: toggleRoleSwitcher ────────────────────────────────────
+// Muestra/oculta el menú desplegable del role switcher (solo super_admin).
+function toggleRoleSwitcher() {
+  var menu = document.getElementById('role-switcher-menu');
+  if (!menu) return;
+  var isOpen = menu.style.display === 'block' || menu.classList.contains('open');
+  menu.style.display = isOpen ? '' : 'block';
+  menu.classList.toggle('open', !isOpen);
+}
+window.toggleRoleSwitcher = toggleRoleSwitcher;
+
+// ── DEP-01.4: switchRole ─────────────────────────────────────────────
+// Cambia el rol activo del usuario (herramienta de desarrollo — solo super_admin).
+function switchRole(newRole, event) {
+  if (event) event.stopPropagation();
+  if (!window.state) return;
+  var menu = document.getElementById('role-switcher-menu');
+  if (menu) { menu.style.display = ''; menu.classList.remove('open'); }
+  // Solo super_admin puede cambiar de rol
+  var actualRole = state.user.role || state.user.rol;
+  if (actualRole !== 'super_admin') return;
+  state.user.role = newRole;
+  state.user.rol  = newRole;
+  var permissions = (window.PERMISSIONS && window.PERMISSIONS[newRole]) || {};
+  state.user.permissions = permissions;
+  // Re-aplicar RBAC con el nuevo rol
+  if (window._applyRBAC) _applyRBAC(newRole, state.user.email || state.user.id);
+  updateRoleBadge();
+  var toast_fn = window.toast;
+  if (toast_fn) toast_fn('Rol cambiado a: ' + newRole, 'info');
+}
+window.switchRole = switchRole;
+
+// ── DEP-01.5: Modal "Bloquear renovación" ────────────────────────────
+function openBlockModal() {
+  var editingId = window.state && state.editingId;
+  if (!editingId) return;
+  var bg = document.getElementById('block-modal-bg');
+  if (!bg) return;
+  // Poblar opciones de categoría
+  var sel = document.getElementById('block-category') || document.getElementById('block-category-select');
+  if (sel && window.ConfigService && ConfigService.CATEGORIAS_BLOQUEO) {
+    sel.innerHTML = ConfigService.CATEGORIAS_BLOQUEO.map(function(c) {
+      return '<option value="' + (window.esc ? esc(c) : c) + '">' + (window.esc ? esc(c) : c) + '</option>';
+    }).join('');
+  }
+  var eyebrow = document.getElementById('block-modal-eyebrow');
+  if (eyebrow) eyebrow.textContent = 'Registro #' + editingId;
+  var reason = document.getElementById('block-reason');
+  if (reason) reason.value = '';
+  bg.classList.add('active');
+}
+window.openBlockModal = openBlockModal;
+
+function closeBlockModal() {
+  var bg = document.getElementById('block-modal-bg');
+  if (bg) bg.classList.remove('active');
+}
+window.closeBlockModal = closeBlockModal;
+
+function submitBlock() {
+  var editingId = window.state && state.editingId;
+  if (!editingId) { closeBlockModal(); return; }
+  var sel    = document.getElementById('block-category') || document.getElementById('block-category-select');
+  var reason = document.getElementById('block-reason');
+  var cat    = sel    ? sel.value    : '';
+  var mot    = reason ? reason.value.trim() : '';
+  if (!mot) {
+    if (window.toast) toast('El motivo es obligatorio', 'warning');
+    return;
+  }
+  // Actualizar el registro con estado Bloqueado
+  var changes = {
+    estado: StateMachine.states.BLOQUEADO,
+    block_reason:    mot,
+    block_category:  cat,
+  };
+  if (window.DataService) DataService.updateRenewal(editingId, changes, window.state && state.user);
+  if (window.saveRecord) saveRecord();
+  closeBlockModal();
+  if (window.toast) toast('Renovación bloqueada', 'warning');
+}
+window.submitBlock = submitBlock;
+
+// ── DEP-01.6: Modal "Solicitar validación de cierre" ─────────────────
+function openValidationModal() {
+  var editingId = window.state && state.editingId;
+  if (!editingId) return;
+  var bg = document.getElementById('val-modal-bg');
+  if (!bg) return;
+  var eyebrow = document.getElementById('val-modal-eyebrow');
+  if (eyebrow) eyebrow.textContent = 'Registro #' + editingId;
+  var body = document.getElementById('val-modal-body');
+  if (body) {
+    var r = window.DataService ? DataService.getRenewal(editingId) : null;
+    body.innerHTML = r
+      ? '<p style="font-size:13px;color:var(--text-2);line-height:1.6">Solicitar revisión y aprobación de cierre para:<br>' +
+        '<strong>' + (r.nombre || '—') + '</strong> · ' + (r.empresa || '—') + '</p>'
+      : '<p style="font-size:13px;color:var(--text-2)">Registro #' + editingId + '</p>';
+  }
+  bg.classList.add('active');
+}
+window.openValidationModal = openValidationModal;
+
+function closeValidationModal() {
+  var bg = document.getElementById('val-modal-bg');
+  if (bg) bg.classList.remove('active');
+}
+window.closeValidationModal = closeValidationModal;
+
+function submitValidation() {
+  var editingId = window.state && state.editingId;
+  if (!editingId) { closeValidationModal(); return; }
+  // RC-06 item 8: cambiar estado + guardar + cerrar modal + notificar
+  var changes = { estado: StateMachine.states.PENDIENTE_APROBACION };
+  if (window.DataService) DataService.updateRenewal(editingId, changes, window.state && state.user);
+  if (window.saveRecord) saveRecord();
+  closeValidationModal();
+  // Cerrar modal de edición también
+  var modalBg = document.getElementById('modal-bg');
+  if (modalBg) modalBg.classList.remove('active');
+  if (window.state) state.editingId = null;
+  // Actualizar la tabla con el nuevo estado
+  if (window.renderResumen) renderResumen();
+  if (window.renderView) renderView(window.state ? state.view : 'resumen');
+  if (window.toast) toast('Validación solicitada · Estado actualizado a Pendiente aprobación', 'success');
+}
+window.submitValidation = submitValidation;
+
+// ── DEP-01.7: RC2_doLogin — export faltante ──────────────────────────
+window.RC2_doLogin = RC2_doLogin;

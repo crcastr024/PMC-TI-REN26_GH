@@ -1,0 +1,10 @@
+{
+  "name": "pmc-ti-ren26",
+  "version": "0.8.0",
+  "tag": "STAB-v08",
+  "branch": "release/STAB-v08",
+  "frozen": true,
+  "frozen_at": "2026-07-15T01:23:19.264Z",
+  "suite": "640/640",
+  "description": "PMC-TI-REN26 Dashboard — Renovación Tecnológica 2026 — Heinsohn Business Technology"
+}
