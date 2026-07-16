@@ -85,8 +85,10 @@ const SynchronizationManager = (() => {
   let _timer        = null;
   let _lastETag     = null;
   let _running      = false;
-  let _interval     = 10000; // 10 segundos (MVP)
+  let _interval     = 30000; // RC-06: 30 segundos — reduce llamadas Graph 3x
   let _versionCache = {};    // id → _version
+  let _pendingTick  = null;   // RC-06 TASK 7: debounce de requestTick
+  let _tickActive   = false;  // RC-06 TASK 6: lock global tick activo
 
   function isExcelMode() {
     return (window.APP_CONFIG && window.APP_CONFIG.dataSource === 'excel')
@@ -95,7 +97,9 @@ const SynchronizationManager = (() => {
 
   async function tick() {
     if (_running) return;
+    if (_tickActive) return; // RC-06 TASK 6: lock global
     _running = true;
+    _tickActive = true;
     try {
       EventBus.publish('provider.sync.started', { timestamp: Date.now() });
 
@@ -187,6 +191,7 @@ const SynchronizationManager = (() => {
       EventBus.publish('provider.sync.failed', { error: err.message });
     } finally {
       _running = false;
+      _tickActive = false; // RC-06 TASK 6: liberar lock
     }
   }
 
@@ -202,7 +207,7 @@ const SynchronizationManager = (() => {
         document.addEventListener('visibilitychange', () => {
           if (document.hidden) {
             if (_timer) clearInterval(_timer);
-            _timer = setInterval(tick, _interval * 6); // 60s cuando oculto
+            _timer = setInterval(tick, _interval * 5); // RC-06: 150s cuando oculto (30s×5)
 
           } else {
             if (_timer) clearInterval(_timer);
@@ -219,7 +224,17 @@ const SynchronizationManager = (() => {
 
     },
     tick,
-    isRunning:   () => !!_timer,
+    // RC-06 TASK 7: tick con debounce — N llamadas en < delayMs → 1 sola ejecución
+    requestTick(delayMs) {
+      delayMs = typeof delayMs === 'number' ? delayMs : 1500;
+      if (_pendingTick) clearTimeout(_pendingTick);
+      _pendingTick = setTimeout(function() {
+        _pendingTick = null;
+        tick();
+      }, delayMs);
+    },
+    isTickActive:  () => _tickActive,       // RC-06 TASK 6: estado del lock
+    isRunning:     () => !!_timer,
     setInterval: (ms) => { _interval = ms; },
 
     onReconnect: async function() {

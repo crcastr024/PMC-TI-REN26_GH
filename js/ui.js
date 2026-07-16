@@ -1300,17 +1300,14 @@ function saveRecord() {
       if (window.state) state._syncInProgress = true;
       DataService.syncToProvider(id, syncChanges)
         .then(function() {
-          if (window.DataService && DataService.reloadFromProvider) {
-            return DataService.reloadFromProvider().then(function(ok) {
-              if (window.state) state._syncInProgress = false;
-              if (ok) {
-                if (window.closeModal) closeModal(true);
-                if (window.renderResumen) renderResumen();
-                if (window.renderView && window.state) renderView(state.view || 'resumen');
-                if (window.toast) toast('✓ Guardado · Sincronizado con Excel', 'success');
-                if (window._showSyncStatus) _showSyncStatus('ok');
-              }
-            });
+          // RC-06 TASK 5: no reloadFromProvider completo — requestTick con debounce
+          // closeModal y renderResumen ya fueron llamados antes del PATCH (RC-07)
+          if (window.state) state._syncInProgress = false;
+          if (window.toast) toast('✓ Guardado · Sincronizado', 'success');
+          if (window._showSyncStatus) _showSyncStatus('ok');
+          // Propagar a otros usuarios: 1 tick tras 1.5s de propagación Graph
+          if (window.SynchronizationManager && SynchronizationManager.requestTick) {
+            SynchronizationManager.requestTick(1500);
           }
         })
         .catch(function(err) {

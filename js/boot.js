@@ -314,7 +314,7 @@ async function boot() {
 
 
       // Iniciar sincronización automática (RC1 GL-5 preservado)
-      SynchronizationManager.start((window.APP_CONFIG && window.APP_CONFIG.refreshInterval) || 10000);
+      SynchronizationManager.start((window.APP_CONFIG && window.APP_CONFIG.refreshInterval) || 30000 /* RC-06: 30s */);
 
 
     } catch(err) {
