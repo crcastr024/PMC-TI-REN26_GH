@@ -157,7 +157,6 @@ window.HBT = (function() {
 // porque ExcelFieldName.toLowerCase() coincide directamente con el campo interno.
 // Si el Excel usa CamelCase (EqNvoTipo), este alias permite encontrar la columna.
 window.FIELD_COLUMN_ALIASES = {
-<<<<<<< HEAD
   // ══════════════════════════════════════════════════════════════════
   // Correspondencia 1:1 explícita: campo JS → columna Excel exacta
   // WorkbookWriter hace lookup case-insensitive sobre el valor.
@@ -227,56 +226,4 @@ window.FIELD_COLUMN_ALIASES = {
   'motor_raee_version':       'MOTOR_RAEE_VERSION',
   'fecha_evaluacion_raee':    'FECHA_EVALUACION_RAEE',
   'usuario_evaluacion_raee':  'USUARIO_EVALUACION_RAEE',
-=======
-  // Nombre completo del colaborador
-  'nombre':          'NombreCompleto',    // SP_FIELD_MAP: Title→nombre y NombreCompleto→nombre
-  // Equipo nuevo
-  'eq_nvo_tipo':     'EqNvoTipo',
-  'eq_nvo_marca':    'EqNvoMarca',
-  'eq_nvo_modelo':   'EqNvoModelo',
-  'eq_nvo_serial':   'EqNvoSerial',
-  'eq_nvo_placa':    'EqNvoPlaca',
-  'eq_nvo_hostname': 'EqNvoHostname',
-  'eq_nvo_procesador': 'EqNvoProcesador',
-  'eq_nvo_ram':      'EqNvoRam',
-  'eq_nvo_disco':    'EqNvoDisco',
-  'eq_nvo_so':       'EqNvoSO',
-  'dato_maestro':    'DatoMaestro',
-  // Equipo anterior
-  'eq_ant_tipo':     'EqAntTipo',
-  'eq_ant_marca':    'EqAntMarca',
-  'eq_ant_modelo':   'EqAntModelo',
-  'eq_ant_serial':   'EqAntSerial',
-  'eq_ant_af':       'EqAntAF',
-  'eq_ant_placa':    'EqAntPlaca',
-  'eq_ant_hostname': 'EqAntHostname',
-  'eq_ant_procesador': 'EqAntProcesador',
-  'eq_ant_memoria':  'EqAntRam',
-  'eq_ant_disco':    'EqAntDisco',
-  'eq_ant_so':       'EqAntSO',
-  // Devolución
-  'lista_recoleccion': 'LISTA_RECOLECCION',   // guard CamelCase
-  'observaciones_devolucion': 'ObservacionesDevolucion',
-  // Registro
-  'ceco':            'CentroCostos',
-  'registro':        'NIVEL_USUARIO',
-  // Estado y seguimiento
-  'estado_entrega_equipo_nuevo': 'EstadoEntregaEquipoNuevo',
-  'estado':           'ESTADO_RENOVACION',  // Excel: ESTADO_RENOVACION
-  'caso_envio':      'CasoEnvio',
-  'fecha_envio':     'FechaEnvio',
-  'fecha_entrega':   'FechaAsignacion',
-  'fecha_envio_acta': 'FECHA_ACTA_ENVIADA',
-  'fecha_firma_acta': 'FECHA_ACTA_FIRMADA',
-  'fecha_solicitud_devolucion': 'FechaSolicitudDevolucion',
-  'fecha_transito':  'FechaTransito',
-  'fecha_recepcion_bodega': 'FechaRecepcionBodega',
-  // Documentos
-  'acta_entrega_url':  'ActaEntregaUrl',
-  'nombre_archivo':    'NOMBRE_ARCHIVO_ACTA',
-  'disposicion_final': 'DisposicionFinal',
-  // Feedback y evidencia
-  'feedback':          'CALIFICACION_FEEDBACK',
-  'evidencia_adjunta': 'EvidenciaAdjunta',
->>>>>>> 86454359875c2d1de677f078b9a0117058f463ec
 };

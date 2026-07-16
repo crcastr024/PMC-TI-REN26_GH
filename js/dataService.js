@@ -54,13 +54,6 @@ function normalizeRecord_F3(r) {
     'bloqueado':         'blocked',
     'categoriabloqueo':  'block_category',
     'estadoanteriorbloqueo': 'block_previous_state',
-    // Excel UPPERCASE_UNDERSCORE aliases
-    'nivel_usuario':       'registro',
-    'estado_renovacion':   'estado',
-    'nombre_archivo_acta': 'nombre_archivo',
-    'fecha_acta_enviada':  'fecha_envio_acta',
-    'fecha_acta_firmada':  'fecha_firma_acta',
-    'calificacion_feedback': 'feedback',
   };
   Object.keys(LOAD_ALIASES).forEach(function(src) {
     var dst = LOAD_ALIASES[src];
