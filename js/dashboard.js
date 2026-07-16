@@ -101,6 +101,11 @@ function buildDashboardStats(users) {
   // hbt/hgs cuentan TODOS (incluyendo backup) — compatible con calculateProjectMetrics original
   var hbt = all.filter(function(u){ return u.empresa === 'HBT'; }).length;
   var hgs = all.filter(function(u){ return u.empresa === 'HGS'; }).length;
+  // STAB-v10: desglose operativos vs backup por empresa
+  var hbtOp = activos.filter(function(u){ return u.empresa === 'HBT'; }).length;
+  var hgsOp = activos.filter(function(u){ return u.empresa === 'HGS'; }).length;
+  var hbtBk = backups.filter(function(u){ return u.empresa === 'HBT'; }).length;
+  var hgsBk = backups.filter(function(u){ return u.empresa === 'HGS'; }).length;
 
   return {
     // Totales
@@ -109,6 +114,8 @@ function buildDashboardStats(users) {
     totalColaboradores: activos.length,
     totalBackups:       backups.length,
     hbt: hbt, hgs: hgs,
+    hbtOperativos: hbtOp, hgsOperativos: hgsOp, // STAB-v10: solo activos
+    hbtBackup:     hbtBk, hgsBackup:     hgsBk,  // STAB-v10: solo backup
     // KPIs por hito
     pendientes:   pendientes,
     proceso:      proceso,

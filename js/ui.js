@@ -26,13 +26,13 @@ function renderResumen() {
   _setText('h-entregados', entregados);
   _setText('h-pct', pct + '%');
   
-  _setText('h-empresas', 'HBT ' + m.hbt + ' \u00b7 HGS ' + m.hgs);
+  _setText('h-empresas', 'HBT + HGS'); // STAB-v10: sin números de empresa en hero
   var _lkpiC = document.getElementById('lkpi-colabs');
   if (_lkpiC) _lkpiC.textContent = m.totalColaboradores;
   var _lkpiCS = document.getElementById('lkpi-colabs-sub');
   if (_lkpiCS) _lkpiCS.textContent = 'colaboradores activos';
   var _lkpiE = document.getElementById('lkpi-empresas');
-  if (_lkpiE) _lkpiE.textContent = 'HBT ' + m.hbt + ' \u00b7 HGS ' + m.hgs;
+  if (_lkpiE) _lkpiE.textContent = 'HBT + HGS';
   
   const _allCount   = m.totalEquipos;
   const _backupCount = m.totalBackups;
@@ -45,7 +45,7 @@ function renderResumen() {
   var _bcEl = document.getElementById('k-backup');
   if (_bcEl) _bcEl.textContent = _backupCount;
   var _bcSubEl = document.getElementById('k-backup-sub');
-  if (_bcSubEl) _bcSubEl.textContent = m.hbt + ' HBT · ' + m.hgs + ' HGS (backup)';
+  if (_bcSubEl) _bcSubEl.textContent = (m.hbtBackup||0) + ' HBT · ' + (m.hgsBackup||0) + ' HGS (backup)'; // STAB-v10
   
   _setText('b-usuarios', _allCount);
   const provName = (DataService.providerName ? DataService.providerName() : 'Mock');
@@ -87,24 +87,18 @@ function renderResumen() {
 
 function renderEmpresaChart() {
   // STAB-v09.1 TASK 4: usar buildDashboardStats para consistencia total
-  var _bds = window.buildDashboardStats ? buildDashboardStats(getReal()) : calculateProjectMetrics();
+  var _bds = window.buildDashboardStats ? buildDashboardStats(window.USERS || []) : calculateProjectMetrics();
   const data = ['HBT', 'HGS'].map(emp => {
     var d = (_bds.porEmpresa && _bds.porEmpresa[emp]) || { total:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
+    var bkCount = emp === 'HBT' ? (_bds.hbtBackup||0) : (_bds.hgsBackup||0); // STAB-v10 TASK 4
     return {
-      label: emp, total: d.total, backup: 0,
+      label: emp, total: d.total, backup: bkCount,
       entregados: d.entregados, proceso: d.proceso, pend: d.pendientes, finalizados: d.finalizados, pct: d.pct
     };
   });
   $('empresa-chart').innerHTML = data.map(d => {
     const pct = d.total > 0 ? Math.round(d.entregados / d.total * 100) : 0;
-    return '<div class="chart-row"><div class="chart-row-head"><div class="chart-row-name">' + d.label + '</div><div class="chart-row-stat"><strong>' + d.total + '</strong> equipos · ' + d.entregados + ' entregados (<strong>' + pct + '%</strong>)</div></div><div class="chart-bar">' +
-      (d.entregados ? '<div class="chart-bar-seg" style="width:' + (d.entregados/d.total*100) + '%; background: var(--green)"></div>' : '') +
-      (d.proceso ? '<div class="chart-bar-seg" style="width:' + (d.proceso/d.total*100) + '%; background: var(--amber)"></div>' : '') +
-      (d.pend ? '<div class="chart-bar-seg" style="width:' + (d.pend/d.total*100) + '%; background: var(--blue)"></div>' : '') +
-      (d.backup ? '<div class="chart-bar-seg" style="width:' + (d.backup/d.total*100) + '%; background: #FCD34D"></div>' : '') +
-      '</div><div class="chart-legend"><div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--green)"></span>Entregados ' + d.entregados + '</div><div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--amber)"></span>En proceso ' + d.proceso + '</div><div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--blue)"></span>Pendientes ' + d.pend + '</div>' +
-      (d.backup ? '<div class="chart-legend-item"><span class="chart-legend-dot" style="background: #FCD34D"></span>Backup ' + d.backup + '</div>' : '') +
-      '</div></div>';
+    const totalDisp = d.total + d.backup;    return '<div class="chart-row">' +'<div class="chart-row-head">' +'<div class="chart-row-name">' + d.label + '</div>' +'<div class="chart-row-stat"><strong>' + d.total + '</strong> op · <span style="opacity:.6">' + d.backup + ' bk</span> · <strong>' + pct + '%</strong></div>' +'</div>' +'<div style="font-size:10px;color:var(--text-3);margin:2px 0;display:flex;gap:10px">' +'<span>Entregados: '+d.entregados+'</span>' +'<span>En proceso: '+d.proceso+'</span>' +'<span>Pendientes: '+d.pend+'</span>' +'</div>' +'<div class="chart-bar">' +(d.entregados ? '<div class="chart-bar-seg" style="width:' + (d.entregados/Math.max(d.total,1)*100) + '%;background:var(--green)"></div>' : '') +(d.proceso    ? '<div class="chart-bar-seg" style="width:' + (d.proceso/Math.max(d.total,1)*100)    + '%;background:var(--amb)"></div>' : '') +(d.pend       ? '<div class="chart-bar-seg" style="width:' + (d.pend/Math.max(d.total,1)*100)       + '%;background:var(--accent)"></div>' : '') +'</div>' +'</div>';
   }).join('');
 }
 
@@ -374,23 +368,9 @@ function enterDashboard() {
 window.enterDashboard = enterDashboard;
 
 // ═══ PREVIEW VISITANTE (botón para super_admin / gestor_activos) ═══
-function previewVisitante() {
-  if (!can('panel.preview')) {
-    toast('Sin permisos para previsualizar el Vista de Seguimiento', 'warning');
-    return;
-  }
-  notify({
-    level: 'info', category: 'system',
-    title: 'Vista de Seguimiento · Vista previa',
-    message: 'El Vista de Seguimiento (modo Visitante) estará disponible en la siguiente fase de desarrollo.'
-  });
-}
-window.previewVisitante = previewVisitante;
+// STAB-v10 TASK 8: previewVisitante eliminado previewVisitante;
 
-function updatePreviewButton() {
-  const btn = $('btn-preview-visitante');
-  if (btn) btn.style.display = can('panel.preview') ? 'flex' : 'none';
-}
+// STAB-v10: updatePreviewButton eliminado
 
 function updateAprobacionesItem() {
   const item = document.getElementById('sb-aprobaciones');
@@ -1109,6 +1089,72 @@ function renderAprobaciones() {
 }
 window.renderAprobaciones = renderAprobaciones;
 
+// STAB-v10 TASK 5 — Donut RAEE (Chart.js en pe-raee-canvas)
+function renderRaeeDonut(stats) {
+  var canvas = document.getElementById('pe-raee-canvas');
+  if (!canvas) return;
+  var raeeD = stats.raeeDistrib || {};
+  // Mapear a 3 categorías oficiales
+  var cats = {
+    'RAEE':                  raeeD['RAEE'] || 0,
+    'Reasignable':           (raeeD['Reasignable'] || 0) + (raeeD['Reasignación interna'] || 0),
+    'Reutilizable/Obsoleto': raeeD['Reutilizable'] || raeeD['Obsoleto'] || raeeD['Venta interna empleado'] || raeeD['Venta interna'] || raeeD['Donación'] || raeeD['Donacion'] || 0,
+  };
+  // Añadir categorías no cubiertas
+  Object.keys(raeeD).forEach(function(k) {
+    if (!cats['RAEE'] && k === 'RAEE') cats['RAEE'] = raeeD[k];
+    if (!['RAEE','Reasignable','Reasignación interna','Reutilizable','Obsoleto','Venta interna empleado','Venta interna','Donación','Donacion'].includes(k)) {
+      cats[k] = (cats[k] || 0) + raeeD[k];
+    }
+  });
+  var keys = Object.keys(cats).filter(function(k){ return cats[k] > 0; });
+  var vals = keys.map(function(k){ return cats[k]; });
+  var total = vals.reduce(function(a,b){ return a+b; }, 0);
+  if (total === 0) { var ll = document.getElementById('pe-raee-labels'); if(ll) ll.innerHTML = '<div style="color:var(--text-3);font-size:11px;padding:12px 0">Sin evaluaciones</div>'; return; }
+  var COLORS = ['#C00000','#1565C0','#2E7D32','#E65100','#7B1FA2'];
+  if (canvas._chart) { canvas._chart.destroy(); delete canvas._chart; }
+  if (typeof Chart === 'undefined') return;
+  canvas.width = 120; canvas.height = 120;
+  canvas._chart = new Chart(canvas.getContext('2d'), {
+    type: 'doughnut',
+    data: { labels: keys, datasets: [{ data: vals, backgroundColor: keys.map(function(k,i){ return COLORS[i%COLORS.length]; }), borderWidth: 2, borderColor: 'var(--bg)' }] },
+    options: {
+      cutout: '68%', responsive: false, animation: { duration: 600 },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c){ return c.label + ': ' + c.raw + ' (' + Math.round(c.raw/total*100) + '%)'; } } } }
+    }
+  });
+  var ll = document.getElementById('pe-raee-labels');
+  if (ll) ll.innerHTML = '<div style="font-size:18px;font-weight:900;text-align:center;color:var(--text-1)">' + total + '</div>' +
+    '<div style="font-size:9px;color:var(--text-3);text-align:center;margin-bottom:8px">evaluados</div>' +
+    keys.map(function(k,i){ return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">' +
+      '<span style="width:9px;height:9px;border-radius:50%;background:'+COLORS[i%COLORS.length]+';flex-shrink:0"></span>' +
+      '<span style="font-size:10px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(k) + '</span>' +
+      '<span style="font-size:10px;font-weight:700">' + cats[k] + '</span>' +
+      '<span style="font-size:9px;color:var(--text-3)">' + Math.round(cats[k]/total*100) + '%</span></div>'; }).join('');
+}
+window.renderRaeeDonut = renderRaeeDonut;
+
+// STAB-v10 TASK 6 — Distribución de estados (barras HTML)
+function renderEstadosChart(stats) {
+  var el = document.getElementById('pe-estados-list');
+  if (!el) return;
+  var estados = stats.estados || {};
+  var keys = Object.keys(estados).sort(function(a,b){ return estados[b]-estados[a]; });
+  var max = keys.length ? estados[keys[0]] : 1;
+  el.innerHTML = keys.map(function(st) {
+    var count = estados[st];
+    var pct = max ? Math.round(count/max*100) : 0;
+    return '<div style="margin-bottom:6px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px">' +
+      '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px">' + esc(st) + '</span>' +
+      '<span style="font-weight:700;flex-shrink:0;margin-left:4px">' + count + '</span></div>' +
+      '<div style="background:var(--bg-2,#f0f0f0);height:5px;border-radius:3px">' +
+      '<div style="width:'+pct+'%;height:100%;background:var(--accent);border-radius:3px;transition:width .4s"></div></div>' +
+      '</div>';
+  }).join('') || '<div style="color:var(--text-3);font-size:11px">Sin datos de estado</div>';
+}
+window.renderEstadosChart = renderEstadosChart;
+
 function renderPanelEjecutivo() {
   var role = window.state && state.user && (state.user.role || state.user.rol);
   // STAB-v09.2 ÍTEM 3+4: técnico puede ver Seguimiento
@@ -1153,8 +1199,12 @@ function renderPanelEjecutivo() {
   set('pe-destino-reasign', _raeeD['Reasignable']             || _raeeD['Reasignación interna'] || 0);
   set('pe-destino-donacion',_raeeD['Donación']                || _raeeD['Donacion'] || 0);
   // Distribución de estados (TASK 7)
+  // STAB-v10 TASK 5+6: renderizar gráficos
+  if (window.renderRaeeDonut)    renderRaeeDonut(_stats);
+  if (window.renderEstadosChart) renderEstadosChart(_stats);
+
   var peEstEl = document.getElementById('pe-estados-list');
-  if (peEstEl) {
+  if (peEstEl && false) {
     var stKeys = Object.keys(_estD).sort();
     peEstEl.innerHTML = stKeys.length ? stKeys.map(function(st) {
       return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-light)">'+
@@ -1483,66 +1533,84 @@ window.attachFieldValidation = function() {
     });
   });
 };
-// STAB-v09.1 TASK 2+10 — Vista Equipos Backup (completa, como renderUsuarios)
+// STAB-v10 TASK 1 — Vista Equipos Backup (layout nativo, mismo que Usuarios)
 function renderBackup() {
   var vp = document.getElementById('view-backup');
   if (!vp) return;
   var allBackups = (window.USERS || []).filter(function(u) { return isBackup(u); });
   // Filtros
-  var srch  = ((document.getElementById('bk-srch')     || {}).value || '').toLowerCase();
-  var fEmp  = (document.getElementById('bk-filter-empresa') || {}).value || '';
-  var fTipo = (document.getElementById('bk-filter-tipo')    || {}).value || '';
-  var fMar  = (document.getElementById('bk-filter-marca')   || {}).value || '';
-  var fCiu  = (document.getElementById('bk-filter-ciudad')  || {}).value || '';
+  var srch  = ((document.getElementById('bk-srch')           || {}).value || '').toLowerCase();
+  var fEmp  = (document.getElementById('bk-filter-empresa')  || {}).value || '';
+  var fTipo = (document.getElementById('bk-filter-tipo')     || {}).value || '';
+  var fCiu  = (document.getElementById('bk-filter-ciudad')   || {}).value || '';
   var data  = allBackups.filter(function(u) {
     if (fEmp  && u.empresa !== fEmp) return false;
     if (fTipo && (u.eq_ant_tipo||'').toUpperCase() !== fTipo.toUpperCase()) return false;
-    if (fMar  && !(u.eq_ant_marca||'').toLowerCase().includes(fMar)) return false;
     if (fCiu  && u.ciudad !== fCiu) return false;
     if (srch) {
-      var hay = [u.nombre,u.eq_ant_serial,u.eq_ant_marca,u.eq_ant_modelo,u.ciudad,u.empresa].join(' ').toLowerCase();
+      var hay = [u.nombre,u.eq_ant_serial,u.eq_ant_marca,u.eq_ant_modelo,u.ciudad,u.empresa,u.eq_ant_tipo].join(' ').toLowerCase();
       if (!hay.includes(srch)) return false;
     }
     return true;
   });
-  var uniq = function(arr){ return arr.filter(function(v,i,a){ return v && a.indexOf(v)===i; }); };
-  var opts = function(arr,sel,ph) {
-    return '<option value="">'+(ph||'Todos')+'</option>'+uniq(arr).sort().map(function(v) {
-      return '<option'+(v===sel?' selected':'')+'>'+esc(v)+'</option>';
-    }).join('');
+  var uniq = function(arr){ return arr.filter(function(v,i,a){ return v && a.indexOf(v)===i; }).sort(); };
+  var pill = function(arr, id, ph, val) {
+    return '<select class="filter-pill" id="'+id+'" onchange="renderBackup()">' +
+      '<option value="">' + ph + '</option>' +
+      arr.map(function(v){ return '<option'+(v===val?' selected':'')+'>'+esc(v)+'</option>'; }).join('') +
+      '</select>';
   };
+  // Estadísticas rápidas
+  var hbtCount = allBackups.filter(function(u){ return u.empresa==='HBT'; }).length;
+  var hgsCount = allBackups.filter(function(u){ return u.empresa==='HGS'; }).length;
+
   vp.innerHTML =
-    '<div class="panel-head"><div><div class="panel-title">Equipos Backup disponibles</div>' +
-    '<div class="panel-sub">' + data.length + ' de ' + allBackups.length + ' equipos backup</div></div></div>' +
-    '<div class="filter-row" style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
-    '<input id="bk-srch" class="form-input" style="min-width:180px" placeholder="Buscar..." value="'+esc(srch)+'" oninput="renderBackup()">' +
-    '<select id="bk-filter-empresa" class="form-select" style="min-width:100px" onchange="renderBackup()">' + opts(allBackups.map(function(u){return u.empresa;}),fEmp,'Empresa') + '</select>' +
-    '<select id="bk-filter-tipo"    class="form-select" style="min-width:100px" onchange="renderBackup()">' + opts(allBackups.map(function(u){return u.eq_ant_tipo;}),fTipo,'Tipo') + '</select>' +
-    '<input  id="bk-filter-marca"   class="form-input"  style="min-width:120px" placeholder="Marca..." value="'+esc(fMar)+'" oninput="renderBackup()">' +
-    '<select id="bk-filter-ciudad"  class="form-select" style="min-width:120px" onchange="renderBackup()">' + opts(allBackups.map(function(u){return u.ciudad;}),fCiu,'Ciudad') + '</select>' +
+    '<div class="hero compact">' +
+    '<div class="hero-inner">' +
+    '<div class="hero-eyebrow">Repositorio de Hardware</div>' +
+    '<h1 class="hero-title">Equipos <strong>Backup</strong></h1>' +
+    '<p class="hero-sub">' + allBackups.length + ' equipos disponibles · HBT ' + hbtCount + ' · HGS ' + hgsCount + '</p>' +
+    '</div></div>' +
+    '<div class="section">' +
+    '<div class="toolbar">' +
+    '<div class="search-box">' +
+    '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+    '<input type="text" id="bk-srch" placeholder="Buscar por nombre, serial, marca, modelo..." value="' + esc(srch) + '" oninput="renderBackup()" style="flex:1">' +
     '</div>' +
-    '<div class="table-wrap"><table class="main-table"><thead><tr>' +
-    '<th>ID</th><th>Empresa</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serial</th><th>Ciudad</th><th>Estado</th><th></th>' +
+    pill(uniq(allBackups.map(function(u){return u.empresa;})), 'bk-filter-empresa', 'Todas las empresas', fEmp) +
+    pill(uniq(allBackups.map(function(u){return u.eq_ant_tipo;})), 'bk-filter-tipo', 'Todos los tipos', fTipo) +
+    pill(uniq(allBackups.map(function(u){return u.ciudad;})), 'bk-filter-ciudad', 'Todas las ciudades', fCiu) +
+    '<span class="filter-count">' + data.length + ' de ' + allBackups.length + ' equipos</span>' +
+    '</div>' +
+    '<div class="tbl-wrap"><div class="tbl-scroll"><table class="tbl">' +
+    '<thead><tr>' +
+    '<th>ID</th><th>Empresa</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serial (ant.)</th><th>Placa</th><th>Ciudad</th><th>Estado</th><th></th>' +
     '</tr></thead><tbody>' +
     (data.length === 0
-      ? '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-3)">Sin equipos backup disponibles</td></tr>'
+      ? '<tr><td colspan="10"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Sin equipos backup disponibles</div><div class="empty-sub">No se encontraron resultados con los filtros actuales</div></div></td></tr>'
       : data.map(function(u) {
           var safeId = String(u.id).replace(/'/g,'');
-          return '<tr class="clickable" onclick="openEditModal('+safeId+')">'+
-            '<td class="td-id">'+esc(u.id||'—')+'</td>'+
-            '<td>'+esc(u.empresa||'—')+'</td>'+
-            '<td>'+esc(u.eq_ant_tipo||'—')+'</td>'+
-            '<td>'+esc(u.eq_ant_marca||'—')+'</td>'+
-            '<td>'+esc(u.eq_ant_modelo||'—')+'</td>'+
-            '<td style="font-family:monospace">'+esc(u.eq_ant_serial||'—')+'</td>'+
-            '<td>'+esc(u.ciudad||'—')+'</td>'+
-            '<td><span class="badge badge-'+({Pendiente:'warn','Renovación completada':'ok','Completado':'ok'}[u.estado]||'neutral')+'">'+esc(u.estado||'—')+'</span></td>'+
-            '<td><button class="btn btn-sm" onclick="event.stopPropagation();openEditModal('+safeId+')">Ver</button></td>'+
-            '</tr>';
+          var estCls = ConfigService && ConfigService.badgeClass ? ConfigService.badgeClass(u.estado||'pendiente') : 'badge-pendiente';
+          return '<tr onclick="openEditModal('+safeId+')">' +
+            '<td class="td-id">'+esc(u.id||'—')+'</td>' +
+            '<td><span class="badge badge-'+(u.empresa||'').toLowerCase()+'">'+esc(u.empresa||'—')+'</span></td>' +
+            '<td>'+esc(u.eq_ant_tipo||'—')+'</td>' +
+            '<td class="td-strong">'+esc(u.eq_ant_marca||'—')+'</td>' +
+            '<td>'+esc(u.eq_ant_modelo||'—')+'</td>' +
+            '<td class="td-mono">'+esc(u.eq_ant_serial||'—')+'</td>' +
+            '<td class="td-mono">'+esc(u.eq_ant_placa||'—')+'</td>' +
+            '<td class="td-soft">'+esc(u.ciudad||'—')+'</td>' +
+            '<td><span class="badge '+estCls+'">'+esc(u.estado||'Pendiente')+'</span></td>' +
+            '<td class="td-actions" onclick="event.stopPropagation()">' +
+            '<button class="row-action" onclick="openEditModal('+safeId+')" title="Editar">✏</button>' +
+            '</td></tr>';
         }).join('')) +
-    '</tbody></table></div>';
-  if (document.getElementById('bk-srch')) document.getElementById('bk-srch').focus();
+    '</tbody></table></div></div>' +
+    '</div>';
+  // Focus en el buscador solo si no hay filtros activos
+  var bkSrch = document.getElementById('bk-srch');
+  if (bkSrch && !srch) bkSrch.focus();
 }
-window.renderBackup = renderBackup;;
+window.renderBackup = renderBackup;;;
 
 

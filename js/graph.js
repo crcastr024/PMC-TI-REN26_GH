@@ -542,7 +542,7 @@ const WriteContract = (() => {
   const READONLY_FIELDS = new Set([
     'id',                      // clave interna — nunca editar
     'fecha_devolucion',        // Bodega — sin control en formulario
-    'observaciones_devolucion',// notas devolución — sin control en formulario
+    // TASK 13 fix: observaciones_devolucion TIENE control UI → removida de READONLY
   ]);
 
   // Campos sincronizables → SharePoint (whitelist oficial)
@@ -573,6 +573,7 @@ const WriteContract = (() => {
     'estado_devolucion',
     'fecha_solicitud_devolucion', 'fecha_transito', 'fecha_recepcion_bodega',
     'lista_recoleccion',
+    'observaciones_devolucion',  // TASK 13 fix: campo con control UI en formulario
     // Evaluación física y RAEE
     'eval_bateria', 'eval_teclado', 'eval_touchpad', 'eval_estetico',
     'recomendacion_raee', 'motivo_raee', 'motor_raee_version', 'fecha_evaluacion_raee',
