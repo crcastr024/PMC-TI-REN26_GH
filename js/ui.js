@@ -6,23 +6,17 @@
 function renderResumen() {
   try {
   // GH3.39.2 P2/P3: ÚNICA fuente de verdad — calculateProjectMetrics()
-  var m = window.calculateProjectMetrics ? calculateProjectMetrics() : {
-    totalEquipos: (window.USERS||[]).length,
-    totalColaboradores: (window.USERS||[]).filter(function(u){return !isBackup(u);}).length,
-    totalBackups: 0, hbt: 0, hgs: 0, pendientes: 0, entregados: 0, enProceso: 0, estados: {}
-  };
+  // STAB-v09.1 TASK 8: fuente única de verdad — buildDashboardStats()
+  var m = window.buildDashboardStats ? buildDashboardStats(window.USERS || []) : calculateProjectMetrics();
 
-  const real = getReal(); // para actas y compatibilidad
-  const total = m.totalColaboradores;
-  const entregados   = (m.estados && m.estados['Entregado'] !== undefined)
-    ? m.estados['Entregado']
-    : real.filter(u=>u.estado==='Entregado'||u.estado==='Completado'||u.estado==='Entregado equipo nuevo').length;
-  const alistamiento = (m.estados && m.estados['Alistamiento'] !== undefined)
-    ? m.estados['Alistamiento']
-    : real.filter(u=>u.estado==='Alistamiento').length;
-  const proceso = m.enProceso;
-  const pendientes = m.pendientes;
-  const actas = real.filter(u => u.acta_firmada).length;
+  // STAB-v09.1 TASK 3: KPIs por hitos canónicos de buildDashboardStats
+  const real        = getReal();
+  const total       = m.totalColaboradores || 0;
+  const entregados  = m.entregados   || 0;  // hito: fecha_entrega OR estado>=Entregado
+  const alistamiento= (m.estados && m.estados['Alistamiento']) || 0;
+  const proceso     = m.proceso      || m.enProceso || 0;
+  const pendientes  = m.pendientes   || 0;
+  const actas       = m.actas        || 0;  // hito: fecha_firma_acta
   const pct = m.totalColaboradores > 0 ? Math.round(entregados / m.totalColaboradores * 100) : 0;
   var _setText = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = (v !== undefined && v !== null) ? String(v) : ''; };
   
@@ -92,25 +86,13 @@ function renderResumen() {
 }
 
 function renderEmpresaChart() {
+  // STAB-v09.1 TASK 4: usar buildDashboardStats para consistencia total
+  var _bds = window.buildDashboardStats ? buildDashboardStats(getReal()) : calculateProjectMetrics();
   const data = ['HBT', 'HGS'].map(emp => {
-    const all = DataService.getRenewals({ empresa: emp });
+    var d = (_bds.porEmpresa && _bds.porEmpresa[emp]) || { total:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
     return {
-      label: emp, total: all.length,
-      backup: all.filter(u => isBackup(u)).length,
-      // GH3.22 P8: estados canónicos + aliases legacy para consistencia
-      entregados: all.filter(u => {
-        const s = u.estado || '';
-        return s === 'Entregado equipo nuevo' || s === 'Pendiente devolución equipo anterior' ||
-               s === 'En tránsito equipo anterior' || s === 'Equipo anterior recibido' ||
-               s === 'Renovación completada' || s === 'Pendiente aprobación' ||
-               s === 'Cerrado' || s === 'Entregado' || s === 'Completado';
-      }).length,
-      proceso: all.filter(u => {
-        const s = u.estado || '';
-        return s === 'Alistamiento' || s === 'Programado' ||
-               s === 'En tránsito equipo nuevo' || s === 'En tránsito';
-      }).length,
-      pend: all.filter(u => u.estado === 'Pendiente').length,
+      label: emp, total: d.total, backup: 0,
+      entregados: d.entregados, proceso: d.proceso, pend: d.pendientes, finalizados: d.finalizados, pct: d.pct
     };
   });
   $('empresa-chart').innerHTML = data.map(d => {
@@ -134,18 +116,19 @@ function renderTecnicoChart() {
     ? [_esTecnicoT]
     : window.CONFIG.technicians;
   const colors = ['var(--accent)', 'var(--blue)', 'var(--green)', 'var(--text-4)'];
+  // STAB-v09.1 TASK 5: usar buildDashboardStats para consistencia total
+  var _bds2 = window.buildDashboardStats ? buildDashboardStats(getReal()) : calculateProjectMetrics();
+  var _ptMap = _bds2.porTecnico || {};
   const data = techs.map((t, i) => {
-    const mine = t === 'Sin asignar'
-      ? getReal().filter(u => !u.tecnico)
-      : getReal().filter(u => (u.tecnico || '').toLowerCase() === t.toLowerCase());
-    return { tec: t, color: colors[i], total: mine.length,
-      entregados: mine.filter(u => u.estado === 'Entregado' || u.estado === 'Completado').length };
+    var d = _ptMap[t] || { asignados:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
+    return { tec: t, color: colors[i], total: d.asignados,
+      entregados: d.entregados, proceso: d.proceso, finalizados: d.finalizados, pct: d.pct };
   }).filter(d => d.total > 0);
   $('tecnico-chart').innerHTML = data.map(d => {
-    const pct = d.total > 0 ? Math.round(d.entregados / d.total * 100) : 0;
-    return '<div class="chart-row"><div class="chart-row-head"><div class="chart-row-name">' + d.tec + '</div><div class="chart-row-stat"><strong>' + d.total + '</strong> · ' + pct + '%</div></div><div class="chart-bar"><div class="chart-bar-seg" style="width:' + pct + '%; background: ' + d.color + '"></div></div></div>';
+    return '<div class="chart-row">' +'<div class="chart-row-head"><div class="chart-row-name" style="font-weight:700">' + esc(d.tec) + '</div>' +'<div class="chart-row-val">' + d.total + ' asig · <span style="color:var(--accent)">' + d.entregados + ' entregados</span> · <strong>' + d.pct + '%</strong></div></div>' +'<div style="font-size:10px;color:var(--text-3);display:flex;gap:10px;margin:2px 0">' +'<span>Pend:' + d.pendientes + '</span><span>Proc:' + d.proceso + '</span><span style="color:var(--green)">Fin:' + d.finalizados + '</span>' +'</div>' +'<div class="chart-bar"><div class="chart-bar-seg" style="width:' + Math.min(d.entregados/Math.max(d.total,1)*100,100) + '%;background:' + d.color + '"></div></div>' +'</div>';
   }).join('');
 }
+
 
 function renderMap() {
   const svg = $('map-svg');
@@ -1160,10 +1143,35 @@ function renderPanelEjecutivo() {
       return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span>' + esc(t) + '</span><strong>' + byTec[t] + '</strong></div>';
     }).join('');
   }
-  set('pe-destino-raee',    records.filter(function(r) { return r.recomendacion_raee === 'RAEE'; }).length);
-  set('pe-destino-venta',   records.filter(function(r) { return r.recomendacion_raee === 'Venta interna'; }).length);
-  set('pe-destino-reasign', records.filter(function(r) { return r.recomendacion_raee === 'Reasignacion'; }).length);
-  set('pe-destino-donacion',records.filter(function(r) { return r.recomendacion_raee === 'Donacion'; }).length);
+  // STAB-v09.1 TASK 6+7: usar buildDashboardStats para RAEE y estados
+  var _stats = window.buildDashboardStats ? buildDashboardStats(records.filter(function(r){ return !isBackup(r); })) : {};
+  var _raeeD = _stats.raeeDistrib || {};
+  var _estD  = _stats.estados || {};
+  // Destino RAEE
+  set('pe-destino-raee',    _raeeD['RAEE']                    || 0);
+  set('pe-destino-venta',   _raeeD['Venta interna empleado']  || _raeeD['Venta interna'] || 0);
+  set('pe-destino-reasign', _raeeD['Reasignable']             || _raeeD['Reasignación interna'] || 0);
+  set('pe-destino-donacion',_raeeD['Donación']                || _raeeD['Donacion'] || 0);
+  // Distribución de estados (TASK 7)
+  var peEstEl = document.getElementById('pe-estados-dist');
+  if (peEstEl) {
+    var stKeys = Object.keys(_estD).sort();
+    peEstEl.innerHTML = stKeys.length ? stKeys.map(function(st) {
+      return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-light)">'+
+        '<span style="font-size:11px">'+esc(st)+'</span>'+
+        '<span style="font-size:11px;font-weight:700">'+_estD[st]+'</span></div>';
+    }).join('') : '<div style="color:var(--text-3);font-size:11px">Sin datos</div>';
+  }
+  // Distribución RAEE completa (TASK 6)
+  var peRaeeEl = document.getElementById('pe-raee-dist');
+  if (peRaeeEl) {
+    var rKeys = Object.keys(_raeeD).sort();
+    peRaeeEl.innerHTML = rKeys.length ? rKeys.map(function(r) {
+      return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-light)">'+
+        '<span style="font-size:11px">'+esc(r)+'</span>'+
+        '<span style="font-size:11px;font-weight:700">'+_raeeD[r]+'</span></div>';
+    }).join('') : '<div style="color:var(--text-3);font-size:11px">Sin clasificación</div>';
+  }
 }
 window.renderPanelEjecutivo = renderPanelEjecutivo;
 
@@ -1475,49 +1483,66 @@ window.attachFieldValidation = function() {
     });
   });
 };
-// STAB-v09.2 ÍTEM 8 — Vista Equipos Backup
+// STAB-v09.1 TASK 2+10 — Vista Equipos Backup (completa, como renderUsuarios)
 function renderBackup() {
   var vp = document.getElementById('view-backup');
   if (!vp) return;
-  var backups = (window.USERS || []).filter(function(u) { return isBackup(u); });
+  var allBackups = (window.USERS || []).filter(function(u) { return isBackup(u); });
   // Filtros
+  var srch  = ((document.getElementById('bk-srch')     || {}).value || '').toLowerCase();
   var fEmp  = (document.getElementById('bk-filter-empresa') || {}).value || '';
   var fTipo = (document.getElementById('bk-filter-tipo')    || {}).value || '';
   var fMar  = (document.getElementById('bk-filter-marca')   || {}).value || '';
   var fCiu  = (document.getElementById('bk-filter-ciudad')  || {}).value || '';
-  if (fEmp)  backups = backups.filter(function(u){ return u.empresa === fEmp; });
-  if (fTipo) backups = backups.filter(function(u){ return (u.eq_ant_tipo||'').toUpperCase() === fTipo.toUpperCase(); });
-  if (fMar)  backups = backups.filter(function(u){ return (u.eq_ant_marca||'').toLowerCase().includes(fMar.toLowerCase()); });
-  if (fCiu)  backups = backups.filter(function(u){ return u.ciudad === fCiu; });
-
-  var empresas = [...new Set((window.USERS||[]).filter(isBackup).map(u=>u.empresa).filter(Boolean))].sort();
-  var tipos    = [...new Set((window.USERS||[]).filter(isBackup).map(u=>u.eq_ant_tipo).filter(Boolean))].sort();
-  var ciudades = [...new Set((window.USERS||[]).filter(isBackup).map(u=>u.ciudad).filter(Boolean))].sort();
-  var opts = function(arr,sel) { return '<option value="">Todos</option>'+arr.map(function(v){ return '<option'+(v===sel?' selected':'')+'>'+esc(v)+'</option>'; }).join(''); };
-
+  var data  = allBackups.filter(function(u) {
+    if (fEmp  && u.empresa !== fEmp) return false;
+    if (fTipo && (u.eq_ant_tipo||'').toUpperCase() !== fTipo.toUpperCase()) return false;
+    if (fMar  && !(u.eq_ant_marca||'').toLowerCase().includes(fMar)) return false;
+    if (fCiu  && u.ciudad !== fCiu) return false;
+    if (srch) {
+      var hay = [u.nombre,u.eq_ant_serial,u.eq_ant_marca,u.eq_ant_modelo,u.ciudad,u.empresa].join(' ').toLowerCase();
+      if (!hay.includes(srch)) return false;
+    }
+    return true;
+  });
+  var uniq = function(arr){ return arr.filter(function(v,i,a){ return v && a.indexOf(v)===i; }); };
+  var opts = function(arr,sel,ph) {
+    return '<option value="">'+(ph||'Todos')+'</option>'+uniq(arr).sort().map(function(v) {
+      return '<option'+(v===sel?' selected':'')+'>'+esc(v)+'</option>';
+    }).join('');
+  };
   vp.innerHTML =
     '<div class="panel-head"><div><div class="panel-title">Equipos Backup disponibles</div>' +
-    '<div class="panel-sub">' + backups.length + ' equipos sin asignar</div></div></div>' +
-    '<div class="filter-row" style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap">' +
-    '<select id="bk-filter-empresa" class="form-select" style="min-width:120px" onchange="renderBackup()">' + opts(empresas,fEmp) + '</select>' +
-    '<select id="bk-filter-tipo"    class="form-select" style="min-width:120px" onchange="renderBackup()">' + opts(tipos,fTipo) + '</select>' +
+    '<div class="panel-sub">' + data.length + ' de ' + allBackups.length + ' equipos backup</div></div></div>' +
+    '<div class="filter-row" style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+    '<input id="bk-srch" class="form-input" style="min-width:180px" placeholder="Buscar..." value="'+esc(srch)+'" oninput="renderBackup()">' +
+    '<select id="bk-filter-empresa" class="form-select" style="min-width:100px" onchange="renderBackup()">' + opts(allBackups.map(function(u){return u.empresa;}),fEmp,'Empresa') + '</select>' +
+    '<select id="bk-filter-tipo"    class="form-select" style="min-width:100px" onchange="renderBackup()">' + opts(allBackups.map(function(u){return u.eq_ant_tipo;}),fTipo,'Tipo') + '</select>' +
     '<input  id="bk-filter-marca"   class="form-input"  style="min-width:120px" placeholder="Marca..." value="'+esc(fMar)+'" oninput="renderBackup()">' +
-    '<select id="bk-filter-ciudad"  class="form-select" style="min-width:120px" onchange="renderBackup()">' + opts(ciudades,fCiu) + '</select>' +
+    '<select id="bk-filter-ciudad"  class="form-select" style="min-width:120px" onchange="renderBackup()">' + opts(allBackups.map(function(u){return u.ciudad;}),fCiu,'Ciudad') + '</select>' +
     '</div>' +
-    '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Empresa</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serial</th><th>Ciudad</th><th>Estado</th></tr></thead>' +
-    '<tbody>' + (backups.length === 0 ? '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-3)">Sin equipos backup disponibles</td></tr>' :
-      backups.map(function(u) {
-        return '<tr onclick="openEditModal('+u.id+')"><td class="td-id">'+u.id+'</td>' +
-          '<td>'+esc(u.empresa||'—')+'</td>' +
-          '<td>'+esc(u.eq_ant_tipo||'—')+'</td>' +
-          '<td>'+esc(u.eq_ant_marca||'—')+'</td>' +
-          '<td>'+esc(u.eq_ant_modelo||'—')+'</td>' +
-          '<td style="font-family:monospace">'+esc(u.eq_ant_serial||'—')+'</td>' +
-          '<td>'+esc(u.ciudad||'—')+'</td>' +
-          '<td>'+esc(u.estado||'—')+'</td></tr>';
-      }).join('')) +
+    '<div class="table-wrap"><table class="main-table"><thead><tr>' +
+    '<th>ID</th><th>Empresa</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serial</th><th>Ciudad</th><th>Estado</th><th></th>' +
+    '</tr></thead><tbody>' +
+    (data.length === 0
+      ? '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-3)">Sin equipos backup disponibles</td></tr>'
+      : data.map(function(u) {
+          var safeId = String(u.id).replace(/'/g,'');
+          return '<tr class="clickable" onclick="openEditModal('+safeId+')">'+
+            '<td class="td-id">'+esc(u.id||'—')+'</td>'+
+            '<td>'+esc(u.empresa||'—')+'</td>'+
+            '<td>'+esc(u.eq_ant_tipo||'—')+'</td>'+
+            '<td>'+esc(u.eq_ant_marca||'—')+'</td>'+
+            '<td>'+esc(u.eq_ant_modelo||'—')+'</td>'+
+            '<td style="font-family:monospace">'+esc(u.eq_ant_serial||'—')+'</td>'+
+            '<td>'+esc(u.ciudad||'—')+'</td>'+
+            '<td><span class="badge badge-'+statusClass(u.estado)+'">'+esc(u.estado||'—')+'</span></td>'+
+            '<td><button class="btn btn-sm" onclick="event.stopPropagation();openEditModal('+safeId+')">Ver</button></td>'+
+            '</tr>';
+        }).join('')) +
     '</tbody></table></div>';
+  if (document.getElementById('bk-srch')) document.getElementById('bk-srch').focus();
 }
-window.renderBackup = renderBackup;
+window.renderBackup = renderBackup;;
 
 

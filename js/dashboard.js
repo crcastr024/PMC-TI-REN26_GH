@@ -7,67 +7,136 @@
 
 
 // ════════════════════════════════════════════════════════════════════
-// GH3.39.1 P2/P3 — calculateProjectMetrics()
-// ÚNICA fuente de verdad para todos los dashboards.
-// Todos los módulos deben consumir esta función.
 // ════════════════════════════════════════════════════════════════════
-function calculateProjectMetrics() {
-  var all = window.USERS || [];
-  var backups  = all.filter(function(u){ return isBackup(u); });
-  var activos  = all.filter(function(u){ return !isBackup(u); });
+// STAB-v09.1 TASK 1 — buildDashboardStats(users)
+// ÚNICA fuente de verdad para todos los KPIs del sistema.
+// Todos los renderers consumen este objeto.
+// ════════════════════════════════════════════════════════════════════
+function buildDashboardStats(users) {
+  var all     = users || window.USERS || [];
+  var backups = all.filter(function(u){ return isBackup(u); });
+  var activos = all.filter(function(u){ return !isBackup(u); });
 
-  // Totales
-  var totalEquipos      = all.length;          // 146
-  var totalColaboradores = activos.length;       // 141
-  var totalBackups      = backups.length;        // 5
+  // TASK 3 — estados canónicos de proceso (sin Pendiente, sin Completado/Cancelado)
+  var PROC_ST = ['Alistamiento','Programado','En tránsito equipo nuevo',
+    'Entregado equipo nuevo','Pendiente devolución equipo anterior',
+    'En tránsito equipo anterior','Equipo anterior recibido',
+    'Pendiente aprobación','Cerrado'];
+  // Estados que significan "ya entregado" (hito acumulativo — no disminuye)
+  var ENTREGADO_ST = ['Entregado equipo nuevo','Pendiente devolución equipo anterior',
+    'En tránsito equipo anterior','Equipo anterior recibido',
+    'Renovación completada','Pendiente aprobación','Cerrado',
+    'Entregado','Completado'];
 
-  // Por empresa (todos los equipos, incluyendo backups)
-  var hbt = all.filter(function(u){ return u.empresa === 'HBT'; });
-  var hgs = all.filter(function(u){ return u.empresa === 'HGS'; });
+  var pendientes   = activos.filter(function(u){ return u.estado === 'Pendiente'; }).length;
+  var proceso      = activos.filter(function(u){ return PROC_ST.indexOf(u.estado) >= 0; }).length;
+  var entregados   = activos.filter(function(u){
+    return u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0;
+  }).length;
+  var actas        = activos.filter(function(u){ return !!u.fecha_firma_acta; }).length;
+  var finalizados  = activos.filter(function(u){
+    return u.estado === 'Renovación completada' || u.estado === 'Completado';
+  }).length;
+  var devoluciones = activos.filter(function(u){ return !!u.fecha_solicitud_devolucion; }).length;
+  var raee         = activos.filter(function(u){ return u.recomendacion_raee === 'RAEE'; }).length;
+  var reasignables = activos.filter(function(u){
+    return u.recomendacion_raee === 'Reasignable' || u.recomendacion_raee === 'Reasignación interna';
+  }).length;
 
-  // Por estado (solo activos)
+  // Por empresa — breakdown completo (TASK 4)
+  var porEmpresa = {};
+  ['HBT','HGS'].forEach(function(emp) {
+    var eu = activos.filter(function(u){ return u.empresa === emp; });
+    var ent = eu.filter(function(u){ return u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0; });
+    var fin = eu.filter(function(u){ return u.estado === 'Renovación completada' || u.estado === 'Completado'; });
+    porEmpresa[emp] = {
+      total:      eu.length,
+      pendientes: eu.filter(function(u){ return u.estado === 'Pendiente'; }).length,
+      proceso:    eu.filter(function(u){ return PROC_ST.indexOf(u.estado) >= 0; }).length,
+      entregados: ent.length,
+      finalizados:fin.length,
+      pct:        eu.length ? Math.round(ent.length / eu.length * 100) : 0,
+    };
+  });
+
+  // Por técnico — breakdown completo (TASK 5)
+  var porTecnico = {};
+  activos.forEach(function(u) {
+    var t = u.tecnico || 'Sin asignar';
+    if (!porTecnico[t]) porTecnico[t] = { asignados:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
+    var d = porTecnico[t];
+    d.asignados++;
+    if (u.estado === 'Pendiente') d.pendientes++;
+    if (PROC_ST.indexOf(u.estado) >= 0) d.proceso++;
+    if (u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0) d.entregados++;
+    if (u.estado === 'Renovación completada' || u.estado === 'Completado') d.finalizados++;
+  });
+  Object.keys(porTecnico).forEach(function(t) {
+    var d = porTecnico[t];
+    d.pct = d.asignados ? Math.round(d.entregados / d.asignados * 100) : 0;
+  });
+
+  // Por ciudad
+  var porCiudad = {};
+  activos.forEach(function(u) {
+    var c = (window.CityNormalizer ? CityNormalizer.normalize(u.ciudad) : (u.ciudad||'Sin ciudad')).trim()||'Sin ciudad';
+    porCiudad[c] = (porCiudad[c] || 0) + 1;
+  });
+
+  // Distribución de estados (TASK 7)
   var estados = {};
-  activos.forEach(function(u){
+  activos.forEach(function(u) {
     var st = u.estado || 'Sin estado';
     estados[st] = (estados[st] || 0) + 1;
   });
 
-  // Por técnico
-  var porTecnico = {};
-  activos.forEach(function(u){
-    var t = u.tecnico || 'Sin asignar';
-    porTecnico[t] = (porTecnico[t] || 0) + 1;
+  // Distribución RAEE (TASK 6)
+  var raeeDistrib = {};
+  activos.forEach(function(u) {
+    if (u.recomendacion_raee) {
+      raeeDistrib[u.recomendacion_raee] = (raeeDistrib[u.recomendacion_raee] || 0) + 1;
+    }
   });
 
-  // Por ciudad (normalizada)
-  var porCiudad = {};
-  activos.forEach(function(u){
-    var c = (window.CityNormalizer ? CityNormalizer.normalize(u.ciudad) : (u.ciudad||'Sin ciudad')).trim() || 'Sin ciudad';
-    porCiudad[c] = (porCiudad[c] || 0) + 1;
-  });
-
-  // Destino RAEE
-  var raee        = activos.filter(function(u){ return u.recomendacion_raee === 'RAEE'; }).length;
-  var reasignable = activos.filter(function(u){ return u.recomendacion_raee === 'Reasignable'; }).length;
-  var donacion    = activos.filter(function(u){ return u.recomendacion_raee === 'Donación'; }).length;
+  // hbt/hgs cuentan TODOS (incluyendo backup) — compatible con calculateProjectMetrics original
+  var hbt = all.filter(function(u){ return u.empresa === 'HBT'; }).length;
+  var hgs = all.filter(function(u){ return u.empresa === 'HGS'; }).length;
 
   return {
-    totalEquipos:       totalEquipos,        // P3: siempre 146
-    totalColaboradores: totalColaboradores,  // 141
-    totalBackups:       totalBackups,        // 5
-    hbt:                hbt.length,          // P3: siempre 88
-    hgs:                hgs.length,          // P3: siempre 58
-    pendientes:         estados['Pendiente']      || estados['PENDIENTE'] || 0,
-    entregados:         estados['Entregado']      || 0,
-    enProceso:          (totalColaboradores - (estados['Pendiente'] || estados['PENDIENTE'] || 0) - (estados['Entregado'] || 0)),
-    raee:               raee,
-    reasignables:       reasignable,
-    donaciones:         donacion,
-    porEmpresa:         { HBT: hbt.length, HGS: hgs.length },
-    porTecnico:         porTecnico,
-    porCiudad:          porCiudad,
-    estados:            estados,
+    // Totales
+    total:              activos.length,
+    totalEquipos:       all.length,
+    totalColaboradores: activos.length,
+    totalBackups:       backups.length,
+    hbt: hbt, hgs: hgs,
+    // KPIs por hito
+    pendientes:   pendientes,
+    proceso:      proceso,
+    enProceso:    proceso,         // alias backward compat
+    entregados:   entregados,
+    actas:        actas,
+    finalizados:  finalizados,
+    backup:       backups.length,
+    devoluciones: devoluciones,
+    raee:         raee,
+    reasignables: reasignables,
+    // Breakdowns
+    porEmpresa:   porEmpresa,
+    porTecnico:   porTecnico,
+    porCiudad:    porCiudad,
+    estados:      estados,
+    raeeDistrib:  raeeDistrib,
   };
+}
+window.buildDashboardStats = buildDashboardStats;
+
+// GH3.39.1 P2/P3 — calculateProjectMetrics()
+// ÚNICA fuente de verdad para todos los dashboards.
+// Todos los módulos deben consumir esta función.
+// ════════════════════════════════════════════════════════════════════
+// STAB-v09.1: calculateProjectMetrics es ahora un wrapper de buildDashboardStats
+function calculateProjectMetrics() {
+  return buildDashboardStats(window.USERS || []);
 }
 window.calculateProjectMetrics = calculateProjectMetrics;
 
