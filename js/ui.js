@@ -577,7 +577,7 @@ function openEditModal(id) {
   const projectOpts = '<option value="">—</option>' + projects.map(p => '<option' + (u.proyecto === p ? ' selected' : '') + '>' + esc(p) + '</option>').join('');
   // F3.5 · Niveles desde ConfigService (no hardcodeados en componente UI)
   const niveles = ConfigService.NIVELES_REGISTRO;
-  const nivelOpts = '<option value="">—</option>' + niveles.map(n => '<option' + (u.registro === n ? ' selected' : '') + '>' + esc(n) + '</option>').join('');
+  const nivelOpts = '<option value="">—</option>' + niveles.map(n => '<option' + (u.nivel_usuario === n ? ' selected' : '') + '>' + esc(n) + '</option>').join('');
   // GH3.30 Bloque 12: mostrar solo transiciones válidas desde el estado actual
   // Previene selección de estados inalcanzables (2,7,8,9 desde PENDIENTE)
   var _allEstados = ConfigService.getFlow
@@ -586,13 +586,11 @@ function openEditModal(id) {
        'Entregado equipo nuevo','Pendiente devolución equipo anterior',
        'En tránsito equipo anterior','Equipo anterior recibido',
        'Renovación completada','Pendiente aprobación','Cerrado','BACKUP'];
-  var _validNext = (typeof StateMachine !== 'undefined' && u.estado)
-    ? (StateMachine.TRANSITIONS[u.estado] || []).concat([u.estado])
-    : _allEstados;
-  // Si el estado actual no tiene transiciones definidas, mostrar todos
-  if (_validNext.length <= 1) _validNext = _allEstados;
-  var estados = _validNext.filter(function(s){ return _allEstados.indexOf(s) >= 0; });
-  const estadoOpts = estados.map(e => '<option' + (u.estado === e ? ' selected' : '') + '>' + e + '</option>').join('');
+  // RC-07: mostrar TODOS los estados disponibles (no restringir transiciones en el form)
+  var estados = _allEstados.slice();
+  // Asegurar que el estado actual esté en la lista aunque no esté en _allEstados
+  if (u.estado && estados.indexOf(u.estado) < 0) estados.unshift(u.estado);
+  const estadoOpts = estados.map(e => '<option value="' + esc(e) + '"' + (u.estado === e ? ' selected' : '') + '>' + esc(e) + '</option>').join('');
   // F3.3 fix: la UI consume EXCLUSIVAMENTE el modelo normalizado (equipoNuevo),
   // nunca los campos planos legacy (u.marca/u.modelo/...) que nunca se completan.
   const eqNvo = u.equipoNuevo || {};
@@ -601,12 +599,6 @@ function openEditModal(id) {
     .map(v => '<option value="' + v + '"' + (u.estado_entrega_equipo_nuevo === v ? ' selected' : '') + '>' + (v || '—') + '</option>').join('');
   const devEstados = ['No aplica', 'Pendiente', 'Solicitada', 'En tránsito', 'Recibida en bodega'];
   const devEstadoOpts = '<option value="">—</option>' + devEstados.map(e => '<option' + (u.estado_devolucion === e ? ' selected' : '') + '>' + e + '</option>').join('');
-  // F3.2 · Disposición final del equipo anterior — entidad independiente de estado_devolucion
-  // (logística de retorno) y de clasificacion_obsolescencia (motor RAEE). Decide el destino
-  // final del activo una vez recibido en bodega.
-  // F3.5 · Valores desde ConfigService — no hardcodeados en componente UI
-  const dispFinalOpts_ = ConfigService.DISPOSICION_FINAL_OPTS;
-  const dispFinalOpts = dispFinalOpts_.map(d => '<option value="' + d + '"' + (u.disposicion_final === d ? ' selected' : '') + '>' + (d || '—') + '</option>').join('');
   
   $('modal-body').innerHTML = 
 '<div class="form-section" id="seccion-timeline"><div class="form-section-head">Timeline REN26</div>' +
@@ -614,7 +606,7 @@ function openEditModal(id) {
     '</div>' +
 '<div class="form-section"><div class="form-section-head">1 · Datos del usuario</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Empresa</label><select class="form-select" id="m-empresa"><option' + (u.empresa === 'HBT' ? ' selected' : '') + '>HBT</option><option' + (u.empresa === 'HGS' ? ' selected' : '') + '>HGS</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Nivel del usuario</label><select class="form-select" id="m-registro">' + nivelOpts + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Nivel del usuario</label><select class="form-select" id="m-nivel_usuario">' + nivelOpts + '</select></div>' +
       '<div class="form-group full"><label class="form-label">Nombre completo</label><input type="text" class="form-input" id="m-nombre" value="' + esc(u.nombre) + '"></div>' +
       '<div class="form-group"><label class="form-label">Cédula</label><input type="text" class="form-input" id="m-cedula" value="' + esc(u.cedula) + '"></div>' +
       '<div class="form-group"><label class="form-label">Usuario (login)</label><input type="text" class="form-input" id="m-usuario" value="' + esc(u.usuario) + '"></div>' +
@@ -635,7 +627,7 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Placa</label><input type="text" class="form-input" id="m-eq_ant_placa" value="' + esc(u.eq_ant_placa) + '"></div>' +
       '<div class="form-group"><label class="form-label">Hostname</label><input type="text" class="form-input" id="m-eq_ant_hostname" value="' + esc(u.eq_ant_hostname) + '"></div>' +
       '<div class="form-group"><label class="form-label">Procesador</label><input type="text" class="form-input" id="m-eq_ant_procesador" value="' + esc(u.eq_ant_procesador) + '"></div>' +
-      '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" list="ram-opts" class="form-input" id="m-eq_ant_memoria" value="' + esc(u.eq_ant_memoria) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" list="ram-opts" class="form-input" id="m-eq_ant_ram" value="' + esc(u.eq_ant_ram) + '"></div>' +
       '<div class="form-group"><label class="form-label">Disco duro (ant.)</label><input type="text" class="form-input" id="m-eq_ant_disco" value="' + esc(u.eq_ant_disco) + '"></div>' +
       '<div class="form-group full"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_ant_so" value="' + esc(u.eq_ant_so) + '"></div>' +
     '</div>' +
@@ -725,13 +717,13 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Marca</label><input type="text" class="form-input" id="m-eq_nvo_marca" value="' + esc(eqNvo.marca) + '"></div>' +
       '<div class="form-group"><label class="form-label">Modelo</label><input type="text" class="form-input" id="m-eq_nvo_modelo" value="' + esc(eqNvo.modelo) + '"></div>' +
       '<div class="form-group"><label class="form-label">Serial</label><input type="text" class="form-input" id="m-eq_nvo_serial" value="' + esc(eqNvo.serial) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Activo Fijo (AF)</label><input type="text" class="form-input" id="m-eq_nvo_af" value="' + esc(eqNvo.af) + '" placeholder="Código AF"></div>' +
       '<div class="form-group"><label class="form-label">Placa</label><input type="text" class="form-input" id="m-eq_nvo_placa" value="' + esc(eqNvo.placa) + '"></div>' +
       '<div class="form-group"><label class="form-label">Hostname</label><input type="text" class="form-input" id="m-eq_nvo_hostname" value="' + esc(eqNvo.hostname) + '"></div>' +
       '<div class="form-group"><label class="form-label">Procesador</label><input type="text" class="form-input" id="m-eq_nvo_procesador" value="' + esc(eqNvo.procesador) + '"></div>' +
       '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" list="ram-opts" class="form-input" id="m-eq_nvo_ram" value="' + esc(eqNvo.ram) + '"></div>' +
       '<div class="form-group"><label class="form-label">Disco</label><input type="text" class="form-input" id="m-eq_nvo_disco" value="' + esc(eqNvo.disco) + '"></div>' +
       '<div class="form-group full"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_nvo_so" value="' + esc(u.eq_nvo_so) + '" placeholder="Ej: Windows 11 Pro"></div>' +
-      '<div class="form-group full"><label class="form-label">Dato maestro SAP (AF) <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="text" class="form-input" id="m-eq_nvo_af" value="' + esc(eqNvo.af) + '" placeholder="Código AF / dato maestro SAP"></div>' +
     '</div></div>' +
     '<div class="form-section"><div class="form-section-head">5 · Estado REN26</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Técnico asignado</label><select class="form-select" id="m-tecnico">' + '<option value="">— Sin asignar —</option>' + (window.CONFIG.technicians || []).map(function(t){ return '<option value="' + esc(t) + '"' + ((u.tecnico||'').toLowerCase()===t.toLowerCase()?' selected':'') + '>' + esc(t) + '</option>'; }).join('') + '</select></div>' +
@@ -748,7 +740,7 @@ function openEditModal(id) {
         '<div class="form-group" style="margin:0"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo||'') + '" placeholder="Ej: acta_juan_garcia.pdf"></div>' +
         '<div class="form-group" style="margin:0"><label class="form-label">URL del acta (SharePoint)</label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url||'') + '" placeholder="https://..."></div>' +
       '</div>' +
-      '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:underline">📄 Ver acta firmada</a>' : '<span style="font-size:11px;color:var(--text-3)">No existe un acta registrada.</span>') + '</div>' +
+      '<div class="form-group full" style="text-align:center;margin-top:6px">' + (u.acta_entrega_url ? '<div style="text-align:center;margin-top:8px"><a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" class="btn" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:8px 18px">📄 Ver acta firmada</a></div>' : '') +
     '</div></div>' +
     '<div class="form-section" id="seccion-devolucion"><div class="form-section-head">6 · Devolución del equipo anterior</div>' +
     '<div style="padding:8px 0 10px;border-bottom:1px dashed var(--border);margin-bottom:10px">' +
@@ -756,7 +748,6 @@ function openEditModal(id) {
     '</div>' +
     '<div id="dev-campos">' +
       '<div class="form-group"><label class="form-label">Estado de devolución</label><select class="form-select" id="m-estado_devolucion">' + devEstadoOpts + '</select></div>' +
-      '<div class="form-group"><label class="form-label">Disposición final del equipo</label><select class="form-select" id="m-disposicion_final">' + dispFinalOpts + '</select></div>' +
       '<div class="form-group"><label class="form-label">F. Solicitud devolución</label><input type="date" class="form-input" id="m-fecha_solicitud_devolucion" value="' + toDateInput(u.fecha_solicitud_devolucion) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. en tránsito</label><input type="date" class="form-input" id="m-fecha_transito" value="' + toDateInput(u.fecha_transito) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. Recepción en Bodega</label><input type="date" class="form-input" id="m-fecha_recepcion_bodega" value="' + toDateInput(u.fecha_recepcion_bodega) + '"></div>' +
@@ -1053,6 +1044,11 @@ window.actualizarRecomendacion = function() {
   if (!bat && !tec && !tou && !est) { disp.style.display = 'none'; if (motdisp) motdisp.style.display='none'; return; }
   var resultado = (typeof RAEEEngine !== 'undefined') ? RAEEEngine.calcular(bat, tec, tou, est) : null;
   if (!resultado) { disp.style.display = 'none'; return; }
+  // RC-07 T3: Si Motor A clasifica como Reasignable → Motor B debe ser Reasignacion
+  if (window._currentRecord && window._currentRecord.estado_eq_ant === 'Reasignable') {
+    resultado.recomendacion = 'Reasignacion';
+    resultado.motivo = 'Motor A: procesador de generación reciente — equipo apto para reasignación.';
+  }
   var colors = { 'RAEE': { bg: '#FFEBEE', fg: '#C00000' }, 'Donacion': { bg: '#FFF3E0', fg: '#E65100' },
     'Venta interna': { bg: '#E8F5E9', fg: '#2E7D32' }, 'Reasignacion': { bg: '#E3F2FD', fg: '#1565C0' } };
   var c = colors[resultado.recomendacion] || { bg: '#F5F5F5', fg: '#555' };
@@ -1233,14 +1229,14 @@ function saveRecord() {
   if (!u) return;
 
   var fields = [
-    'empresa','nombre','cedula','usuario','correo','ciudad','ceco','proyecto','cargo','gerente','registro',
+    'empresa','nombre','cedula','usuario','correo','ciudad','ceco','proyecto','cargo','gerente','nivel_usuario',
     'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname',
-    'eq_ant_procesador','eq_ant_memoria','eq_ant_disco','eq_ant_so',
+    'eq_ant_procesador','eq_ant_ram','eq_ant_disco','eq_ant_so',
     'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname',
     'eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco','eq_nvo_so',
     'tecnico','estado','estado_entrega_equipo_nuevo','notas_alistamiento','caso_envio',
     'fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta','nombre_archivo',
-    'estado_devolucion','disposicion_final','fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega',
+    'estado_devolucion','fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega',
     'observaciones_devolucion',
     'lista_recoleccion','eval_bateria','eval_teclado','eval_touchpad','eval_estetico'
   ];
@@ -1258,7 +1254,6 @@ function saveRecord() {
   var acEl = document.getElementById('m-acta_entrega_url');
   changes.acta_entrega_url = (acEl ? acEl.value.trim() : '') || '';
   changes.recibido_bodega    = changes.estado_devolucion === 'Recibida en bodega';
-  changes.equipo_reasignable = changes.disposicion_final === 'Reasignación interna';
   changes.equipo_devuelto    = changes.recibido_bodega;
   var fbStars = document.getElementById('m-feedback-stars');
   changes.feedback = fbStars ? parseInt(fbStars.dataset.value || '0') : 0;
@@ -1272,6 +1267,11 @@ function saveRecord() {
           changes.eval_bateria, changes.eval_teclado,
           changes.eval_touchpad, changes.eval_estetico
         );
+        // RC-07 T3: Si Motor A Reasignable → forzar Reasignacion en Motor B
+        if (_raeeResult && u.estado_eq_ant === 'Reasignable') {
+          _raeeResult.recomendacion = 'Reasignacion';
+          _raeeResult.motivo = 'Motor A: procesador de generación reciente — reasignación.';
+        }
         if (_raeeResult) {
           changes.recomendacion_raee     = _raeeResult.recomendacion;
           changes.motivo_raee            = _raeeResult.motivo;

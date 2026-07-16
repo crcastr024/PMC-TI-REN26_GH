@@ -1250,18 +1250,6 @@ const ConfigService = (() => {
   // GH3.40.2 Task 4: catálogo oficial RAEE — 4 valores (el motor se actualiza en sprint posterior)
   const CLASIFICACIONES_RAEE = ['Reutilizar', 'Reasignar', 'RAEE', 'Revisión manual'];
 
-  // ── 4. Disposición final del equipo anterior — valores permitidos
-  // F3.6 · Disposición final — 4 valores del spec de negocio
-  // GH3.40.2 Task 3: catálogo oficial de disposición final
-  const DISPOSICION_FINAL_OPTS = [
-    'Pendiente definir',
-    'Reasignación interna',
-    'RAEE',
-    'Donación',
-    'Venta',
-    'Garantía',
-    'Otro',
-  ];
 
   // F3.6 · Estado de entrega del equipo nuevo — entidad física independiente del proceso REN26
   const ESTADO_ENTREGA_EQ_NVO = [
@@ -1309,7 +1297,6 @@ const ConfigService = (() => {
 
     // Enums de negocio
     CLASIFICACIONES_RAEE,
-    DISPOSICION_FINAL_OPTS,
     ESTADO_ENTREGA_EQ_NVO,
     CATEGORIAS_BLOQUEO,
     NIVELES_REGISTRO,

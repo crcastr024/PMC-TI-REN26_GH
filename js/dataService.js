@@ -12,30 +12,47 @@ function normalizeRecord_F3(r) {
   // ExcelMapper.toJson produce campos sin guiones. Este bloque remapea
   // esos campos al formato interno con guiones (eq_nvo_tipo).
   var LOAD_ALIASES = {
-    // Columna nombre: Excel puede usar 'NombreCompleto' o 'Title'
-    'nombrecompleto': 'nombre', 'title': 'nombre',
-    'eqnvotipo': 'eq_nvo_tipo', 'eqnvomarca': 'eq_nvo_marca',
-    'eqnvomodelo': 'eq_nvo_modelo', 'eqnvoserial': 'eq_nvo_serial',
-    'eqnvoplaca': 'eq_nvo_placa', 'eqnvohostname': 'eq_nvo_hostname',
-    'eqnvoprocesador': 'eq_nvo_procesador', 'eqnvoram': 'eq_nvo_ram',
-    'eqnvodisco': 'eq_nvo_disco', 'eqnvoso': 'eq_nvo_so',
-    'datomaestro': 'dato_maestro',
-    'eqanttipo': 'eq_ant_tipo', 'eqantmarca': 'eq_ant_marca',
-    'eqantmodelo': 'eq_ant_modelo', 'eqantserial': 'eq_ant_serial',
-    'eqantaf': 'eq_ant_af', 'eqantplaca': 'eq_ant_placa',
-    'eqanthostname': 'eq_ant_hostname', 'eqantprocesador': 'eq_ant_procesador',
-    'eqantram': 'eq_ant_ram', 'eqantdisco': 'eq_ant_disco', 'eqantso': 'eq_ant_so',
-    'centrocostos': 'ceco', 'nivel': 'registro',
-    'estadoentregaequiponuevo': 'estado_entrega_equipo_nuevo',
-    'casoenvio': 'caso_envio',
-    'fechaenvio': 'fecha_envio', 'fechaasignacion': 'fecha_entrega',
-    'fechaenvioacta': 'fecha_envio_acta', 'fechafirmaacta': 'fecha_firma_acta',
+    // ── Columnas cuyo nombre lowercase ≠ nombre interno del campo ──────
+    // Excel UPPERCASE_UNDERSCORE → lowercase → alias → campo interno
+    'estado_renovacion':      'estado',           // ESTADO_RENOVACION → estado
+    'nombre_archivo_acta':    'nombre_archivo',   // NOMBRE_ARCHIVO_ACTA → nombre_archivo
+    'fecha_acta_enviada':     'fecha_envio_acta', // FECHA_ACTA_ENVIADA → fecha_envio_acta
+    'fecha_acta_firmada':     'fecha_firma_acta', // FECHA_ACTA_FIRMADA → fecha_firma_acta
+    'calificacion_feedback':  'feedback',         // CALIFICACION_FEEDBACK → feedback
+
+    // ── Aliases legacy CamelCase (compatibilidad Excel anterior) ────────
+    'nombrecompleto':            'nombre',
+    'title':                     'nombre',
+    'centrocostos':              'ceco',
+    'nivel':                     'nivel_usuario',
+    'eqnvotipo':     'eq_nvo_tipo',    'eqnvomarca':    'eq_nvo_marca',
+    'eqnvomodelo':   'eq_nvo_modelo',  'eqnvoserial':   'eq_nvo_serial',
+    'eqnvoaf':       'eq_nvo_af',      'eqnvoplaca':    'eq_nvo_placa',
+    'eqnvohostname': 'eq_nvo_hostname','eqnvoprocesador':'eq_nvo_procesador',
+    'eqnvoram':      'eq_nvo_ram',     'eqnvodisco':    'eq_nvo_disco',
+    'eqnvoso':       'eq_nvo_so',
+    'eqanttipo':     'eq_ant_tipo',    'eqantmarca':    'eq_ant_marca',
+    'eqantmodelo':   'eq_ant_modelo',  'eqantserial':   'eq_ant_serial',
+    'eqantaf':       'eq_ant_af',      'eqantplaca':    'eq_ant_placa',
+    'eqanthostname': 'eq_ant_hostname','eqantprocesador':'eq_ant_procesador',
+    'eqantram':      'eq_ant_ram', 'eq_ant_memoria': 'eq_ant_ram', 'eqantdisco':    'eq_ant_disco',
+    'eqantso':       'eq_ant_so',
+    'casoenvio':         'caso_envio',
+    'fechaenvio':        'fecha_envio',
+    'fechaasignacion':   'fecha_entrega',
+    'fechaenvioacta':    'fecha_envio_acta',
+    'fechafirmaacta':    'fecha_firma_acta',
     'fechasolicituddevolucion': 'fecha_solicitud_devolucion',
-    'fechatransito': 'fecha_transito', 'fecharecepcionbodega': 'fecha_recepcion_bodega',
-    'actaentregaurl': 'acta_entrega_url', 'nombrearchivo': 'nombre_archivo',
-    'disposicionfinal': 'disposicion_final',
-    'feedbackrecibido': 'feedback', 'evidenciaadjunta': 'evidencia_adjunta',
-    'bloqueado': 'blocked', 'categoriabloqueo': 'block_category',
+    'fechatransito':     'fecha_transito',
+    'fecharecepcionbodega': 'fecha_recepcion_bodega',
+    'actaentregaurl':    'acta_entrega_url',
+    'nombrearchivo':     'nombre_archivo',
+    'estadoentregaequiponuevo': 'estado_entrega_equipo_nuevo',
+    'disposicionfinal':  'disposicion_final',
+    'observacionesdevolucion': 'observaciones_devolucion',
+    'feedbackrecibido':  'feedback',
+    'bloqueado':         'blocked',
+    'categoriabloqueo':  'block_category',
     'estadoanteriorbloqueo': 'block_previous_state',
   };
   Object.keys(LOAD_ALIASES).forEach(function(src) {
@@ -76,7 +93,12 @@ function normalizeRecord_F3(r) {
   if (r.eq_ant_disco == null) r.eq_ant_disco = '';  // GH3.26: EQ_ANT_DISCO — col U
   // GH3.28/GH3.29: campos Motor RAEE — solo inicializar, NUNCA recalcular
   // (GH3.29: RAEEEngine.calcular() PROHIBIDO fuera de saveRecord)
-  if (r.lista_recoleccion   == null) r.lista_recoleccion   = false;
+  if (r.lista_recoleccion == null) {
+    r.lista_recoleccion = false;
+  } else if (typeof r.lista_recoleccion === 'string') {
+    var _lr = r.lista_recoleccion.toUpperCase().trim();
+    r.lista_recoleccion = _lr === 'TRUE' || _lr === 'SI' || _lr === '1' || _lr === 'YES';
+  } else { r.lista_recoleccion = !!r.lista_recoleccion; }
   if (r.eval_bateria        == null) r.eval_bateria        = '';
   if (r.eval_teclado        == null) r.eval_teclado        = '';
   if (r.eval_touchpad       == null) r.eval_touchpad       = '';
@@ -94,7 +116,6 @@ function normalizeRecord_F3(r) {
   if (r.eq_nvo_af == null) r.eq_nvo_af = '';
   if (r.evidencia_adjunta == null) r.evidencia_adjunta = false;
   if (r.nombre_archivo == null) r.nombre_archivo = '';
-  if (r.disposicion_final == null) r.disposicion_final = '';
   // F3.6 · estado físico de entrega del equipo nuevo (entidad independiente del proceso)
   if (r.estado_entrega_equipo_nuevo == null) r.estado_entrega_equipo_nuevo = '';
   
@@ -223,49 +244,9 @@ function renderTimelineHTML(record) {
       (record._missing_items ? ' · falta: ' + record._missing_items.join(', ') : '') + '</div>';
   }
 
-  // ── Historial vertical
-  let historyHTML = '<div class="tl-history">';
-  if (timeline.length === 0) {
-    historyHTML += '<div class="tl-empty">Sin eventos registrados</div>';
-  } else {
-    const sorted = timeline.slice().sort((a, b) => b.at.localeCompare(a.at));
-    sorted.forEach((ev, idx) => {
-      const isFirst = idx === 0;
-      historyHTML += '<div class="tl-event' + (isFirst ? ' tl-event-current' : '') + '">' +
-        '<div class="tl-event-dot"></div>' +
-        '<div class="tl-event-body">' +
-          '<div class="tl-event-head">' +
-            '<strong>' + esc(ev.to || '—') + '</strong>' +
-            (ev.from ? ' <span class="tl-event-from">desde ' + esc(ev.from) + '</span>' : '') +
-          '</div>' +
-          '<div class="tl-event-meta">' + formatDateEs(ev.at) + ' · ' + esc(ev.by || 'sistema') + '</div>' +
-          (ev.note ? '<div class="tl-event-note">' + esc(ev.note) + '</div>' : '') +
-        '</div>' +
-      '</div>';
-    });
-  }
-  historyHTML += '</div>';
+  let historyHTML = ''; // RC-07: historial eliminado del formulario
 
-  // GH3.28: Panel RAEE
-  var raeePanel = '';
-  if (record.recomendacion_raee) {
-    var raeeColor = {
-      'RAEE': '#C00000', 'Donacion': '#E65100',
-      'Venta interna': '#2E7D32', 'Reasignacion': '#1565C0'
-    }[record.recomendacion_raee] || '#555';
-    var motorVer  = record.motor_raee_version   || 'v1';
-    var evalDate  = record.fecha_evaluacion_raee ? formatDateEs(record.fecha_evaluacion_raee) : '—';
-    var evalUser  = record.usuario_evaluacion_raee || '—';
-    raeePanel =
-      '<div style="margin-top:8px;padding:8px 14px;border-radius:var(--r-sm);background:#FFF7ED;border-left:3px solid ' + raeeColor + '">' +
-        '<div style="font-size:10px;color:' + raeeColor + ';font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Clasificación RAEE · ' + esc(motorVer) + '</div>' +
-        '<strong style="color:' + raeeColor + '">' + esc(record.recomendacion_raee) + '</strong>' +
-        (record.motivo_raee ? '<div style="font-size:11px;color:#777;margin-top:4px">' + esc(record.motivo_raee) + '</div>' : '') +
-        '<div style="font-size:10px;color:#999;margin-top:6px">Evaluado: ' + evalDate + ' · ' + esc(evalUser) + '</div>' +
-      '</div>';
-  }
-
-  return progressHTML + historyHTML + raeePanel;
+  return progressHTML;
 }
 window.renderTimelineHTML  = renderTimelineHTML;
 window.normalizeRecord_F3  = normalizeRecord_F3;  // Exportado para tests y sync.js
