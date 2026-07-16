@@ -51,19 +51,28 @@ function _applyRBAC(role, userEmail) {
   // ── RBAC-03: Ocultar vistas por rol ──────────────────────────────────────
   // roles técnico / consulta / visitante no acceden a vistas ejecutivas
   // GH3.39.1 FC-11: Técnico puede ver panel — solo se restringe admin/permisos
-  var RESTRICTED_VIEWS = ['aprobaciones', 'roles', 'configuracion', 'reportes-ejecutivos', 'administracion', 'permisos'];
+  var RESTRICTED_VIEWS = [
+    // STAB-v09.2 TASK 4: técnico solo se restringe de ajustes, aprobaciones y admin
+    'roles', 'configuracion', 'reportes-ejecutivos', 'administracion'
+  ];
+  var TECNICO_RESTRICTED = ['ajustes']; // ajustes siempre solo para admin
   var isTecnico  = (role === 'tecnico');
   var isConsulta = (role === 'consulta' || role === 'visitante');
   var isRestricted = isTecnico || isConsulta;
 
-  if (isRestricted) {
-    // Ocultar items del nav para roles restringidos
-    document.querySelectorAll('.sb-item').forEach(function(item) {
-      var view = item.dataset && item.dataset.view;
-      if (view && RESTRICTED_VIEWS.some(function(rv) { return view.indexOf(rv) >= 0; })) {
-        item.style.display = 'none';
-      }
-    });
+  // STAB-v09.2 TASK 4: aplicar restricciones por rol
+  document.querySelectorAll('.sb-item').forEach(function(item) {
+    var view = item.dataset && item.dataset.view;
+    if (!view) return;
+    var blocked = false;
+    if (isRestricted && RESTRICTED_VIEWS.some(function(rv) { return view.indexOf(rv) >= 0; })) blocked = true;
+    if (isTecnico  && TECNICO_RESTRICTED.some(function(rv) { return view === rv; })) blocked = true;
+    if (blocked) item.style.display = 'none';
+  });
+  // Panel/Seguimiento visible para técnico (STAB-v09.2 TASK 4)
+  var panelItem = document.getElementById('sb-panel');
+  if (panelItem && (isTecnico || ['gestor_activos','super_admin','director_ti','gerencia'].indexOf(role) >= 0)) {
+    panelItem.style.display = '';
   }
 
   // ── RBAC-04: Ocultar el role-switcher para todos excepto Super Admin ──────
@@ -314,7 +323,7 @@ async function boot() {
 
 
       // Iniciar sincronización automática (RC1 GL-5 preservado)
-      SynchronizationManager.start((window.APP_CONFIG && window.APP_CONFIG.refreshInterval) || 10000);
+      SynchronizationManager.start(); // RC-07: intervalos adaptativos (15/60/120s)
 
 
     } catch(err) {
@@ -1250,18 +1259,6 @@ const ConfigService = (() => {
   // GH3.40.2 Task 4: catálogo oficial RAEE — 4 valores (el motor se actualiza en sprint posterior)
   const CLASIFICACIONES_RAEE = ['Reutilizar', 'Reasignar', 'RAEE', 'Revisión manual'];
 
-  // ── 4. Disposición final del equipo anterior — valores permitidos
-  // F3.6 · Disposición final — 4 valores del spec de negocio
-  // GH3.40.2 Task 3: catálogo oficial de disposición final
-  const DISPOSICION_FINAL_OPTS = [
-    'Pendiente definir',
-    'Reasignación interna',
-    'RAEE',
-    'Donación',
-    'Venta',
-    'Garantía',
-    'Otro',
-  ];
 
   // F3.6 · Estado de entrega del equipo nuevo — entidad física independiente del proceso REN26
   const ESTADO_ENTREGA_EQ_NVO = [
@@ -1309,7 +1306,6 @@ const ConfigService = (() => {
 
     // Enums de negocio
     CLASIFICACIONES_RAEE,
-    DISPOSICION_FINAL_OPTS,
     ESTADO_ENTREGA_EQ_NVO,
     CATEGORIAS_BLOQUEO,
     NIVELES_REGISTRO,

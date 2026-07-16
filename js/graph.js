@@ -334,7 +334,7 @@ const SP_FIELD_MAP = {
   'Gerente':                  'gerente',
   'CentroCostos':             'ceco',
   'Proyecto':                 'proyecto',
-  'Nivel':                    'registro',
+  'Nivel':                    'nivel_usuario',
   // ── Equipo nuevo ─────────────────────────────────────────────
   'EqNvoTipo':                'eq_nvo_tipo',
   'EqNvoMarca':               'eq_nvo_marca',
@@ -361,7 +361,6 @@ const SP_FIELD_MAP = {
   'Tecnico':                  'tecnico',
   'Estado':                   'estado',
   'EstadoEntregaEquipoNuevo': 'estado_entrega_equipo_nuevo',
-  'DisposicionFinal':         'disposicion_final',
   'ActaEnviada':              'acta_enviada',
   'ActaEntregaUrl':           'acta_entrega_url',
   'EvidenciaAdjunta':         'evidencia_adjunta',
@@ -535,7 +534,7 @@ const WriteContract = (() => {
     'estado_eq_ant', 'clasificacion_raee', '_obsolescence_meta',
     'equipoAnterior', 'equipoNuevo',
     'sp_item_id',                      // meta SP — no se escribe al campo real
-    'recibido_bodega', 'equipo_reasignable', 'equipo_devuelto', // derivados de formulario
+    'recibido_bodega', 'equipo_devuelto', // derivados de formulario
   ]);
 
   // Campos de solo lectura (vienen del Excel/SAP — no se editan en el Dashboard)
@@ -554,11 +553,11 @@ const WriteContract = (() => {
   const ALLOWED_FIELDS = [
     // Sección 1 — Colaborador
     'empresa', 'nombre', 'cedula', 'usuario', 'correo', 'ciudad', 'ceco', 'proyecto',
-    'cargo', 'gerente', 'registro',
+    'cargo', 'gerente', 'nivel_usuario',
     // Sección 2 — Equipo anterior
     'eq_ant_tipo', 'eq_ant_marca', 'eq_ant_modelo', 'eq_ant_serial', 'eq_ant_af',
     'eq_ant_placa', 'eq_ant_hostname', 'eq_ant_procesador',
-    'eq_ant_memoria', 'eq_ant_disco', 'eq_ant_so',
+    'eq_ant_ram', 'eq_ant_disco', 'eq_ant_so',
     // Sección 4 — Equipo nuevo (+ eq_nvo_so nuevo en este Excel)
     'eq_nvo_tipo', 'eq_nvo_marca', 'eq_nvo_modelo', 'eq_nvo_serial', 'eq_nvo_af',
     'eq_nvo_placa', 'eq_nvo_hostname', 'eq_nvo_procesador', 'eq_nvo_ram', 'eq_nvo_disco',
@@ -571,7 +570,7 @@ const WriteContract = (() => {
     'acta_entrega_url', 'nombre_archivo',
     'feedback',
     // Sección 7 — Devolución
-    'estado_devolucion', 'disposicion_final',
+    'estado_devolucion',
     'fecha_solicitud_devolucion', 'fecha_transito', 'fecha_recepcion_bodega',
     'lista_recoleccion',
     // Evaluación física y RAEE
@@ -588,7 +587,6 @@ const WriteContract = (() => {
   const FIELD_TYPES = {
     estado:                      'choice',
     estado_entrega_equipo_nuevo: 'choice',
-    disposicion_final:           'choice',
     tecnico:                     'choice',
     acta_entrega_url:            'string',
     feedback:                    'number',
@@ -612,11 +610,6 @@ const WriteContract = (() => {
       typeof ConfigService !== 'undefined'
         ? ConfigService.ESTADO_ENTREGA_EQ_NVO.filter(Boolean)
         : ['Pendiente','Alistado','En tránsito','Entregado','Completado']
-    ),
-    disposicion_final: (
-      typeof ConfigService !== 'undefined'
-        ? ConfigService.DISPOSICION_FINAL_OPTS.filter(Boolean)
-        : ['Venta interna empleado','Reasignación interna','Baja RAEE','Pendiente evaluación']
     ),
     tecnico: (
       window.CONFIG && window.CONFIG.technicians
@@ -693,8 +686,6 @@ const GraphWriteValidator = (() => {
       // ConfigService no existe cuando graph.js inicializa su IIFE (#6 en carga)
       // pero sí existe cuando validateField() se ejecuta (boot.js carga en #13)
       const choices = (function() {
-        if (field === 'disposicion_final' && typeof ConfigService !== 'undefined')
-          return ConfigService.DISPOSICION_FINAL_OPTS.filter(Boolean);
         if (field === 'estado_entrega_equipo_nuevo' && typeof ConfigService !== 'undefined')
           return ConfigService.ESTADO_ENTREGA_EQ_NVO.filter(Boolean);
         return WriteContract.VALID_CHOICES[field];
@@ -1268,7 +1259,7 @@ const RenovacionModel = {
       hostname:   record.eq_ant_hostname   || null,
       placa:      record.eq_ant_placa      || null,
       procesador: record.eq_ant_procesador || null,
-      memoria:    record.eq_ant_memoria    || null,
+      memoria:    record.eq_ant_ram         || null,
       so:         record.eq_ant_so         || null,
       // campos calculados por ObsolescenceService (solo lectura en UI)
       clasificacion: record.clasificacion_obsolescencia || null,
@@ -1318,7 +1309,7 @@ const RenovacionModel = {
       record.eq_ant_tipo = ea.tipo; record.eq_ant_marca = ea.marca; record.eq_ant_modelo = ea.modelo;
       record.eq_ant_af = ea.af; record.eq_ant_serial = ea.serial; record.eq_ant_hostname = ea.hostname;
       record.eq_ant_placa = ea.placa; record.eq_ant_procesador = ea.procesador;
-      record.eq_ant_memoria = ea.memoria; record.eq_ant_so = ea.so;
+      record.eq_ant_ram = ea.memoria; record.eq_ant_so = ea.so;
     }
     if (record.equipoNuevo) {
       const en = record.equipoNuevo;

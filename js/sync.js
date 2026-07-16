@@ -82,11 +82,22 @@ window.RefreshManager = RefreshManager;
 // MVP · SynchronizationManager — polling cada 10s, delta por _VERSION
 // ────────────────────────────────────────────────────────────────────
 const SynchronizationManager = (() => {
-  let _timer        = null;
-  let _lastETag     = null;
-  let _running      = false;
-  let _interval     = 10000; // 10 segundos (MVP)
-  let _versionCache = {};    // id → _version
+  let _timer         = null;
+  let _lastETag      = null;
+  let _running       = false;
+  let _tickActive    = false;   // RC-06/07 TASK 9: lock global
+  let _pendingTick   = null;    // RC-07 TASK 7: debounce requestTick
+  let _versionCache  = {};      // id → VERSION (columna Excel)
+  let _lastActivity  = 0;       // RC-07 TASK 6: timestamp última actividad
+  // RC-07 TASK 6 — Intervalos adaptativos
+  var INTERVAL_INACTIVE = 60000;  // 60s — usuario inactivo
+  var INTERVAL_ACTIVE   = 15000;  // 15s — actividad reciente (< 2 min)
+  var INTERVAL_HIDDEN   = 120000; // 120s — pestaña oculta
+  function _getInterval() {
+    if (typeof document !== 'undefined' && document.hidden) return INTERVAL_HIDDEN;
+    if (Date.now() - _lastActivity < 120000) return INTERVAL_ACTIVE; // últimos 2 min
+    return INTERVAL_INACTIVE;
+  }
 
   function isExcelMode() {
     return (window.APP_CONFIG && window.APP_CONFIG.dataSource === 'excel')
@@ -95,7 +106,9 @@ const SynchronizationManager = (() => {
 
   async function tick() {
     if (_running) return;
+    if (_tickActive) return; // RC-06 TASK 6: lock global
     _running = true;
+    _tickActive = true;
     try {
       EventBus.publish('provider.sync.started', { timestamp: Date.now() });
 
@@ -116,13 +129,13 @@ const SynchronizationManager = (() => {
 
       // Nivel 2: Descargar solo columnas ID + _VERSION
       const { headers, rows } = await WorkbookLoader.loadColumns(
-        TableRegistry.RENOVACIONES, ['ID', '_VERSION']
+        TableRegistry.RENOVACIONES, ['ID', 'VERSION']
       ).catch(() => ({ headers: [], rows: [] }));
 
       if (headers.length === 0) { _running = false; return; }
 
       const idIdx  = headers.findIndex(h => h.toUpperCase() === 'ID');
-      const verIdx = headers.findIndex(h => h.toUpperCase() === '_VERSION');
+      const verIdx = headers.findIndex(h => h.toUpperCase() === 'VERSION');
 
       const changedIds = [];
       rows.forEach(row => {
@@ -168,7 +181,7 @@ const SynchronizationManager = (() => {
         });
         // Actualizar cache de versiones
         allHeaders.forEach((h, colIdx) => {
-          if (h.toUpperCase() === '_VERSION') {
+          if (h.toUpperCase() === 'VERSION') {
             allRows.forEach((row) => {
               const idColIdx = allHeaders.findIndex(h2 => h2.toUpperCase() === 'ID');
               if (idColIdx >= 0) _versionCache[Number(row[idColIdx])] = Number(row[colIdx] || 0);
@@ -187,44 +200,53 @@ const SynchronizationManager = (() => {
       EventBus.publish('provider.sync.failed', { error: err.message });
     } finally {
       _running = false;
+      _tickActive = false; // RC-06 TASK 6: liberar lock
     }
   }
 
+  // RC-07 TASK 6: scheduling adaptativo con setTimeout recursivo
+  function _scheduleNext() {
+    if (_timer) clearTimeout(_timer);
+    _timer = setTimeout(async function() { await tick(); _scheduleNext(); }, _getInterval());
+  }
+
   return {
-    start(intervalMs) {
-      if (intervalMs) _interval = intervalMs;
-      if (_timer) clearInterval(_timer);
-      _timer = setInterval(tick, _interval);
-
-
-      // RC1 GL-5: reducir polling cuando el tab está oculto (ahorro de red)
+    start() {
+      _scheduleNext();
       if (typeof document !== 'undefined') {
-        document.addEventListener('visibilitychange', () => {
-          if (document.hidden) {
-            if (_timer) clearInterval(_timer);
-            _timer = setInterval(tick, _interval * 6); // 60s cuando oculto
-
-          } else {
-            if (_timer) clearInterval(_timer);
-            _timer = setInterval(tick, _interval);
-            tick(); // tick inmediato al volver al tab
-
+        document.addEventListener('visibilitychange', function() {
+          if (!document.hidden) {
+            if (_timer) clearTimeout(_timer);
+            tick().then(function() { _scheduleNext(); });
           }
         });
       }
     },
     stop() {
-      if (_timer) clearInterval(_timer);
+      if (_timer) clearTimeout(_timer);
       _timer = null;
-
     },
     tick,
-    isRunning:   () => !!_timer,
-    setInterval: (ms) => { _interval = ms; },
-
+    // RC-07 TASK 7: requestTick con debounce
+    requestTick(delayMs) {
+      delayMs = typeof delayMs === 'number' ? delayMs : 1500;
+      if (_pendingTick) clearTimeout(_pendingTick);
+      _pendingTick = setTimeout(function() { _pendingTick = null; tick(); }, delayMs);
+    },
+    // RC-07 TASK 6: registrar actividad → intervalo activo 15s
+    recordActivity() {
+      _lastActivity = Date.now();
+      if (_timer) {
+        clearTimeout(_timer);
+        _timer = setTimeout(async function() { await tick(); _scheduleNext(); }, INTERVAL_ACTIVE);
+      }
+    },
+    // RC-07 TASK 3: versión cacheada de un registro (sin llamada Graph)
+    getCachedVersion(id) { return _versionCache[Number(id)]; },
+    isTickActive:  () => _tickActive,
+    isRunning:     () => !!_timer,
     onReconnect: async function() {
-
-      _lastETag = null; // forzar recarga
+      _lastETag = null;
       await WriteQueue.flush();
       await tick();
     },

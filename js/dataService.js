@@ -12,38 +12,48 @@ function normalizeRecord_F3(r) {
   // ExcelMapper.toJson produce campos sin guiones. Este bloque remapea
   // esos campos al formato interno con guiones (eq_nvo_tipo).
   var LOAD_ALIASES = {
-    // Columna nombre: Excel puede usar 'NombreCompleto' o 'Title'
-    'nombrecompleto': 'nombre', 'title': 'nombre',
-    'eqnvotipo': 'eq_nvo_tipo', 'eqnvomarca': 'eq_nvo_marca',
-    'eqnvomodelo': 'eq_nvo_modelo', 'eqnvoserial': 'eq_nvo_serial',
-    'eqnvoplaca': 'eq_nvo_placa', 'eqnvohostname': 'eq_nvo_hostname',
-    'eqnvoprocesador': 'eq_nvo_procesador', 'eqnvoram': 'eq_nvo_ram',
-    'eqnvodisco': 'eq_nvo_disco', 'eqnvoso': 'eq_nvo_so',
-    'datomaestro': 'dato_maestro',
-    'eqanttipo': 'eq_ant_tipo', 'eqantmarca': 'eq_ant_marca',
-    'eqantmodelo': 'eq_ant_modelo', 'eqantserial': 'eq_ant_serial',
-    'eqantaf': 'eq_ant_af', 'eqantplaca': 'eq_ant_placa',
-    'eqanthostname': 'eq_ant_hostname', 'eqantprocesador': 'eq_ant_procesador',
-    'eqantram': 'eq_ant_ram', 'eqantdisco': 'eq_ant_disco', 'eqantso': 'eq_ant_so',
-    'centrocostos': 'ceco', 'nivel': 'registro',
-    'estadoentregaequiponuevo': 'estado_entrega_equipo_nuevo',
-    'casoenvio': 'caso_envio',
-    'fechaenvio': 'fecha_envio', 'fechaasignacion': 'fecha_entrega',
-    'fechaenvioacta': 'fecha_envio_acta', 'fechafirmaacta': 'fecha_firma_acta',
+    // ── Columnas cuyo nombre lowercase ≠ nombre interno del campo ──────
+    // Excel UPPERCASE_UNDERSCORE → lowercase → alias → campo interno
+    'estado_renovacion':      'estado',           // ESTADO_RENOVACION → estado
+    'nombre_archivo_acta':    'nombre_archivo',   // NOMBRE_ARCHIVO_ACTA → nombre_archivo
+    'fecha_acta_enviada':     'fecha_envio_acta', // FECHA_ACTA_ENVIADA → fecha_envio_acta
+    'fecha_acta_firmada':     'fecha_firma_acta', // FECHA_ACTA_FIRMADA → fecha_firma_acta
+    'calificacion_feedback':  'feedback',         // CALIFICACION_FEEDBACK → feedback
+
+    // ── Aliases legacy CamelCase (compatibilidad Excel anterior) ────────
+    'nombrecompleto':            'nombre',
+    'title':                     'nombre',
+    'centrocostos':              'ceco',
+    'nivel':                     'nivel_usuario',
+    'eqnvotipo':     'eq_nvo_tipo',    'eqnvomarca':    'eq_nvo_marca',
+    'eqnvomodelo':   'eq_nvo_modelo',  'eqnvoserial':   'eq_nvo_serial',
+    'eqnvoaf':       'eq_nvo_af',      'eqnvoplaca':    'eq_nvo_placa',
+    'eqnvohostname': 'eq_nvo_hostname','eqnvoprocesador':'eq_nvo_procesador',
+    'eqnvoram':      'eq_nvo_ram',     'eqnvodisco':    'eq_nvo_disco',
+    'eqnvoso':       'eq_nvo_so',
+    'eqanttipo':     'eq_ant_tipo',    'eqantmarca':    'eq_ant_marca',
+    'eqantmodelo':   'eq_ant_modelo',  'eqantserial':   'eq_ant_serial',
+    'eqantaf':       'eq_ant_af',      'eqantplaca':    'eq_ant_placa',
+    'eqanthostname': 'eq_ant_hostname','eqantprocesador':'eq_ant_procesador',
+    'eqantram':      'eq_ant_ram', 'eq_ant_memoria': 'eq_ant_ram', 'eqantdisco':    'eq_ant_disco',
+    'eqantso':       'eq_ant_so',
+    'casoenvio':         'caso_envio',
+    'fechaenvio':        'fecha_envio',
+    'fechaasignacion':   'fecha_entrega',
+    'fechaenvioacta':    'fecha_envio_acta',
+    'fechafirmaacta':    'fecha_firma_acta',
     'fechasolicituddevolucion': 'fecha_solicitud_devolucion',
-    'fechatransito': 'fecha_transito', 'fecharecepcionbodega': 'fecha_recepcion_bodega',
-    'actaentregaurl': 'acta_entrega_url', 'nombrearchivo': 'nombre_archivo',
-    'disposicionfinal': 'disposicion_final',
-    'feedbackrecibido': 'feedback', 'evidenciaadjunta': 'evidencia_adjunta',
-    'bloqueado': 'blocked', 'categoriabloqueo': 'block_category',
+    'fechatransito':     'fecha_transito',
+    'fecharecepcionbodega': 'fecha_recepcion_bodega',
+    'actaentregaurl':    'acta_entrega_url',
+    'nombrearchivo':     'nombre_archivo',
+    'estadoentregaequiponuevo': 'estado_entrega_equipo_nuevo',
+    'disposicionfinal':  'disposicion_final',
+    'observacionesdevolucion': 'observaciones_devolucion',
+    'feedbackrecibido':  'feedback',
+    'bloqueado':         'blocked',
+    'categoriabloqueo':  'block_category',
     'estadoanteriorbloqueo': 'block_previous_state',
-    // Excel UPPERCASE_UNDERSCORE aliases
-    'nivel_usuario':       'registro',
-    'estado_renovacion':   'estado',
-    'nombre_archivo_acta': 'nombre_archivo',
-    'fecha_acta_enviada':  'fecha_envio_acta',
-    'fecha_acta_firmada':  'fecha_firma_acta',
-    'calificacion_feedback': 'feedback',
   };
   Object.keys(LOAD_ALIASES).forEach(function(src) {
     var dst = LOAD_ALIASES[src];
@@ -106,7 +116,6 @@ function normalizeRecord_F3(r) {
   if (r.eq_nvo_af == null) r.eq_nvo_af = '';
   if (r.evidencia_adjunta == null) r.evidencia_adjunta = false;
   if (r.nombre_archivo == null) r.nombre_archivo = '';
-  if (r.disposicion_final == null) r.disposicion_final = '';
   // F3.6 · estado físico de entrega del equipo nuevo (entidad independiente del proceso)
   if (r.estado_entrega_equipo_nuevo == null) r.estado_entrega_equipo_nuevo = '';
   

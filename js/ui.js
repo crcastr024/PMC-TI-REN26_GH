@@ -127,7 +127,12 @@ function renderEmpresaChart() {
 }
 
 function renderTecnicoChart() {
-  const techs = window.CONFIG.technicians;
+  const _roleT = window.state && state.user && (state.user.role || state.user.rol);
+  const _esTecnicoT = window.state && state.user && state.user.esTecnico;
+  // STAB-v09.2 ÍTEM 6: técnico solo ve su propia tarjeta
+  const techs = (_roleT === 'tecnico' && _esTecnicoT)
+    ? [_esTecnicoT]
+    : window.CONFIG.technicians;
   const colors = ['var(--accent)', 'var(--blue)', 'var(--green)', 'var(--text-4)'];
   const data = techs.map((t, i) => {
     const mine = t === 'Sin asignar'
@@ -485,12 +490,12 @@ function renderReportes() {
   };
   const base = getReportBase();
   $('rep-base-count').textContent = base.length + ' de ' + (window.calculateProjectMetrics ? calculateProjectMetrics().totalColaboradores : getReal().length) + ' base';
-  $('r-alistamiento').textContent = base.filter(u => u.estado === 'Alistamiento').length;
-  $('r-entregados').textContent = base.filter(u => u.estado === 'Entregado' || u.estado === 'Completado').length;
-  $('r-actas').textContent = base.filter(u => u.acta_firmada).length;
-  $('r-devoluciones').textContent = base.filter(u => u.recibido_bodega).length;
-  $('r-finalizados').textContent = base.filter(u => u.estado === 'Completado' && u.acta_firmada).length;
-  $('r-feedback').textContent = base.filter(u => (u.feedback || 0) > 0).length;
+  $('r-alistamiento').textContent = base.filter(u => u.estado && u.estado !== 'Pendiente').length;
+  $('r-entregados').textContent   = base.filter(u => u.fecha_entrega || u.fecha_envio_acta || u.fecha_firma_acta || u.acta_entrega_url).length;
+  $('r-actas').textContent        = base.filter(u => u.fecha_firma_acta).length;
+  $('r-devoluciones').textContent = base.filter(u => u.fecha_solicitud_devolucion).length;
+  $('r-finalizados').textContent  = base.filter(u => u.estado === 'Completado').length;
+  $('r-feedback').textContent     = base.filter(u => (u.feedback || 0) > 0).length;
   if (state.reportFilter) setReport(state.reportFilter);
 }
 
@@ -500,14 +505,14 @@ function setReport(type, btn) {
   const base = getReportBase();
   let filtered = [], title = '';
   switch(type) {
-    case 'alistamiento': filtered = base.filter(u => u.estado === 'Alistamiento'); title = 'REP-01 · En Alistamiento'; break;
-    case 'entregados': filtered = base.filter(u => u.estado === 'Entregado' || u.estado === 'Completado'); title = 'REP-02 · Entregados'; break;
-    case 'actas': filtered = base.filter(u => u.acta_firmada); title = 'REP-03 · Actas firmadas'; break;
-    case 'devoluciones': filtered = base.filter(u => u.recibido_bodega); title = 'REP-04 · Devoluciones recibidas'; break;
-    case 'finalizados': filtered = base.filter(u => u.estado === 'Completado' && u.acta_firmada); title = 'REP-05 · Finalizados'; break;
-    case 'feedback': filtered = base.filter(u => (u.feedback || 0) > 0); title = 'REP-06 · Con feedback'; break;
+    case 'alistamiento': filtered = base.filter(u => u.estado && u.estado !== 'Pendiente'); title = 'REP-01 · Alistamiento (cualquier avance)'; break;
+    case 'entregados':   filtered = base.filter(u => u.fecha_entrega||u.fecha_envio_acta||u.fecha_firma_acta||u.acta_entrega_url); title = 'REP-02 · Entregados'; break;
+    case 'actas':        filtered = base.filter(u => u.fecha_firma_acta); title = 'REP-03 · Actas firmadas'; break;
+    case 'devoluciones': filtered = base.filter(u => u.fecha_solicitud_devolucion); title = 'REP-04 · Proceso devolución iniciado'; break;
+    case 'finalizados':  filtered = base.filter(u => u.estado === 'Completado'); title = 'REP-05 · Finalizados'; break;
+    case 'feedback':     filtered = base.filter(u => (u.feedback||0) > 0); title = 'REP-06 · Con feedback'; break;
+    case 'raee':         filtered = base.filter(u => u.recomendacion_raee); title = 'REP-07 · Clasificación Tecnológica'; break;
   }
-  const activeFilters = [];
   if (state.repFilters.empresa) activeFilters.push(state.repFilters.empresa);
   if (state.repFilters.tipo) activeFilters.push(state.repFilters.tipo);
   if (state.repFilters.proyecto) activeFilters.push(state.repFilters.proyecto);
@@ -570,14 +575,22 @@ function openEditModal(id) {
   const u = DataService.getRenewal(id);
   _currentRecord = u;  // GH3.28
   if (!u) return;
-  state.editingId = id;
+  state.editingId      = id;
+  state.editingVersion = (u.version !== undefined ? Number(u.version) : -1); // RC-07 TASK 2
+  // STAB-v09.2 ÍTEM 11: reiniciar scroll del modal al abrir
+  setTimeout(function() {
+    var mb = document.getElementById('modal-body');
+    if (mb) mb.scrollTop = 0;
+    var tl = document.querySelector('#seccion-timeline');
+    if (tl) tl.scrollLeft = 0;
+  }, 0);
   $('modal-eyebrow').textContent = isBackup(u) ? 'BACKUP ' + u.empresa : (u.empresa + ' · ' + (u.tipo || 'EQUIPO') + ' · ID ' + u.id);
   $('modal-title').textContent = (u.nombre || ('BACKUP ' + u.empresa)) + (u.serial ? ' · ' + u.serial : '');
   const projects = Array.from(new Set(DataService.getRenewals({}).map(x => x.proyecto).filter(p => p))).sort();
   const projectOpts = '<option value="">—</option>' + projects.map(p => '<option' + (u.proyecto === p ? ' selected' : '') + '>' + esc(p) + '</option>').join('');
   // F3.5 · Niveles desde ConfigService (no hardcodeados en componente UI)
   const niveles = ConfigService.NIVELES_REGISTRO;
-  const nivelOpts = '<option value="">—</option>' + niveles.map(n => '<option' + (u.registro === n ? ' selected' : '') + '>' + esc(n) + '</option>').join('');
+  const nivelOpts = '<option value="">—</option>' + niveles.map(n => '<option' + (u.nivel_usuario === n ? ' selected' : '') + '>' + esc(n) + '</option>').join('');
   // GH3.30 Bloque 12: mostrar solo transiciones válidas desde el estado actual
   // Previene selección de estados inalcanzables (2,7,8,9 desde PENDIENTE)
   var _allEstados = ConfigService.getFlow
@@ -599,12 +612,6 @@ function openEditModal(id) {
     .map(v => '<option value="' + v + '"' + (u.estado_entrega_equipo_nuevo === v ? ' selected' : '') + '>' + (v || '—') + '</option>').join('');
   const devEstados = ['No aplica', 'Pendiente', 'Solicitada', 'En tránsito', 'Recibida en bodega'];
   const devEstadoOpts = '<option value="">—</option>' + devEstados.map(e => '<option' + (u.estado_devolucion === e ? ' selected' : '') + '>' + e + '</option>').join('');
-  // F3.2 · Disposición final del equipo anterior — entidad independiente de estado_devolucion
-  // (logística de retorno) y de clasificacion_obsolescencia (motor RAEE). Decide el destino
-  // final del activo una vez recibido en bodega.
-  // F3.5 · Valores desde ConfigService — no hardcodeados en componente UI
-  const dispFinalOpts_ = ConfigService.DISPOSICION_FINAL_OPTS;
-  const dispFinalOpts = dispFinalOpts_.map(d => '<option value="' + d + '"' + (u.disposicion_final === d ? ' selected' : '') + '>' + (d || '—') + '</option>').join('');
   
   $('modal-body').innerHTML = 
 '<div class="form-section" id="seccion-timeline"><div class="form-section-head">Timeline REN26</div>' +
@@ -612,7 +619,7 @@ function openEditModal(id) {
     '</div>' +
 '<div class="form-section"><div class="form-section-head">1 · Datos del usuario</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Empresa</label><select class="form-select" id="m-empresa"><option' + (u.empresa === 'HBT' ? ' selected' : '') + '>HBT</option><option' + (u.empresa === 'HGS' ? ' selected' : '') + '>HGS</option></select></div>' +
-      '<div class="form-group"><label class="form-label">Nivel del usuario</label><select class="form-select" id="m-registro">' + nivelOpts + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Nivel del usuario</label><select class="form-select" id="m-nivel_usuario">' + nivelOpts + '</select></div>' +
       '<div class="form-group full"><label class="form-label">Nombre completo</label><input type="text" class="form-input" id="m-nombre" value="' + esc(u.nombre) + '"></div>' +
       '<div class="form-group"><label class="form-label">Cédula</label><input type="text" class="form-input" id="m-cedula" value="' + esc(u.cedula) + '"></div>' +
       '<div class="form-group"><label class="form-label">Usuario (login)</label><input type="text" class="form-input" id="m-usuario" value="' + esc(u.usuario) + '"></div>' +
@@ -633,7 +640,7 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Placa</label><input type="text" class="form-input" id="m-eq_ant_placa" value="' + esc(u.eq_ant_placa) + '"></div>' +
       '<div class="form-group"><label class="form-label">Hostname</label><input type="text" class="form-input" id="m-eq_ant_hostname" value="' + esc(u.eq_ant_hostname) + '"></div>' +
       '<div class="form-group"><label class="form-label">Procesador</label><input type="text" class="form-input" id="m-eq_ant_procesador" value="' + esc(u.eq_ant_procesador) + '"></div>' +
-      '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" list="ram-opts" class="form-input" id="m-eq_ant_memoria" value="' + esc(u.eq_ant_memoria) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" list="ram-opts" class="form-input" id="m-eq_ant_ram" value="' + esc(u.eq_ant_ram) + '"></div>' +
       '<div class="form-group"><label class="form-label">Disco duro (ant.)</label><input type="text" class="form-input" id="m-eq_ant_disco" value="' + esc(u.eq_ant_disco) + '"></div>' +
       '<div class="form-group full"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_ant_so" value="' + esc(u.eq_ant_so) + '"></div>' +
     '</div>' +
@@ -723,13 +730,13 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Marca</label><input type="text" class="form-input" id="m-eq_nvo_marca" value="' + esc(eqNvo.marca) + '"></div>' +
       '<div class="form-group"><label class="form-label">Modelo</label><input type="text" class="form-input" id="m-eq_nvo_modelo" value="' + esc(eqNvo.modelo) + '"></div>' +
       '<div class="form-group"><label class="form-label">Serial</label><input type="text" class="form-input" id="m-eq_nvo_serial" value="' + esc(eqNvo.serial) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Activo Fijo (AF)</label><input type="text" class="form-input" id="m-eq_nvo_af" value="' + esc(eqNvo.af) + '" placeholder="Código AF"></div>' +
       '<div class="form-group"><label class="form-label">Placa</label><input type="text" class="form-input" id="m-eq_nvo_placa" value="' + esc(eqNvo.placa) + '"></div>' +
       '<div class="form-group"><label class="form-label">Hostname</label><input type="text" class="form-input" id="m-eq_nvo_hostname" value="' + esc(eqNvo.hostname) + '"></div>' +
       '<div class="form-group"><label class="form-label">Procesador</label><input type="text" class="form-input" id="m-eq_nvo_procesador" value="' + esc(eqNvo.procesador) + '"></div>' +
       '<div class="form-group"><label class="form-label">Memoria (RAM)</label><input type="text" list="ram-opts" class="form-input" id="m-eq_nvo_ram" value="' + esc(eqNvo.ram) + '"></div>' +
       '<div class="form-group"><label class="form-label">Disco</label><input type="text" class="form-input" id="m-eq_nvo_disco" value="' + esc(eqNvo.disco) + '"></div>' +
       '<div class="form-group full"><label class="form-label">Sistema operativo</label><input type="text" class="form-input" id="m-eq_nvo_so" value="' + esc(u.eq_nvo_so) + '" placeholder="Ej: Windows 11 Pro"></div>' +
-      '<div class="form-group full"><label class="form-label">Dato maestro SAP (AF) <span style="font-size:9px;font-weight:700;color:#F57F17;background:#FFF8E1;padding:1px 5px;border-radius:3px;letter-spacing:.3px">F7</span></label><input type="text" class="form-input" id="m-eq_nvo_af" value="' + esc(eqNvo.af) + '" placeholder="Código AF / dato maestro SAP"></div>' +
     '</div></div>' +
     '<div class="form-section"><div class="form-section-head">5 · Estado REN26</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Técnico asignado</label><select class="form-select" id="m-tecnico">' + '<option value="">— Sin asignar —</option>' + (window.CONFIG.technicians || []).map(function(t){ return '<option value="' + esc(t) + '"' + ((u.tecnico||'').toLowerCase()===t.toLowerCase()?' selected':'') + '>' + esc(t) + '</option>'; }).join('') + '</select></div>' +
@@ -746,7 +753,7 @@ function openEditModal(id) {
         '<div class="form-group" style="margin:0"><label class="form-label">Nombre del archivo</label><input type="text" class="form-input" id="m-nombre_archivo" value="' + esc(u.nombre_archivo||'') + '" placeholder="Ej: acta_juan_garcia.pdf"></div>' +
         '<div class="form-group" style="margin:0"><label class="form-label">URL del acta (SharePoint)</label><input type="url" class="form-input" id="m-acta_entrega_url" value="' + esc(u.acta_entrega_url||'') + '" placeholder="https://..."></div>' +
       '</div>' +
-      '<div style="margin:4px 0">' + (u.acta_entrega_url ? '<div style="text-align:center;margin-top:8px"><a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" class="btn" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:8px 18px">📄 Ver acta firmada</a></div>' : '') +
+      '<div class="form-group full" style="text-align:center;margin-top:6px">' + (u.acta_entrega_url ? '<div style="text-align:center;margin-top:8px"><a href="' + esc(u.acta_entrega_url) + '" target="_blank" rel="noopener" class="btn" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:8px 18px">📄 Ver acta firmada</a></div>' : '') +
     '</div></div>' +
     '<div class="form-section" id="seccion-devolucion"><div class="form-section-head">6 · Devolución del equipo anterior</div>' +
     '<div style="padding:8px 0 10px;border-bottom:1px dashed var(--border);margin-bottom:10px">' +
@@ -754,7 +761,6 @@ function openEditModal(id) {
     '</div>' +
     '<div id="dev-campos">' +
       '<div class="form-group"><label class="form-label">Estado de devolución</label><select class="form-select" id="m-estado_devolucion">' + devEstadoOpts + '</select></div>' +
-      '<div class="form-group"><label class="form-label">Disposición final del equipo</label><select class="form-select" id="m-disposicion_final">' + dispFinalOpts + '</select></div>' +
       '<div class="form-group"><label class="form-label">F. Solicitud devolución</label><input type="date" class="form-input" id="m-fecha_solicitud_devolucion" value="' + toDateInput(u.fecha_solicitud_devolucion) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. en tránsito</label><input type="date" class="form-input" id="m-fecha_transito" value="' + toDateInput(u.fecha_transito) + '"></div>' +
       '<div class="form-group"><label class="form-label">F. Recepción en Bodega</label><input type="date" class="form-input" id="m-fecha_recepcion_bodega" value="' + toDateInput(u.fecha_recepcion_bodega) + '"></div>' +
@@ -1122,7 +1128,8 @@ window.renderAprobaciones = renderAprobaciones;
 
 function renderPanelEjecutivo() {
   var role = window.state && state.user && (state.user.role || state.user.rol);
-  var allowed = ['super_admin', 'gestor_activos', 'director_ti', 'gerencia'];
+  // STAB-v09.2 ÍTEM 3+4: técnico puede ver Seguimiento
+  var allowed = ['super_admin', 'gestor_activos', 'director_ti', 'gerencia', 'tecnico'];
   if (role && allowed.indexOf(role) < 0) {
     var vp = document.getElementById('view-panel');
     if (vp) vp.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-3)">Vista no disponible para este rol.</div>';
@@ -1200,7 +1207,7 @@ function closeModal(force) {
   // RC-01 T17: DirtyForm eliminado
   var bg = document.getElementById('modal-bg');
   if (bg) bg.classList.remove('active');
-  if (window.state) state.editingId = null;
+  if (window.state) { state.editingId = null; state.editingVersion = undefined; } // RC-07 TASK 9
 }
 window.closeModal = closeModal;
 
@@ -1236,14 +1243,14 @@ function saveRecord() {
   if (!u) return;
 
   var fields = [
-    'empresa','nombre','cedula','usuario','correo','ciudad','ceco','proyecto','cargo','gerente','registro',
+    'empresa','nombre','cedula','usuario','correo','ciudad','ceco','proyecto','cargo','gerente','nivel_usuario',
     'eq_ant_tipo','eq_ant_marca','eq_ant_modelo','eq_ant_serial','eq_ant_af','eq_ant_placa','eq_ant_hostname',
-    'eq_ant_procesador','eq_ant_memoria','eq_ant_disco','eq_ant_so',
+    'eq_ant_procesador','eq_ant_ram','eq_ant_disco','eq_ant_so',
     'eq_nvo_tipo','eq_nvo_marca','eq_nvo_modelo','eq_nvo_serial','eq_nvo_af','eq_nvo_placa','eq_nvo_hostname',
     'eq_nvo_procesador','eq_nvo_ram','eq_nvo_disco','eq_nvo_so',
     'tecnico','estado','estado_entrega_equipo_nuevo','notas_alistamiento','caso_envio',
     'fecha_envio','fecha_entrega','fecha_envio_acta','fecha_firma_acta','nombre_archivo',
-    'estado_devolucion','disposicion_final','fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega',
+    'estado_devolucion','fecha_solicitud_devolucion','fecha_transito','fecha_recepcion_bodega',
     'observaciones_devolucion',
     'lista_recoleccion','eval_bateria','eval_teclado','eval_touchpad','eval_estetico'
   ];
@@ -1261,7 +1268,6 @@ function saveRecord() {
   var acEl = document.getElementById('m-acta_entrega_url');
   changes.acta_entrega_url = (acEl ? acEl.value.trim() : '') || '';
   changes.recibido_bodega    = changes.estado_devolucion === 'Recibida en bodega';
-  changes.equipo_reasignable = changes.disposicion_final === 'Reasignación interna';
   changes.equipo_devuelto    = changes.recibido_bodega;
   var fbStars = document.getElementById('m-feedback-stars');
   changes.feedback = fbStars ? parseInt(fbStars.dataset.value || '0') : 0;
@@ -1291,7 +1297,27 @@ function saveRecord() {
       }
     }
 
-    if (window.DataService) DataService.updateRenewal(id, changes, window.state && state.user);
+    // RC-07 TASK 3: verificar VERSION antes del PATCH (sin llamada Graph extra)
+    var _formVer    = window.state && state.editingVersion !== undefined ? state.editingVersion : -1;
+    var _cachedVer  = window.SynchronizationManager ? SynchronizationManager.getCachedVersion(id) : undefined;
+    if (_formVer >= 0 && _cachedVer !== undefined && Number(_cachedVer) > Number(_formVer)) {
+      // RC-07 TASK 4: CONFLICTO — otro usuario modificó el registro
+      if (window.toast) toast('⚠ Conflicto: este registro fue actualizado por otro usuario mientras lo estabas editando. La información será recargada antes de continuar.', 'warning');
+      if (window.closeModal) closeModal(true);
+      var _conflictId = id;
+      if (window.DataService && DataService.reloadFromProvider) {
+        DataService.reloadFromProvider().then(function() {
+          if (window.renderResumen) renderResumen();
+          if (window.openEditModal) openEditModal(_conflictId);
+        });
+      }
+      return;
+    }
+
+    // RC-07 TASK 5: incrementar VERSION en los cambios antes del PATCH
+    var _currentU = window.DataService ? DataService.getRenewal(id) : null;
+    if (_currentU) changes.version = (Number(_currentU.version) || 0) + 1;
+
     if (window.DataService) DataService.updateRenewal(id, changes, window.state && state.user);
     // RC-07 Fix 2: cerrar modal y refrescar inmediatamente
     if (window.closeModal) closeModal(true);
@@ -1308,17 +1334,15 @@ function saveRecord() {
       if (window.state) state._syncInProgress = true;
       DataService.syncToProvider(id, syncChanges)
         .then(function() {
-          if (window.DataService && DataService.reloadFromProvider) {
-            return DataService.reloadFromProvider().then(function(ok) {
-              if (window.state) state._syncInProgress = false;
-              if (ok) {
-                if (window.closeModal) closeModal(true);
-                if (window.renderResumen) renderResumen();
-                if (window.renderView && window.state) renderView(state.view || 'resumen');
-                if (window.toast) toast('✓ Guardado · Sincronizado con Excel', 'success');
-                if (window._showSyncStatus) _showSyncStatus('ok');
-              }
-            });
+          // RC-06 TASK 5: no reloadFromProvider completo — requestTick con debounce
+          // closeModal y renderResumen ya fueron llamados antes del PATCH (RC-07)
+          if (window.state) state._syncInProgress = false;
+          if (window.toast) toast('✓ Guardado · Sincronizado', 'success');
+          if (window._showSyncStatus) _showSyncStatus('ok');
+          // Propagar a otros usuarios: 1 tick tras 1.5s de propagación Graph
+          if (window.SynchronizationManager) {
+            if (SynchronizationManager.recordActivity) SynchronizationManager.recordActivity(); // RC-07 TASK 6
+            if (SynchronizationManager.requestTick)   SynchronizationManager.requestTick(1500); // RC-07 TASK 7
           }
         })
         .catch(function(err) {
@@ -1451,3 +1475,49 @@ window.attachFieldValidation = function() {
     });
   });
 };
+// STAB-v09.2 ÍTEM 8 — Vista Equipos Backup
+function renderBackup() {
+  var vp = document.getElementById('view-backup');
+  if (!vp) return;
+  var backups = (window.USERS || []).filter(function(u) { return isBackup(u); });
+  // Filtros
+  var fEmp  = (document.getElementById('bk-filter-empresa') || {}).value || '';
+  var fTipo = (document.getElementById('bk-filter-tipo')    || {}).value || '';
+  var fMar  = (document.getElementById('bk-filter-marca')   || {}).value || '';
+  var fCiu  = (document.getElementById('bk-filter-ciudad')  || {}).value || '';
+  if (fEmp)  backups = backups.filter(function(u){ return u.empresa === fEmp; });
+  if (fTipo) backups = backups.filter(function(u){ return (u.eq_ant_tipo||'').toUpperCase() === fTipo.toUpperCase(); });
+  if (fMar)  backups = backups.filter(function(u){ return (u.eq_ant_marca||'').toLowerCase().includes(fMar.toLowerCase()); });
+  if (fCiu)  backups = backups.filter(function(u){ return u.ciudad === fCiu; });
+
+  var empresas = [...new Set((window.USERS||[]).filter(isBackup).map(u=>u.empresa).filter(Boolean))].sort();
+  var tipos    = [...new Set((window.USERS||[]).filter(isBackup).map(u=>u.eq_ant_tipo).filter(Boolean))].sort();
+  var ciudades = [...new Set((window.USERS||[]).filter(isBackup).map(u=>u.ciudad).filter(Boolean))].sort();
+  var opts = function(arr,sel) { return '<option value="">Todos</option>'+arr.map(function(v){ return '<option'+(v===sel?' selected':'')+'>'+esc(v)+'</option>'; }).join(''); };
+
+  vp.innerHTML =
+    '<div class="panel-head"><div><div class="panel-title">Equipos Backup disponibles</div>' +
+    '<div class="panel-sub">' + backups.length + ' equipos sin asignar</div></div></div>' +
+    '<div class="filter-row" style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap">' +
+    '<select id="bk-filter-empresa" class="form-select" style="min-width:120px" onchange="renderBackup()">' + opts(empresas,fEmp) + '</select>' +
+    '<select id="bk-filter-tipo"    class="form-select" style="min-width:120px" onchange="renderBackup()">' + opts(tipos,fTipo) + '</select>' +
+    '<input  id="bk-filter-marca"   class="form-input"  style="min-width:120px" placeholder="Marca..." value="'+esc(fMar)+'" oninput="renderBackup()">' +
+    '<select id="bk-filter-ciudad"  class="form-select" style="min-width:120px" onchange="renderBackup()">' + opts(ciudades,fCiu) + '</select>' +
+    '</div>' +
+    '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Empresa</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serial</th><th>Ciudad</th><th>Estado</th></tr></thead>' +
+    '<tbody>' + (backups.length === 0 ? '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-3)">Sin equipos backup disponibles</td></tr>' :
+      backups.map(function(u) {
+        return '<tr onclick="openEditModal('+u.id+')"><td class="td-id">'+u.id+'</td>' +
+          '<td>'+esc(u.empresa||'—')+'</td>' +
+          '<td>'+esc(u.eq_ant_tipo||'—')+'</td>' +
+          '<td>'+esc(u.eq_ant_marca||'—')+'</td>' +
+          '<td>'+esc(u.eq_ant_modelo||'—')+'</td>' +
+          '<td style="font-family:monospace">'+esc(u.eq_ant_serial||'—')+'</td>' +
+          '<td>'+esc(u.ciudad||'—')+'</td>' +
+          '<td>'+esc(u.estado||'—')+'</td></tr>';
+      }).join('')) +
+    '</tbody></table></div>';
+}
+window.renderBackup = renderBackup;
+
+

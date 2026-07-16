@@ -479,7 +479,6 @@ const FIELD_COLUMN_ALIASES = {
   'fecha_firma_acta':  'fecha_acta_firmada',
   // GH3.41.2: actualizados al nuevo contrato Excel
   'estado':            'estado_renovacion',
-  'registro':          'nivel_usuario',
   'feedback':          'calificacion_feedback',
   'nombre_archivo':    'nombre_archivo_acta',
 };

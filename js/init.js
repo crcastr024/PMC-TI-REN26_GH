@@ -157,54 +157,73 @@ window.HBT = (function() {
 // porque ExcelFieldName.toLowerCase() coincide directamente con el campo interno.
 // Si el Excel usa CamelCase (EqNvoTipo), este alias permite encontrar la columna.
 window.FIELD_COLUMN_ALIASES = {
-  // Nombre completo del colaborador
-  'nombre':          'NombreCompleto',    // SP_FIELD_MAP: Title→nombre y NombreCompleto→nombre
-  // Equipo nuevo
-  'eq_nvo_tipo':     'EqNvoTipo',
-  'eq_nvo_marca':    'EqNvoMarca',
-  'eq_nvo_modelo':   'EqNvoModelo',
-  'eq_nvo_serial':   'EqNvoSerial',
-  'eq_nvo_placa':    'EqNvoPlaca',
-  'eq_nvo_hostname': 'EqNvoHostname',
-  'eq_nvo_procesador': 'EqNvoProcesador',
-  'eq_nvo_ram':      'EqNvoRam',
-  'eq_nvo_disco':    'EqNvoDisco',
-  'eq_nvo_so':       'EqNvoSO',
-  'dato_maestro':    'DatoMaestro',
-  // Equipo anterior
-  'eq_ant_tipo':     'EqAntTipo',
-  'eq_ant_marca':    'EqAntMarca',
-  'eq_ant_modelo':   'EqAntModelo',
-  'eq_ant_serial':   'EqAntSerial',
-  'eq_ant_af':       'EqAntAF',
-  'eq_ant_placa':    'EqAntPlaca',
-  'eq_ant_hostname': 'EqAntHostname',
-  'eq_ant_procesador': 'EqAntProcesador',
-  'eq_ant_memoria':  'EqAntRam',
-  'eq_ant_disco':    'EqAntDisco',
-  'eq_ant_so':       'EqAntSO',
-  // Devolución
-  'lista_recoleccion': 'LISTA_RECOLECCION',   // guard CamelCase
-  'observaciones_devolucion': 'ObservacionesDevolucion',
-  // Registro
-  'ceco':            'CentroCostos',
-  'registro':        'NIVEL_USUARIO',
-  // Estado y seguimiento
-  'estado_entrega_equipo_nuevo': 'EstadoEntregaEquipoNuevo',
-  'estado':           'ESTADO_RENOVACION',  // Excel: ESTADO_RENOVACION
-  'caso_envio':      'CasoEnvio',
-  'fecha_envio':     'FechaEnvio',
-  'fecha_entrega':   'FechaAsignacion',
-  'fecha_envio_acta': 'FECHA_ACTA_ENVIADA',
-  'fecha_firma_acta': 'FECHA_ACTA_FIRMADA',
-  'fecha_solicitud_devolucion': 'FechaSolicitudDevolucion',
-  'fecha_transito':  'FechaTransito',
-  'fecha_recepcion_bodega': 'FechaRecepcionBodega',
-  // Documentos
-  'acta_entrega_url':  'ActaEntregaUrl',
-  'nombre_archivo':    'NOMBRE_ARCHIVO_ACTA',
-  'disposicion_final': 'DisposicionFinal',
-  // Feedback y evidencia
-  'feedback':          'CALIFICACION_FEEDBACK',
-  'evidencia_adjunta': 'EvidenciaAdjunta',
+  // ══════════════════════════════════════════════════════════════════
+  // Correspondencia 1:1 explícita: campo JS → columna Excel exacta
+  // WorkbookWriter hace lookup case-insensitive sobre el valor.
+  // Corrección RC-07j: todos los aliases apuntan al nombre REAL de
+  // la columna en el Excel maestro (UPPERCASE_UNDERSCORE).
+  // ══════════════════════════════════════════════════════════════════
+
+  // 1 · Datos del usuario
+  'nombre':            'NOMBRE',
+  'ceco':              'CECO',
+  'nivel_usuario':      'NIVEL_USUARIO',
+
+  // 2 · Equipo anterior
+  'eq_ant_tipo':        'EQ_ANT_TIPO',
+  'eq_ant_marca':       'EQ_ANT_MARCA',
+  'eq_ant_modelo':      'EQ_ANT_MODELO',
+  'eq_ant_serial':      'EQ_ANT_SERIAL',
+  'eq_ant_af':          'EQ_ANT_AF',
+  'eq_ant_hostname':    'EQ_ANT_HOSTNAME',
+  'eq_ant_placa':       'EQ_ANT_PLACA',
+  'eq_ant_procesador':  'EQ_ANT_PROCESADOR',
+  'eq_ant_ram':          'EQ_ANT_RAM',
+  'eq_ant_disco':       'EQ_ANT_DISCO',
+  'eq_ant_so':          'EQ_ANT_SO',
+
+  // 4 · Equipo nuevo asignado
+  'eq_nvo_tipo':        'EQ_NVO_TIPO',
+  'eq_nvo_marca':       'EQ_NVO_MARCA',
+  'eq_nvo_modelo':      'EQ_NVO_MODELO',
+  'eq_nvo_serial':      'EQ_NVO_SERIAL',
+  'eq_nvo_af':          'EQ_NVO_AF',
+  'eq_nvo_hostname':    'EQ_NVO_HOSTNAME',
+  'eq_nvo_placa':       'EQ_NVO_PLACA',
+  'eq_nvo_procesador':  'EQ_NVO_PROCESADOR',
+  'eq_nvo_ram':         'EQ_NVO_RAM',
+  'eq_nvo_disco':       'EQ_NVO_DISCO',
+  'eq_nvo_so':          'EQ_NVO_SO',
+
+  // 5 · Estado REN26
+  'tecnico':            'TECNICO',
+  'estado':             'ESTADO_RENOVACION',
+  'notas_alistamiento': 'NOTAS_ALISTAMIENTO',
+  'caso_envio':         'CASO_ENVIO',
+  'fecha_envio':        'FECHA_ENVIO',
+  'fecha_entrega':      'FECHA_ENTREGA',
+  'nombre_archivo':     'NOMBRE_ARCHIVO_ACTA',
+  'acta_entrega_url':   'ACTA_ENTREGA_URL',
+  'fecha_envio_acta':   'FECHA_ACTA_ENVIADA',
+  'fecha_firma_acta':   'FECHA_ACTA_FIRMADA',
+  'feedback':           'CALIFICACION_FEEDBACK',
+
+  // 6 · Devolución del equipo anterior
+  'lista_recoleccion':           'LISTA_RECOLECCION',
+  'estado_devolucion':           'ESTADO_DEVOLUCION',
+  'fecha_solicitud_devolucion':  'FECHA_SOLICITUD_DEVOLUCION',
+  'fecha_transito':              'FECHA_TRANSITO',
+  'fecha_recepcion_bodega':      'FECHA_RECEPCION_BODEGA',
+  'observaciones_devolucion':    'OBSERVACIONES_DEVOLUCION',
+
+  // 7 · Evaluación física
+  'eval_bateria':             'EVAL_BATERIA',
+  'eval_teclado':             'EVAL_TECLADO',
+  'eval_touchpad':            'EVAL_TOUCHPAD',
+  'eval_estetico':            'EVAL_ESTETICO',
+  'recomendacion_raee':       'RECOMENDACION_RAEE',
+  'motivo_raee':              'MOTIVO_RAEE',
+  'motor_raee_version':       'MOTOR_RAEE_VERSION',
+  'fecha_evaluacion_raee':    'FECHA_EVALUACION_RAEE',
+  'usuario_evaluacion_raee':  'USUARIO_EVALUACION_RAEE',
 };
