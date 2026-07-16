@@ -122,7 +122,7 @@ function renderTecnicoChart() {
   const data = techs.map((t, i) => {
     var d = _ptMap[t] || { asignados:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
     return { tec: t, color: colors[i], total: d.asignados,
-      entregados: d.entregados, proceso: d.proceso, finalizados: d.finalizados, pct: d.pct };
+      pendientes: d.pendientes, entregados: d.entregados, proceso: d.proceso, finalizados: d.finalizados, pct: d.pct };
   }).filter(d => d.total > 0);
   $('tecnico-chart').innerHTML = data.map(d => {
     return '<div class="chart-row">' +'<div class="chart-row-head"><div class="chart-row-name" style="font-weight:700">' + esc(d.tec) + '</div>' +'<div class="chart-row-val">' + d.total + ' asig · <span style="color:var(--accent)">' + d.entregados + ' entregados</span> · <strong>' + d.pct + '%</strong></div></div>' +'<div style="font-size:10px;color:var(--text-3);display:flex;gap:10px;margin:2px 0">' +'<span>Pend:' + d.pendientes + '</span><span>Proc:' + d.proceso + '</span><span style="color:var(--green)">Fin:' + d.finalizados + '</span>' +'</div>' +'<div class="chart-bar"><div class="chart-bar-seg" style="width:' + Math.min(d.entregados/Math.max(d.total,1)*100,100) + '%;background:' + d.color + '"></div></div>' +'</div>';
@@ -1153,7 +1153,7 @@ function renderPanelEjecutivo() {
   set('pe-destino-reasign', _raeeD['Reasignable']             || _raeeD['Reasignación interna'] || 0);
   set('pe-destino-donacion',_raeeD['Donación']                || _raeeD['Donacion'] || 0);
   // Distribución de estados (TASK 7)
-  var peEstEl = document.getElementById('pe-estados-dist');
+  var peEstEl = document.getElementById('pe-estados-list');
   if (peEstEl) {
     var stKeys = Object.keys(_estD).sort();
     peEstEl.innerHTML = stKeys.length ? stKeys.map(function(st) {
@@ -1163,7 +1163,7 @@ function renderPanelEjecutivo() {
     }).join('') : '<div style="color:var(--text-3);font-size:11px">Sin datos</div>';
   }
   // Distribución RAEE completa (TASK 6)
-  var peRaeeEl = document.getElementById('pe-raee-dist');
+  var peRaeeEl = document.getElementById('pe-raee-labels');
   if (peRaeeEl) {
     var rKeys = Object.keys(_raeeD).sort();
     peRaeeEl.innerHTML = rKeys.length ? rKeys.map(function(r) {
@@ -1536,7 +1536,7 @@ function renderBackup() {
             '<td>'+esc(u.eq_ant_modelo||'—')+'</td>'+
             '<td style="font-family:monospace">'+esc(u.eq_ant_serial||'—')+'</td>'+
             '<td>'+esc(u.ciudad||'—')+'</td>'+
-            '<td><span class="badge badge-'+statusClass(u.estado)+'">'+esc(u.estado||'—')+'</span></td>'+
+            '<td><span class="badge badge-'+({Pendiente:'warn','Renovación completada':'ok','Completado':'ok'}[u.estado]||'neutral')+'">'+esc(u.estado||'—')+'</span></td>'+
             '<td><button class="btn btn-sm" onclick="event.stopPropagation();openEditModal('+safeId+')">Ver</button></td>'+
             '</tr>';
         }).join('')) +
