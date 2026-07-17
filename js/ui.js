@@ -324,7 +324,7 @@ function renderTecnicoDetail() {
   var _bdsD = window.buildDashboardStats ? buildDashboardStats(mine) : {};
   const ent  = _bdsD.entregados || 0;  // P0: usa milestone logic
   const acta = _bdsD.actas      || 0;  // P0: usa milestone logic
-  
+  const pct  = total > 0 ? Math.round(ent / total * 100) : 0; // STAB-v11 TASK 03
   // Ciudad principal
   const ciudades = {};
   mine.forEach(u => { if (u.ciudad) ciudades[u.ciudad] = (ciudades[u.ciudad] || 0) + 1; });
@@ -433,6 +433,8 @@ function renderCiudades() {
     if (u.fecha_entrega || ['Entregado equipo nuevo','Pendiente devolución equipo anterior','En tránsito equipo anterior','Equipo anterior recibido','Renovación completada','Pendiente aprobación','Cerrado','Entregado','Completado'].indexOf(u.estado) >= 0) cityMap[c].entregados++;
   });
   const sorted = Object.entries(cityMap).sort((a,b) => b[1].total - a[1].total);
+  // STAB-v11 TASK 07: fuente única — buildDashboardStats para KPIs
+  var _bdsGlobal = window.buildDashboardStats ? buildDashboardStats(allRecords) : {};
   $('cities-grid').innerHTML = sorted.map(entry => {
     const city = entry[0], s = entry[1];
     const pct = s.total > 0 ? Math.round(s.entregados / s.total * 100) : 0;
@@ -442,34 +444,7 @@ function renderCiudades() {
       '<div class="city-card-sub">' + s.entregados + ' entregados · ' + pct + '%</div>' +
       '</div>';
   }).join('');
-  // P1 STAB-v10.1: tabla de KPIs por ciudad (Σ total = todos los equipos)
-  var cityTableEl = document.getElementById('city-kpi-table');
-  if (cityTableEl) {
-    var grandTotal = allRecords.length;
-    cityTableEl.innerHTML =
-      '<table class="tbl">' +
-      '<thead><tr><th>Ciudad</th><th>Total</th><th>Pendientes</th><th>Proceso</th><th>En envío</th><th>Entregados</th><th>Actas</th><th>%</th></tr></thead>' +
-      '<tbody>' +
-      sorted.map(function(entry) {
-        var city = entry[0], s = entry[1];
-        var _bdsC = window.buildDashboardStats ? buildDashboardStats(
-          allRecords.filter(function(u){ return (u.ciudad||'Sin ciudad') === city; })
-        ) : {};
-        var pct = s.total > 0 ? Math.round(s.entregados/s.total*100) : 0;
-        return '<tr>' +
-          '<td class="td-strong">' + esc(city) + '</td>' +
-          '<td>' + s.total + '</td>' +
-          '<td>' + (_bdsC.pendientes||0) + '</td>' +
-          '<td>' + (_bdsC.proceso||0) + '</td>' +
-          '<td>' + (_bdsC.enEnvio||0) + '</td>' +
-          '<td>' + (_bdsC.entregados||0) + '</td>' +
-          '<td>' + (_bdsC.actas||0) + '</td>' +
-          '<td><strong>' + pct + '%</strong></td></tr>';
-      }).join('') +
-      '<tfoot><tr style="font-weight:700;border-top:2px solid var(--accent)">' +
-        '<td>TOTAL</td><td>' + grandTotal + '</td><td colspan="6"></td></tr></tfoot>' +
-      '</tbody></table>';
-  }
+  // STAB-v11 TASK 05: city KPI table eliminado — solo vive en Reportes Ejecutivos
 }
 
 // ═══ DEVOLUCIONES ═══
@@ -1143,7 +1118,7 @@ function renderAprobaciones() {
       '<td style="padding:8px 10px;text-align:center">' + esc(r.empresa || '—') + '</td>' +
       '<td style="padding:8px 10px;text-align:center">' + esc(r.tecnico || '—') + '</td>' +
       '<td style="padding:8px 10px;text-align:center"><span style="background:var(--amber-l);color:var(--amber);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">Pendiente</span></td>' +
-      '<td style="padding:8px 10px;text-align:center"><button class="btn" style="font-size:10px;padding:4px 10px" data-id="' + id + '" onclick="openEditModal(this.dataset.id)">Revisar</button></td>' +
+      '<td style="padding:8px 10px;text-align:center"><button class="btn" style="font-size:10px;padding:4px 10px" onclick="openEditModal(' + id + ')">Revisar</button></td>' +
       '</tr>';
   }).join('');
   content.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--accent);color:#fff">' +
@@ -1230,6 +1205,8 @@ function renderPanelEjecutivo() {
   }
   var records = window.DataService ? DataService.getRenewals({}) : [];
   var total = records.length;
+  // STAB-v11 TASK 04: definir _stats ANTES de cualquier uso
+  var _stats = window.buildDashboardStats ? buildDashboardStats(records.filter(function(r){ return !isBackup(r); })) : {};
   var done  = records.filter(function(r) { return r.estado === 'Renovación completada' || r.estado === 'Cerrado'; }).length;
   var proc  = records.filter(function(r) { return r.estado !== 'Pendiente' && r.estado !== 'Renovación completada' && r.estado !== 'Cerrado'; }).length;
   var pend  = records.filter(function(r) { return r.estado === 'Pendiente'; }).length;
@@ -1259,7 +1236,7 @@ function renderPanelEjecutivo() {
     }).join('');
   }
   // STAB-v09.1 TASK 6+7: usar buildDashboardStats para RAEE y estados
-  var _stats = window.buildDashboardStats ? buildDashboardStats(records.filter(function(r){ return !isBackup(r); })) : {};
+    // (_stats definida arriba)
   var _raeeD = _stats.raeeDistrib || {};
   var _estD  = _stats.estados || {};
   // Destino RAEE
@@ -1468,6 +1445,11 @@ function saveRecord() {
     if (_currentU) changes.version = (Number(_currentU.version) || 0) + 1;
 
     if (window.DataService) DataService.updateRenewal(id, changes, window.state && state.user);
+    // STAB-v11 TASK 01: auto-enqueue cuando estado cambia a 'Pendiente aprobación'
+    if (changes.estado === 'Pendiente aprobación' && window.ApprovalService && ApprovalService.requestValidation) {
+      try { ApprovalService.requestValidation(id, window.state && state.user); }
+      catch(e) { /* silencioso — puede no cumplir todos los checklist aún */ }
+    }
     // RC-07 Fix 2: cerrar modal y refrescar inmediatamente
     if (window.closeModal) closeModal(true);
     if (window.renderResumen) renderResumen();
