@@ -7,7 +7,7 @@ function renderResumen() {
   try {
   // GH3.39.2 P2/P3: ÚNICA fuente de verdad — calculateProjectMetrics()
   // STAB-v09.1 TASK 8: fuente única de verdad — buildDashboardStats()
-  var m = window.buildDashboardStats ? buildDashboardStats(window.USERS || []) : calculateProjectMetrics();
+  var m = window.DashboardStats ? DashboardStats.get() : calculateProjectMetrics();
 
   // STAB-v09.1 TASK 3: KPIs por hitos canónicos de buildDashboardStats
   const real        = getReal();
@@ -52,7 +52,9 @@ function renderResumen() {
   var _bcEl = document.getElementById('k-backup');
   if (_bcEl) _bcEl.textContent = _backupCount;
   var _bcSubEl = document.getElementById('k-backup-sub');
-  if (_bcSubEl) _bcSubEl.textContent = (m.hbtBackup||0) + ' HBT · ' + (m.hgsBackup||0) + ' HGS (backup)'; // STAB-v10
+  // STAB-v12.1: usar porEmpresa.backup
+  var _peAll = m.porEmpresa || {};
+  if (_bcSubEl) _bcSubEl.textContent = ((_peAll['HBT']||{}).backup||0) + ' HBT · ' + ((_peAll['HGS']||{}).backup||0) + ' HGS (backup)';
   
   _setText('b-usuarios', _allCount);
   const provName = (DataService.providerName ? DataService.providerName() : 'Mock');
@@ -94,18 +96,19 @@ function renderResumen() {
 
 function renderEmpresaChart() {
   // STAB-v09.1 TASK 4: usar buildDashboardStats para consistencia total
-  var _bds = window.buildDashboardStats ? buildDashboardStats(window.USERS || []) : calculateProjectMetrics();
+  var _bds = window.DashboardStats ? DashboardStats.get() : calculateProjectMetrics();
   const data = ['HBT', 'HGS'].map(emp => {
-    var d = (_bds.porEmpresa && _bds.porEmpresa[emp]) || { total:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
-    var bkCount = emp === 'HBT' ? (_bds.hbtBackup||0) : (_bds.hgsBackup||0); // STAB-v10 TASK 4
+    // STAB-v12.1: fuente única porEmpresa
+    var d = (_bds.porEmpresa && _bds.porEmpresa[emp]) || { total:0, operativos:0, backup:0, pendientes:0, proceso:0, envio:0, entregados:0, actas:0, cerrados:0, pct:0 };
     return {
-      label: emp, total: d.total, backup: bkCount,
-      entregados: d.entregados, proceso: d.proceso, pend: d.pendientes, finalizados: d.finalizados, pct: d.pct
+      label: emp, total: d.total, operativos: d.operativos, backup: d.backup,
+      entregados: d.entregados, proceso: d.proceso, envio: d.envio,
+      actas: d.actas, pend: d.pendientes, cerrados: d.cerrados, pct: d.pct,
     };
   });
+
   $('empresa-chart').innerHTML = data.map(d => {
-    const pct = d.total > 0 ? Math.round(d.entregados / d.total * 100) : 0;
-    const totalDisp = d.total + d.backup;    return '<div class="chart-row">' +'<div class="chart-row-head">' +'<div class="chart-row-name">' + d.label + '</div>' +'<div class="chart-row-stat"><strong>' + d.total + '</strong> op · <span style="opacity:.6">' + d.backup + ' bk</span> · <strong>' + pct + '%</strong></div>' +'</div>' +'<div style="font-size:10px;color:var(--text-3);margin:2px 0;display:flex;gap:10px">' +'<span>Entregados: '+d.entregados+'</span>' +'<span>En proceso: '+d.proceso+'</span>' +'<span>Pendientes: '+d.pend+'</span>' +'</div>' +'<div class="chart-bar">' +(d.entregados ? '<div class="chart-bar-seg" style="width:' + (d.entregados/Math.max(d.total,1)*100) + '%;background:var(--green)"></div>' : '') +(d.proceso    ? '<div class="chart-bar-seg" style="width:' + (d.proceso/Math.max(d.total,1)*100)    + '%;background:var(--amb)"></div>' : '') +(d.pend       ? '<div class="chart-bar-seg" style="width:' + (d.pend/Math.max(d.total,1)*100)       + '%;background:var(--accent)"></div>' : '') +'</div>' +'</div>';
+    const pct = d.pct; // viene de porEmpresa canónico    return '<div class="chart-row">' +'<div class="chart-row-head">' +'<div class="chart-row-name">' + d.label + '</div>' +'<div class="chart-row-stat"><strong>' + d.total + '</strong> op · <span style="opacity:.6">' + d.backup + ' bk</span> · <strong>' + pct + '%</strong></div>' +'</div>' +'<div style="font-size:10px;color:var(--text-3);margin:2px 0;display:flex;gap:10px">' +'<span>Entregados: '+d.entregados+'</span>' +'<span>En proceso: '+d.proceso+'</span>' +'<span>Pendientes: '+d.pend+'</span>' +'</div>' +'<div class="chart-bar">' +(d.entregados ? '<div class="chart-bar-seg" style="width:' + (d.entregados/Math.max(d.total,1)*100) + '%;background:var(--green)"></div>' : '') +(d.proceso    ? '<div class="chart-bar-seg" style="width:' + (d.proceso/Math.max(d.total,1)*100)    + '%;background:var(--amb)"></div>' : '') +(d.pend       ? '<div class="chart-bar-seg" style="width:' + (d.pend/Math.max(d.total,1)*100)       + '%;background:var(--accent)"></div>' : '') +'</div>' +'</div>';
   }).join('');
 }
 
@@ -118,7 +121,7 @@ function renderTecnicoChart() {
     : window.CONFIG.technicians;
   const colors = ['var(--accent)', 'var(--blue)', 'var(--green)', 'var(--text-4)'];
   // STAB-v09.1 TASK 5: usar buildDashboardStats para consistencia total
-  var _bds2 = window.buildDashboardStats ? buildDashboardStats(getReal()) : calculateProjectMetrics();
+  var _bds2 = window.DashboardStats ? DashboardStats.compute(getReal()) : calculateProjectMetrics();
   var _ptMap = _bds2.porTecnico || {};
   const data = techs.map((t, i) => {
     // P0: lookup case-insensitive — Excel puede tener 'CRISTIAN' vs config 'Cristian'
@@ -284,7 +287,7 @@ function renderTecnicos() {
   const techs = window.CONFIG.technicians;
   const real = getReal();
   // STAB-v10.1 P0+P2: reutilizar buildDashboardStats por técnico
-  var _bdsAll = window.buildDashboardStats ? buildDashboardStats(real) : {};
+  var _bdsAll = window.DashboardStats ? DashboardStats.compute(real) : {};
   var _ptAll  = _bdsAll.porTecnico || {};
   $('tec-grid').innerHTML = techs.map(t => {
     var _tKey = Object.keys(_ptAll).find(function(k){ return k.toLowerCase() === t.toLowerCase(); }) || t;
@@ -321,7 +324,7 @@ function renderTecnicoDetail() {
   const pend = mine.filter(u => u.estado === 'Pendiente').length;
   const alist = mine.filter(u => u.estado === 'Alistamiento').length;
   const proc = mine.filter(u => u.estado === 'Alistamiento' || u.estado === 'En tránsito' || u.estado === 'Programado' || (u.estado || '').indexOf('tránsito') >= 0).length;
-  var _bdsD = window.buildDashboardStats ? buildDashboardStats(mine) : {};
+  var _bdsD = window.DashboardStats ? DashboardStats.compute(mine) : {};
   const ent  = _bdsD.entregados || 0;  // P0: usa milestone logic
   const acta = _bdsD.actas      || 0;  // P0: usa milestone logic
   const pct  = total > 0 ? Math.round(ent / total * 100) : 0; // STAB-v11 TASK 03
@@ -434,7 +437,7 @@ function renderCiudades() {
   });
   const sorted = Object.entries(cityMap).sort((a,b) => b[1].total - a[1].total);
   // STAB-v11 TASK 07: fuente única — buildDashboardStats para KPIs
-  var _bdsGlobal = window.buildDashboardStats ? buildDashboardStats(allRecords) : {};
+  var _bdsGlobal = window.DashboardStats ? DashboardStats.compute(allRecords) : {};
   $('cities-grid').innerHTML = sorted.map(entry => {
     const city = entry[0], s = entry[1];
     const pct = s.total > 0 ? Math.round(s.entregados / s.total * 100) : 0;
@@ -451,7 +454,15 @@ function renderCiudades() {
 function renderDevoluciones() {
   // F3.7 · RBAC: técnico solo ve sus propias devoluciones
   const isTecnico = state.user.role === 'tecnico';
-  const allReal = getReal().filter(u => u.eq_ant_serial || u.eq_ant_marca || u.estado_devolucion);
+  // STAB-v12 TASK 01: regla funcional oficial
+  // lista_recoleccion === true AND estado_devolucion IN ('Pendiente', 'Solicitada')
+  const EXCLUIR_DEV = ['Recibida en bodega','Equipo anterior recibido','Cerrada','Completada','Cancelada','No aplica'];
+  const allReal = getReal().filter(u =>
+    u.lista_recoleccion === true &&
+    u.estado_devolucion &&
+    (u.estado_devolucion === 'Pendiente' || u.estado_devolucion === 'Solicitada') &&
+    EXCLUIR_DEV.indexOf(u.estado_devolucion) < 0
+  );
   const data = isTecnico
     ? allReal.filter(u => (u.tecnico || '').toLowerCase() === (state.user.name || '').toLowerCase())
     : allReal;
@@ -481,6 +492,99 @@ function getReportBase() {
   });
 }
 
+// STAB-v12 TASK 06 — renderReportesEjecutivos: Dashboard gerencial completo
+function renderReportesEjecutivos() {
+  var ejEl = document.getElementById('view-ejecutivos-content');
+  if (!ejEl) return;
+  var all   = window.DataService ? DataService.getRenewals({}) : [];
+  var _bds  = window.DashboardStats ? DashboardStats.compute(all) : {};
+  var activos = all.filter(function(u){ return !isBackup(u); });
+
+  // ── Panel 1: Cumplimiento por empresa ──
+  var p1 = ['HBT','HGS'].map(function(emp) {
+    // STAB-v12.1: porEmpresa canónico con operativos/backup/envio/actas
+    var d = (_bds.porEmpresa && _bds.porEmpresa[emp]) || { total:0, operativos:0, backup:0, pendientes:0, proceso:0, envio:0, entregados:0, actas:0, cerrados:0, pct:0 };
+    return '<div class="exec-empresa-card">' +
+      '<div class="exec-empresa-label">' + emp + '</div>' +
+      '<div class="exec-empresa-grid">' +
+      '<div><div class="exec-stat-v">' + d.total + '</div><div class="exec-stat-l">Total</div></div>' +
+      '<div><div class="exec-stat-v">' + d.operativos + '</div><div class="exec-stat-l">Operativos</div></div>' +
+      '<div><div class="exec-stat-v">' + d.backup + '</div><div class="exec-stat-l">Backup</div></div>' +
+      '<div><div class="exec-stat-v acc">' + d.pendientes + '</div><div class="exec-stat-l">Pendientes</div></div>' +
+      '<div><div class="exec-stat-v amb">' + d.proceso + '</div><div class="exec-stat-l">Proceso</div></div>' +
+      '<div><div class="exec-stat-v grn">' + d.entregados + '</div><div class="exec-stat-l">Entregados</div></div>' +
+      '<div><div class="exec-stat-v">' + d.actas + '</div><div class="exec-stat-l">Actas</div></div>' +
+      '<div><div class="exec-stat-v">' + d.cerrados + '</div><div class="exec-stat-l">Cerrados</div></div>' +
+      '<div><div class="exec-stat-v grn" style="font-size:18px">' + d.pct + '%</div><div class="exec-stat-l">Avance</div></div>' +
+      '</div>' +
+      '<div class="exec-bar-wrap"><div class="exec-bar" style="width:0%" data-pct="' + d.pct + '"></div></div>' +
+      '</div>';
+  }).join('');
+
+  // ── Panel 2: Ranking técnicos ──
+  var ptAll = _bds.porTecnico || {};
+  var tecRanking = Object.keys(ptAll).map(function(t){ var d=ptAll[t]; return Object.assign({tec:t},d); })
+    .filter(function(d){ return d.asignados > 0; })
+    .sort(function(a,b){ return b.pct - a.pct; });
+  var p2 = '<table class="tbl"><thead><tr><th>Técnico</th><th>Asignados</th><th>Pendientes</th><th>Proceso</th><th>Envío</th><th>Entregados</th><th>Actas</th><th>Cerrados</th><th>%</th></tr></thead><tbody>' +
+    tecRanking.map(function(d) {
+      return '<tr><td class="td-strong">' + esc(d.tec) + '</td><td>' + d.asignados + '</td><td>' + d.pendientes + '</td><td>' + d.proceso + '</td><td>' + (d.enEnvio||0) + '</td><td style="color:var(--green)">' + d.entregados + '</td><td>' + (d.actas||0) + '</td><td>' + d.finalizados + '</td><td><strong>' + d.pct + '%</strong></td></tr>';
+    }).join('') + '</tbody></table>';
+
+  // ── Panel 3: Pipeline ──
+  var pipe = _bds.pipeline || [];
+  var pipeMax = pipe.reduce(function(a,b){ return Math.max(a,b.count); }, 1);
+  var bottle = _bds.cueloBotella || {};
+  var p3 = '<div class="exec-pipeline">' + pipe.map(function(s) {
+    var pct = Math.round(s.count / pipeMax * 100);
+    var isBottle = s.estado === bottle.estado && s.count > 0;
+    return '<div class="pipe-step' + (isBottle ? ' pipe-bottle' : '') + '">' +
+      '<div class="pipe-bar-wrap"><div class="pipe-bar" style="width:0%" data-pct="' + pct + '" data-bottle="' + isBottle + '"></div></div>' +
+      '<div class="pipe-label">' + esc(s.estado.replace('equipo nuevo','').replace('equipo anterior','').trim()) + '</div>' +
+      '<div class="pipe-count">' + s.count + '</div>' +
+      '</div>';
+  }).join('') + '</div>' + (bottle.estado ? '<div class="pipe-bottle-note">⚠ Cuello de botella: ' + esc(bottle.estado) + ' (' + (bottle.count||0) + ' equipos)</div>' : '');
+
+  // ── Panel 4: Calidad de datos ──
+  var cal = _bds.calidad || {};
+  var p4 = '<table class="tbl"><thead><tr><th>Campo</th><th>Sin datos</th><th>% incompleto</th></tr></thead><tbody>' +
+    [['Sin técnico',cal.sinTecnico],['Sin ciudad',cal.sinCiudad],['Sin empresa',cal.sinEmpresa],
+     ['Sin serial',cal.sinSerial],['Sin acta',cal.sinActa]].map(function(r) {
+      var pct = cal.total > 0 ? Math.round(r[1]/cal.total*100) : 0;
+      var cls = pct > 20 ? 'color:var(--accent)' : pct > 5 ? 'color:var(--amber)' : 'color:var(--green)';
+      return '<tr><td>' + r[0] + '</td><td style="' + cls + ';font-weight:700">' + (r[1]||0) + '</td><td>' + pct + '%</td></tr>';
+    }).join('') + '</tbody></table>';
+
+  // ── Panel 5: Riesgos ──
+  var ris = _bds.riesgos || {};
+  var p5 = '<div class="exec-riesgos">' +
+    [['Sin movimiento',ris.sinMovimiento,'Equipos en Pendiente sin avance'],
+     ['Pend. aprobación',ris.pendienteAprobacion,'Esperando validación gerencia'],
+     ['Pend. devolución',ris.pendienteDevolucion,'Lista recolección sin recibir'],
+     ['Registros incompletos',ris.registrosIncompletos,'Sin técnico/ciudad/empresa']]
+    .filter(function(r){ return (r[1]||0) > 0; })
+    .map(function(r) {
+      return '<div class="risk-row"><div class="risk-label">' + r[0] + '<span class="risk-sub">' + r[2] + '</span></div>' +
+        '<div class="risk-count" style="color:' + ((r[1]||0) > 10 ? 'var(--accent)' : 'var(--amber)') + '">' + (r[1]||0) + '</div></div>';
+    }).join('') + '</div>';
+
+  // ── Construir HTML ──
+  ejEl.innerHTML =
+    '<div class="exec-section"><div class="exec-section-title">Cumplimiento por empresa</div>' + p1 + '</div>' +
+    '<div class="exec-section"><div class="exec-section-title">Ranking técnicos</div>' + p2 + '</div>' +
+    '<div class="exec-section"><div class="exec-section-title">Pipeline REN26</div>' + p3 + '</div>' +
+    '<div class="exec-section"><div class="exec-section-title">Calidad de datos</div>' + p4 + '</div>' +
+    '<div class="exec-section"><div class="exec-section-title">Riesgos ejecutivos</div>' + p5 + '</div>';
+  // Animar barras
+  setTimeout(function() {
+    ejEl.querySelectorAll('[data-pct]').forEach(function(b){
+      b.style.width = b.dataset.pct + '%';
+      if (b.dataset.bottle === 'true') b.style.background = 'var(--accent)';
+    });
+  }, 80);
+}
+window.renderReportesEjecutivos = renderReportesEjecutivos;
+
 function renderReportes() {
   populateProjectFilter('rep-filter-proyecto');
   state.repFilters = {
@@ -492,13 +596,15 @@ function renderReportes() {
   const base = getReportBase();
   $('rep-base-count').textContent = base.length + ' de ' + (window.calculateProjectMetrics ? calculateProjectMetrics().totalColaboradores : getReal().length) + ' base';
   // Auditoria Final: usar buildDashboardStats para consistencia con Dashboard
-  var _bdsR = window.buildDashboardStats ? buildDashboardStats(base) : {};
+  var _bdsR = window.DashboardStats ? DashboardStats.compute(base) : {};
   $('r-alistamiento').textContent = _bdsR.proceso    || 0; // proceso activo
   $('r-entregados').textContent   = _bdsR.entregados || 0;
   $('r-actas').textContent        = _bdsR.actas      || 0;
   $('r-devoluciones').textContent = _bdsR.devoluciones || 0;
   $('r-finalizados').textContent  = _bdsR.finalizados || 0;
   $('r-feedback').textContent     = base.filter(function(u){ return (u.feedback||0) > 0; }).length;
+  // STAB-v12 TASK 06: tablero gerencial ejecutivo
+  if (window.renderReportesEjecutivos) renderReportesEjecutivos();
 }
 
 function setReport(type, btn) {
@@ -1206,7 +1312,7 @@ function renderPanelEjecutivo() {
   var records = window.DataService ? DataService.getRenewals({}) : [];
   var total = records.length;
   // STAB-v11 TASK 04: definir _stats ANTES de cualquier uso
-  var _stats = window.buildDashboardStats ? buildDashboardStats(records.filter(function(r){ return !isBackup(r); })) : {};
+  var _stats = window.DashboardStats ? DashboardStats.compute(records.filter(function(r){ return !isBackup(r); })) : {};
   var done  = records.filter(function(r) { return r.estado === 'Renovación completada' || r.estado === 'Cerrado'; }).length;
   var proc  = records.filter(function(r) { return r.estado !== 'Pendiente' && r.estado !== 'Renovación completada' && r.estado !== 'Cerrado'; }).length;
   var pend  = records.filter(function(r) { return r.estado === 'Pendiente'; }).length;
@@ -1221,12 +1327,15 @@ function renderPanelEjecutivo() {
   set('pe-en-envio',   _stats.enEnvio     || 0);
   set('pe-backup',     _stats.totalBackups|| 0);
   set('pe-cerrados',   _stats.finalizados || 0);
-  var pf = document.getElementById('pe-prog-fill'); if (pf) pf.style.width = pct + '%';
+  // STAB-v12 TASK 04: usar setTimeout para triggear la transición CSS
+  var pf = document.getElementById('pe-prog-fill');
+  if (pf) { pf.style.width = '0%'; requestAnimationFrame(function(){ setTimeout(function(){ pf.style.width = pct+'%'; }, 50); }); }
   set('pe-prog-pct', pct + '%');
-  var hbt = records.filter(function(r) { return r.empresa === 'HBT'; }).length;
-  var hgs = records.filter(function(r) { return r.empresa === 'HGS'; }).length;
-  set('pe-hbt-n', hbt); set('pe-hgs-n', hgs);
-  if (total) { set('pe-hbt-pct', Math.round(hbt/total*100)+'%'); set('pe-hgs-pct', Math.round(hgs/total*100)+'%'); }
+  // STAB-v12.1: usar porEmpresa canónico (elimina cálculo duplicado)
+  var _peHBT = (_stats.porEmpresa && _stats.porEmpresa['HBT']) || { total:0, operativos:0, backup:0, pct:0 };
+  var _peHGS = (_stats.porEmpresa && _stats.porEmpresa['HGS']) || { total:0, operativos:0, backup:0, pct:0 };
+  set('pe-hbt-n', _peHBT.total); set('pe-hgs-n', _peHGS.total);
+  if (total) { set('pe-hbt-pct', _peHBT.pct + '%'); set('pe-hgs-pct', _peHGS.pct + '%'); }
   var ptEl = document.getElementById('pe-por-tecnico');
   if (ptEl) {
     var byTec = {};
@@ -1248,7 +1357,12 @@ function renderPanelEjecutivo() {
   // Auditoria Final: Backup por empresa
   var peBackupEl = document.getElementById('pe-backup-list');
   if (peBackupEl) {
-    var _bk = _stats;
+    // STAB-v12.1: porEmpresa canónico
+    var _peHBT2 = (_stats.porEmpresa && _stats.porEmpresa['HBT']) || { total:0, operativos:0, backup:0 };
+    var _peHGS2 = (_stats.porEmpresa && _stats.porEmpresa['HGS']) || { total:0, operativos:0, backup:0 };
+    var _bk = { hbtBackup: _peHBT2.backup, hgsBackup: _peHGS2.backup,
+               hbtOperativos: _peHBT2.operativos, hgsOperativos: _peHGS2.operativos,
+               total: _stats.total, totalBackups: _stats.totalBackups };
     peBackupEl.innerHTML =
       '<div style="display:flex;gap:16px">' +
       '<div><strong>' + (_bk.hbtBackup||0) + '</strong><div style="font-size:10px;color:var(--text-3)">HBT backup</div></div>' +
@@ -1452,6 +1566,7 @@ function saveRecord() {
     }
     // RC-07 Fix 2: cerrar modal y refrescar inmediatamente
     if (window.closeModal) closeModal(true);
+    if (window.DashboardStats) DashboardStats.invalidate(); // TASK 02: invalidar caché
     if (window.renderResumen) renderResumen();
     // RC-01 T12: _F7_FIELDS vacío — estado_entrega_equipo_nuevo
     // tiene entrada en SP_FIELD_MAP (EstadoEntregaEquipoNuevo).

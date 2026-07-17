@@ -457,6 +457,7 @@
       </div>
     </div>
 
+    <div class="section" style="margin-top:0" id="view-ejecutivos-content"></div>
     <!-- ═════ VISTA: ACTIVIDAD (Activity Log) ═════ -->
     <div class="view" id="view-backup"></div>
     <div class="view" id="view-actividad">
@@ -982,79 +983,6 @@
 
 <!-- ════════════════════════ MODAL (form completo) ════════════════════════ -->
 
-<!-- ═══ F3 · Modal: Solicitar validación de cierre ═══ -->
-<div class="modal-bg" id="val-modal-bg" onclick="if(event.target===this)closeValidationModal()">
-  <div class="modal" style="max-width:640px">
-    <div class="modal-head">
-      <div class="modal-title-block">
-        <div class="modal-eyebrow" id="val-modal-eyebrow">—</div>
-        <div class="modal-title" id="val-modal-title">Solicitar validación de cierre</div>
-      </div>
-      <button class="modal-close" onclick="closeValidationModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body" id="val-modal-body"></div>
-    <div class="modal-foot">
-      <button class="btn" onclick="closeValidationModal()">Cancelar</button>
-      <button class="btn btn-primary" id="val-modal-send" onclick="submitValidation()">Solicitar validación</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ F3 · Modal: Bloquear renovación ═══ -->
-<div class="modal-bg" id="block-modal-bg" onclick="if(event.target===this)closeBlockModal()">
-  <div class="modal sub-modal">
-    <div class="modal-head">
-      <div class="modal-title-block">
-        <div class="modal-eyebrow" id="block-modal-eyebrow">—</div>
-        <div class="modal-title">🚧 Bloquear renovación</div>
-      </div>
-      <button class="modal-close" onclick="closeBlockModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:var(--text-2);margin-bottom:16px;line-height:1.5">El bloqueo detiene el flujo. Debes registrar un motivo claro · cuando se resuelva el impedimento, podrás desbloquear desde el mismo botón.</p>
-      <div class="form-group">
-        <label class="form-label">Categoría del bloqueo</label>
-        <!-- F3.5: opciones desde ConfigService.CATEGORIAS_BLOQUEO -->
-        <select class="form-select" id="block-category" id="block-category-select">
-        </select>
-      </div>
-      <div class="form-group" style="margin-top:14px">
-        <label class="form-label">Motivo detallado (obligatorio)</label>
-        <textarea class="form-textarea" id="block-reason" rows="4" placeholder="Describe la razón del bloqueo · esta información queda en auditoría"></textarea>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn" onclick="closeBlockModal()">Cancelar</button>
-      <button class="btn btn-danger" onclick="submitBlock()">Bloquear renovación</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ F3 · Vista Aprobaciones ═══ -->
-<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title-block">
-        <div class="modal-eyebrow" id="modal-eyebrow">Editar registro</div>
-        <div class="modal-title" id="modal-title">—</div>
-      </div>
-      <button class="modal-close" onclick="closeModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body" id="modal-body"></div>
-    <div class="modal-foot">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn" id="modal-block-btn" onclick="openBlockModal()">🚧 Bloquear</button>
-      <button class="btn" id="modal-validate-btn" onclick="openValidationModal()" style="background:var(--amber-l);color:var(--amber);border-color:var(--amber)">Solicitar validación de cierre</button>
-      <button class="btn btn-primary" onclick="ejecutarGuardado()">Guardar cambios</button>
-    </div>
-  </div>
-</div>
 <!-- RC2.7 · Login Screen — mostrada cuando authMode=msal y no autenticado -->
 <div id="rc2-login-screen" style="display:none;position:fixed;inset:0;z-index:10001;background:linear-gradient(135deg,#0A0A0F 60%,#1a0a1a);flex-direction:column;align-items:center;justify-content:center;gap:0;">
   <div style="text-align:center;max-width:460px;padding:0 24px;">
