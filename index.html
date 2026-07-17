@@ -269,11 +269,11 @@
             <div class="metric-card-val" id="k-actas">—</div>
             <div class="metric-card-sub">PandaDoc</div>
           </div>
-          <div class="metric-card amb">
+          <div class="metric-card amb" onclick="goView('backup')">
             <div class="metric-card-head"><span class="metric-card-label">Backup</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div></div>
             <div class="metric-card-val" id="k-backup">14</div>
             <div class="metric-card-sub" id="k-backup-sub">10 HBT + 4 HGS</div>
-          <div class="metric-card teal" onclick="setStateFilter('Programado')">
+          <div class="metric-card teal" onclick="setMultiStateFilter(['Programado','En tránsito equipo nuevo'])">
           <div class="metric-card-head"><span class="metric-card-label">En envío</span><div class="metric-card-icon">✈</div></div>
           <div class="metric-card-val" id="k-en-envio">—</div>
           <div class="metric-card-sub">Programado + En tránsito</div>
@@ -698,6 +698,26 @@
               <div class="panel-kpi-val" id="pe-actas">—</div>
               <div class="panel-kpi-sub">De renovaciones completadas</div>
             </div>
+            <div class="panel-kpi">
+            <div class="panel-kpi-label">Entregados</div>
+            <div class="panel-kpi-val grn" id="pe-entregados">—</div>
+            <div class="panel-kpi-sub">Hito acumulativo</div>
+            </div>
+            <div class="panel-kpi">
+            <div class="panel-kpi-label">En envío</div>
+            <div class="panel-kpi-val" id="pe-en-envio">—</div>
+            <div class="panel-kpi-sub">Programado + Tránsito</div>
+            </div>
+            <div class="panel-kpi">
+            <div class="panel-kpi-label">Backup</div>
+            <div class="panel-kpi-val" id="pe-backup">—</div>
+            <div class="panel-kpi-sub">Repositorio</div>
+            </div>
+            <div class="panel-kpi">
+            <div class="panel-kpi-label">Cerrados</div>
+            <div class="panel-kpi-val grn" id="pe-cerrados">—</div>
+            <div class="panel-kpi-sub">Renovación completada</div>
+            </div>
           </div>
           <div class="panel-progress-bar">
             <span class="panel-progress-label">Avance global</span>
@@ -745,6 +765,14 @@
           <div class="panel-card">
             <div class="panel-card-title">Distribución de estados</div>
             <div id="pe-estados-list"></div>
+          </div>
+          <div class="panel-card">
+            <div class="panel-card-title">Backup por empresa</div>
+            <div id="pe-backup-list"></div>
+          </div>
+          <div class="panel-card">
+            <div class="panel-card-title">Devoluciones</div>
+            <div id="pe-devoluciones-list"></div>
           </div>
           <div class="panel-card">
             <div class="panel-card-title">Aprobaciones pendientes</div>
@@ -1123,7 +1151,4 @@
       <button onclick="cancelarGuardado()" style="padding:10px 22px;border:1px solid #ccc;border-radius:7px;background:#f5f5f5;color:#333;font-size:13px;font-weight:600;cursor:pointer;min-width:110px">Cancelar</button>
       <button onclick="ejecutarGuardado()" id="confirm-execute-btn" style="padding:10px 22px;border:none;border-radius:7px;background:var(--r,#C00000);color:#fff;font-size:13px;font-weight:700;cursor:pointer;min-width:110px">Guardar</button>
     </div>
-  </div>
-</div>
-</body>
-</html>
+  <<div class="metric-card-val" 

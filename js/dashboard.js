@@ -66,12 +66,14 @@ function buildDashboardStats(users) {
   var porTecnico = {};
   activos.forEach(function(u) {
     var t = u.tecnico || 'Sin asignar';
-    if (!porTecnico[t]) porTecnico[t] = { asignados:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
+    if (!porTecnico[t]) porTecnico[t] = { asignados:0, pendientes:0, proceso:0, enEnvio:0, entregados:0, actas:0, finalizados:0, pct:0 };
     var d = porTecnico[t];
     d.asignados++;
     if (u.estado === 'Pendiente') d.pendientes++;
+    if (u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo') d.enEnvio++;
     if (PROC_ST.indexOf(u.estado) >= 0) d.proceso++;
     if (u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0) d.entregados++;
+    if (!!u.fecha_firma_acta) d.actas++;
     if (u.estado === 'Renovación completada' || u.estado === 'Completado') d.finalizados++;
   });
   Object.keys(porTecnico).forEach(function(t) {
@@ -146,6 +148,24 @@ window.buildDashboardStats = buildDashboardStats;
 // ÚNICA fuente de verdad para todos los dashboards.
 // Todos los módulos deben consumir esta función.
 // ════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
+// getBDS() — Auditoria Final: cache de 500ms para evitar recálculos
+// múltiples durante el mismo ciclo de render
+// ════════════════════════════════════════════════════════════════════
+var _bdsCache = null, _bdsCacheTs = 0;
+function getBDS(users) {
+  users = users || window.USERS || [];
+  var now = Date.now();
+  // Cache válido solo si los datos son window.USERS y tiene < 500ms
+  if (_bdsCache && users === (window.USERS||users) && (now - _bdsCacheTs) < 500) {
+    return _bdsCache;
+  }
+  _bdsCache  = buildDashboardStats(users);
+  _bdsCacheTs = now;
+  return _bdsCache;
+}
+window.getBDS = getBDS;
+
 // STAB-v09.1: calculateProjectMetrics es ahora un wrapper de buildDashboardStats
 function calculateProjectMetrics() {
   return buildDashboardStats(window.USERS || []);
