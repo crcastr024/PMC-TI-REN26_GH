@@ -273,6 +273,21 @@
             <div class="metric-card-head"><span class="metric-card-label">Backup</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div></div>
             <div class="metric-card-val" id="k-backup">14</div>
             <div class="metric-card-sub" id="k-backup-sub">10 HBT + 4 HGS</div>
+          <div class="metric-card teal" onclick="setStateFilter('Programado')">
+          <div class="metric-card-head"><span class="metric-card-label">En envío</span><div class="metric-card-icon">✈</div></div>
+          <div class="metric-card-val" id="k-en-envio">—</div>
+          <div class="metric-card-sub">Programado + En tránsito</div>
+          </div>
+          <div class="metric-card red" onclick="goView('aprobaciones')">
+          <div class="metric-card-head"><span class="metric-card-label">Por aprobar</span><div class="metric-card-icon">☑</div></div>
+          <div class="metric-card-val" id="k-por-aprobar">—</div>
+          <div class="metric-card-sub">Pendientes validación</div>
+          </div>
+          <div class="metric-card org" onclick="goView('devoluciones')">
+          <div class="metric-card-head"><span class="metric-card-label">Dev. pendientes</span><div class="metric-card-icon">↩</div></div>
+          <div class="metric-card-val" id="k-dev-pendientes">—</div>
+          <div class="metric-card-sub">En recolección sin recibir</div>
+          </div>
           </div>
         </div>
       </div>
@@ -355,6 +370,10 @@
       </div>
       <div class="section">
         <div class="cities-grid" id="cities-grid"></div>
+        <div class="section" style="margin-top:20px">
+        <div class="panel-head"><div class="panel-title">KPIs por ciudad</div></div>
+        <div class="tbl-wrap"><div class="tbl-scroll" id="city-kpi-table"></div></div>
+        </div>
       </div>
     </div>
 

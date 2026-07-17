@@ -452,7 +452,7 @@ function _bootCore() {
     }
   });
   // Botón preview visitante (visible solo para roles que tienen panel.preview)
-  updatePreviewButton();
+  // (updatePreviewButton eliminado STAB-v10)
   updateAprobacionesItem();
   updateRoleBadge();
   // RC-03 T1: updateSidebarByRole absorbida por _applyRBAC

@@ -42,6 +42,13 @@ function renderResumen() {
   _setText('k-alistamiento',alistamiento);
   _setText('k-pendientes',  pendientes);
   _setText('k-actas',       actas);
+  // P1 STAB-v10.1: nuevas tarjetas operativas
+  var _enEnvio = m.enEnvio || 0;
+  var _devPend = m.devolucionesPendientes || 0;
+  var _porApr  = window.ApprovalService ? ApprovalService.getQueue().length : 0;
+  _setText('k-en-envio',       _enEnvio);
+  _setText('k-por-aprobar',    _porApr);
+  _setText('k-dev-pendientes', _devPend);
   var _bcEl = document.getElementById('k-backup');
   if (_bcEl) _bcEl.textContent = _backupCount;
   var _bcSubEl = document.getElementById('k-backup-sub');
@@ -114,7 +121,9 @@ function renderTecnicoChart() {
   var _bds2 = window.buildDashboardStats ? buildDashboardStats(getReal()) : calculateProjectMetrics();
   var _ptMap = _bds2.porTecnico || {};
   const data = techs.map((t, i) => {
-    var d = _ptMap[t] || { asignados:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
+    // P0: lookup case-insensitive — Excel puede tener 'CRISTIAN' vs config 'Cristian'
+    var _tKey2 = Object.keys(_ptMap).find(function(k){ return k.toLowerCase() === t.toLowerCase(); }) || t;
+    var d = _ptMap[_tKey2] || { asignados:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
     return { tec: t, color: colors[i], total: d.asignados,
       pendientes: d.pendientes, entregados: d.entregados, proceso: d.proceso, finalizados: d.finalizados, pct: d.pct };
   }).filter(d => d.total > 0);
@@ -256,16 +265,20 @@ function renderUsuarios() {
 function renderTecnicos() {
   const techs = window.CONFIG.technicians;
   const real = getReal();
+  // STAB-v10.1 P0+P2: reutilizar buildDashboardStats por técnico
+  var _bdsAll = window.buildDashboardStats ? buildDashboardStats(real) : {};
+  var _ptAll  = _bdsAll.porTecnico || {};
   $('tec-grid').innerHTML = techs.map(t => {
-    const mine = t === 'Sin asignar' 
-      ? real.filter(u => !u.tecnico)
-      : real.filter(u => (u.tecnico || '').toLowerCase() === t.toLowerCase());
-    const total = mine.length;
-    const pend = mine.filter(u => u.estado === 'Pendiente').length;
-    const proc = mine.filter(u => u.estado === 'Alistamiento' || u.estado === 'En tránsito').length;
-    const ent = mine.filter(u => u.estado === 'Entregado' || u.estado === 'Completado').length;
-    const acta = mine.filter(u => u.acta_firmada).length;
-    const pct = total > 0 ? Math.round(ent / total * 100) : 0;
+    var _tKey = Object.keys(_ptAll).find(function(k){ return k.toLowerCase() === t.toLowerCase(); }) || t;
+    var _d = _ptAll[_tKey] || { asignados:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
+    const total = _d.asignados;
+    const pend  = _d.pendientes;
+    const proc  = _d.proceso;
+    const ent   = _d.entregados;
+    const acta  = window.buildDashboardStats ? buildDashboardStats(
+      (real.filter(u => (u.tecnico||'').toLowerCase() === t.toLowerCase()))
+    ).actas : 0;
+    const pct   = _d.pct;
     const cls = t.toLowerCase() === 'sin asignar' ? 'unassigned' : t.toLowerCase();
     const initials = t === 'Sin asignar' ? '—' : t.substring(0, 2).toUpperCase();
     return '<div class="tec-card ' + cls + '" onclick="openTecnicoDetail(\'' + t.replace(/\'/g, "\\\'") + '\')" style="cursor:pointer"><div class="tec-head"><div class="tec-avatar">' + initials + '</div><div><div class="tec-name">' + t + '</div><div class="tec-meta">' + total + ' equipos asignados · click para detalle</div></div></div><div class="tec-stats"><div class="tec-stat"><div class="tec-stat-label">Pendientes</div><div class="tec-stat-val">' + pend + '</div></div><div class="tec-stat"><div class="tec-stat-label">En proceso</div><div class="tec-stat-val amb">' + proc + '</div></div><div class="tec-stat"><div class="tec-stat-label">Entregados</div><div class="tec-stat-val grn">' + ent + '</div></div><div class="tec-stat"><div class="tec-stat-label">Actas</div><div class="tec-stat-val blu">' + acta + '</div></div></div><div class="tec-progress"><div class="tec-progress-bar" style="width: ' + pct + '%"></div></div><div class="tec-progress-text">' + pct + '% completado</div></div>';
@@ -292,9 +305,9 @@ function renderTecnicoDetail() {
   const pend = mine.filter(u => u.estado === 'Pendiente').length;
   const alist = mine.filter(u => u.estado === 'Alistamiento').length;
   const proc = mine.filter(u => u.estado === 'Alistamiento' || u.estado === 'En tránsito' || u.estado === 'Programado' || (u.estado || '').indexOf('tránsito') >= 0).length;
-  const ent = mine.filter(u => u.estado === 'Entregado' || u.estado === 'Completado' || u.estado === 'Cerrado' || (u.estado || '').indexOf('Entregado') >= 0).length;
-  const acta = mine.filter(u => u.acta_firmada).length;
-  const pct = total > 0 ? Math.round(ent / total * 100) : 0;
+  var _bdsD = window.buildDashboardStats ? buildDashboardStats(mine) : {};
+  const ent  = _bdsD.entregados || 0;  // P0: usa milestone logic
+  const acta = _bdsD.actas      || 0;  // P0: usa milestone logic
   
   // Ciudad principal
   const ciudades = {};
@@ -399,7 +412,7 @@ function renderCiudades() {
     if (!cityMap[c]) cityMap[c] = { total: 0, entregados: 0, backup: 0 };
     cityMap[c].total++;
     if (isBackup(u)) cityMap[c].backup++;
-    if (u.estado === 'Entregado' || u.estado === 'Completado') cityMap[c].entregados++;
+    if (u.fecha_entrega || u.estado === 'Entregado equipo nuevo' || u.estado === 'Pendiente devolución equipo anterior' || u.estado === 'En tránsito equipo anterior' || u.estado === 'Equipo anterior recibido' || u.estado === 'Renovación completada' || u.estado === 'Completado') cityMap[c].entregados++;
   });
   const sorted = Object.entries(cityMap).sort((a,b) => b[1].total - a[1].total);
   $('cities-grid').innerHTML = sorted.map(entry => {
