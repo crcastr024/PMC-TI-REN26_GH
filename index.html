@@ -727,46 +727,54 @@
         </div>
       </div>
 
-      <div class="section">
-        <div class="panel-grid-2">
-          <div class="panel-card">
-            <div class="panel-card-title">Por empresa</div>
-            <div class="panel-stat-row">
-              <span class="panel-stat-label">HBT</span>
-              <div style="display:flex;align-items:center;gap:10px">
-                <span class="panel-stat-val" id="pe-hbt-n">—</span>
-                <span class="panel-stat-pct grn" id="pe-hbt-pct">—</span>
-              </div>
-            </div>
-            <div class="panel-stat-row">
-              <span class="panel-stat-label">HGS</span>
-              <div style="display:flex;align-items:center;gap:10px">
-                <span class="panel-stat-val" id="pe-hgs-n">—</span>
-                <span class="panel-stat-pct grn" id="pe-hgs-pct">—</span>
-              </div>
-            </div>
+          <div class="panel-card" style="padding:12px 14px">
+            <div class="panel-card-title" style="margin-bottom:8px">Por empresa</div>
+            <div id="pe-empresa-new"></div>
+            <span id="pe-hbt-n" style="display:none">—</span><span id="pe-hbt-pct" style="display:none">—</span>
+            <span id="pe-hgs-n" style="display:none">—</span><span id="pe-hgs-pct" style="display:none">—</span>
           </div>
-          <div class="panel-card">
-            <div class="panel-card-title">Por técnico</div>
-            <div id="pe-por-tecnico"></div>
+
+
+
+
+
+
+
+
+
+
+
+
           </div>
+          <div class="panel-card" style="padding:12px 14px">
+            <div class="panel-card-title" style="margin-bottom:8px">Por técnico</div>
+            <div id="pe-tecnico-new"></div>
+            <div id="pe-por-tecnico" style="display:none"></div>
         </div>
 
         <div class="panel-grid-3" style="margin-top:16px">
-          <div class="panel-card">
-            <div class="panel-card-title">Clasificación RAEE</div>
-            <div class="raee-ring-wrap">
-              <canvas id="pe-raee-canvas" width="100" height="100" style="flex-shrink:0"></canvas>
-              <div class="raee-ring-labels" id="pe-raee-labels"></div>
-            </div>
+          <div class="panel-card" style="padding:12px 14px">
+            <div class="panel-card-title" style="margin-bottom:8px">Cumplimiento</div>
+            <div id="pe-cumplimiento"></div>
+            <canvas id="pe-raee-canvas" style="display:none"></canvas>
+            <div id="pe-raee-labels" style="display:none"></div>
           </div>
-          <div class="panel-card">
-            <div class="panel-card-title">Distribución de estados</div>
-            <div id="pe-estados-list"></div>
+
+
+
+
+
+          <div class="panel-card" style="padding:12px 14px">
+            <div class="panel-card-title" style="margin-bottom:8px">Riesgos operativos</div>
+            <div id="pe-riesgos-op"></div>
+            <div id="pe-backup-list" style="display:none"></div>
           </div>
-          <div class="panel-card">
-            <div class="panel-card-title">Backup por empresa</div>
-            <div id="pe-backup-list"></div>
+            <div class="panel-card-title" style="margin-bottom:8px">Cuello de botella</div>
+            <div id="pe-botella"></div>
+          </div>
+          <div class="panel-card" style="padding:12px 14px">
+            <div class="panel-card-title" style="margin-bottom:8px">Calidad del dato</div>
+            <div id="pe-calidad"></div>
           </div>
           <div class="panel-card">
             <div class="panel-card-title">Devoluciones</div>

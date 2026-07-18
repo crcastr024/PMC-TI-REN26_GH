@@ -1301,109 +1301,220 @@ function renderEstadosChart(stats) {
 window.renderEstadosChart = renderEstadosChart;
 
 function renderPanelEjecutivo() {
+  // ── RBAC ─────────────────────────────────────────────────────────────
   var role = window.state && state.user && (state.user.role || state.user.rol);
-  // STAB-v09.2 ÍTEM 3+4: técnico puede ver Seguimiento
   var allowed = ['super_admin', 'gestor_activos', 'director_ti', 'gerencia', 'tecnico'];
   if (role && allowed.indexOf(role) < 0) {
     var vp = document.getElementById('view-panel');
-    if (vp) vp.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-3)">Vista no disponible para este rol.</div>';
+    if (vp) vp.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-3)">Vista no disponible para tu rol</div>';
     return;
   }
   var records = window.DataService ? DataService.getRenewals({}) : [];
-  var total = records.length;
-  // STAB-v11 TASK 04: definir _stats ANTES de cualquier uso
-  var _stats = window.DashboardStats ? DashboardStats.compute(records.filter(function(r){ return !isBackup(r); })) : {};
-  var done  = records.filter(function(r) { return r.estado === 'Renovación completada' || r.estado === 'Cerrado'; }).length;
-  var proc  = records.filter(function(r) { return r.estado !== 'Pendiente' && r.estado !== 'Renovación completada' && r.estado !== 'Cerrado'; }).length;
-  var pend  = records.filter(function(r) { return r.estado === 'Pendiente'; }).length;
-  var actas = records.filter(function(r) { return !!r.acta_entrega_url; }).length;
-  var aprob = records.filter(function(r) { return r.estado === 'Pendiente aprobación'; }).length;
-  var pct   = total ? Math.round(done / total * 100) : 0;
+  var total   = records.length;
+  // STAB-v14: _stats es la ÚNICA fuente — sin records.filter() en renderers
+  var _stats  = window.DashboardStats ? DashboardStats.compute(records.filter(function(r){ return !isBackup(r); })) : {};
   var set = function(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
-  set('pe-total', total); set('pe-completados', done); set('pe-proceso', proc);
-  set('pe-pendientes', pend); set('pe-actas', actas); set('pe-aprobaciones', aprob);
-  // Auditoría Final: KPIs adicionales en panel
-  set('pe-entregados', _stats.entregados  || 0);
-  set('pe-en-envio',   _stats.enEnvio     || 0);
-  set('pe-backup',     _stats.totalBackups|| 0);
-  set('pe-cerrados',   _stats.finalizados || 0);
-  // STAB-v12 TASK 04: usar setTimeout para triggear la transición CSS
-  var pf = document.getElementById('pe-prog-fill');
-  if (pf) { pf.style.width = '0%'; requestAnimationFrame(function(){ setTimeout(function(){ pf.style.width = pct+'%'; }, 50); }); }
+
+  // ── Hero KPIs (sin cambio) ────────────────────────────────────────────
+  set('pe-total',       _stats.total      || 0);
+  set('pe-completados', _stats.finalizados || 0);
+  set('pe-proceso',     _stats.proceso     || 0);
+  set('pe-pendientes',  _stats.pendientes  || 0);
+  set('pe-actas',       _stats.actas       || 0);
+  set('pe-aprobaciones',_stats.aprobaciones ? _stats.aprobaciones.pendientes : 0);
+  set('pe-entregados',  _stats.entregados  || 0);
+  set('pe-en-envio',    _stats.enEnvio     || 0);
+  set('pe-backup',      _stats.totalBackups|| 0);
+  set('pe-cerrados',    _stats.finalizados || 0);
+  var pct = total ? Math.round((_stats.finalizados||0) / total * 100) : 0;
   set('pe-prog-pct', pct + '%');
-  // STAB-v12.1: usar porEmpresa canónico (elimina cálculo duplicado)
-  var _peHBT = (_stats.porEmpresa && _stats.porEmpresa['HBT']) || { total:0, operativos:0, backup:0, pct:0 };
-  var _peHGS = (_stats.porEmpresa && _stats.porEmpresa['HGS']) || { total:0, operativos:0, backup:0, pct:0 };
-  set('pe-hbt-n', _peHBT.total); set('pe-hgs-n', _peHGS.total);
-  if (total) { set('pe-hbt-pct', _peHBT.pct + '%'); set('pe-hgs-pct', _peHGS.pct + '%'); }
-  var ptEl = document.getElementById('pe-por-tecnico');
-  if (ptEl) {
-    var byTec = {};
-    records.forEach(function(r) { var t = r.tecnico || 'Sin asignar'; byTec[t] = (byTec[t] || 0) + 1; });
-    ptEl.innerHTML = Object.keys(byTec).sort().map(function(t) {
-      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span>' + esc(t) + '</span><strong>' + byTec[t] + '</strong></div>';
+  var pf = document.getElementById('pe-prog-fill');
+  if (pf) { pf.style.width='0%'; requestAnimationFrame(function(){ setTimeout(function(){ pf.style.width=pct+'%'; },50); }); }
+  set('pe-pct-sub', 'de '+total+' equipos');
+  set('pe-sub', 'Renovación Tecnológica 2026 · HBT + HGS');
+
+  // ── TASK 02: Por empresa (dense) ──────────────────────────────────────
+  var empEl = document.getElementById('pe-empresa-new');
+  if (empEl) {
+    var EMPS = ['HBT','HGS'];
+    empEl.innerHTML = EMPS.map(function(emp) {
+      var d = (_stats.porEmpresa && _stats.porEmpresa[emp]) || {total:0,operativos:0,backup:0,pendientes:0,entregados:0,pct:0};
+      var barPct = Math.min(d.pct, 100);
+      return '<div class="op-empresa-block">' +
+        '<div class="op-empresa-head">' +
+          '<span class="op-empresa-name">' + emp + '</span>' +
+          '<span class="op-empresa-total">' + d.total + ' equipos</span>' +
+        '</div>' +
+        '<div class="op-empresa-grid">' +
+          '<div class="op-empresa-stat"><span class="op-empresa-val">' + d.operativos + '</span><span class="op-empresa-lbl">operativos</span></div>' +
+          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--text-3)">' + d.backup + '</span><span class="op-empresa-lbl">backup</span></div>' +
+          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--green)">' + d.entregados + '</span><span class="op-empresa-lbl">entregados</span></div>' +
+          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--accent)">' + d.pendientes + '</span><span class="op-empresa-lbl">pendientes</span></div>' +
+          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--green)">' + d.pct + '%</span><span class="op-empresa-lbl">avance</span></div>' +
+        '</div>' +
+        '<div class="op-bar"><div class="op-bar-fill grn" data-pct="' + barPct + '" style="width:0%"></div></div>' +
+        '</div>';
+    }).join('');
+    // también actualizar IDs compat
+    set('pe-hbt-n', (_stats.porEmpresa&&_stats.porEmpresa['HBT'])||{total:0}); // silencioso
+    setTimeout(function(){empEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},80);
+  }
+
+  // ── TASK 03: Por técnico (dense, ordenado por asignados) ─────────────
+  var tecEl = document.getElementById('pe-tecnico-new');
+  if (tecEl) {
+    var ptMap = _stats.porTecnico || {};
+    var tecList = Object.keys(ptMap).map(function(t){ return Object.assign({tec:t}, ptMap[t]); })
+      .filter(function(d){ return d.asignados > 0; })
+      .sort(function(a,b){ return b.asignados - a.asignados; });
+    var maxAsig = tecList.length ? tecList[0].asignados : 1;
+    tecEl.innerHTML = tecList.length ? tecList.map(function(d) {
+      var barPct = Math.round(d.entregados / Math.max(d.asignados,1) * 100);
+      return '<div class="op-tec-row">' +
+        '<div class="op-tec-head">' +
+          '<span class="op-tec-name">' + esc(d.tec) + '</span>' +
+          '<span class="op-tec-pct">' + barPct + '%</span>' +
+        '</div>' +
+        '<div class="op-tec-stats">' +
+          '<span>' + d.asignados + ' asig</span>' +
+          '<span class="grn">' + d.entregados + ' ent</span>' +
+          '<span class="acc">' + d.pendientes + ' pend</span>' +
+          '<span>' + d.proceso + ' proc</span>' +
+        '</div>' +
+        '<div class="op-bar"><div class="op-bar-fill" data-pct="' + barPct + '" style="width:0%"></div></div>' +
+        '</div>';
+    }).join('') : '<div style="color:var(--text-3);font-size:11px">Sin datos de técnicos</div>';
+    setTimeout(function(){tecEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},100);
+  }
+
+  // ── TASK 04: Cumplimiento por empresa ────────────────────────────────
+  var cumEl = document.getElementById('pe-cumplimiento');
+  if (cumEl) {
+    var EMPS2 = ['HBT','HGS'];
+    cumEl.innerHTML = EMPS2.map(function(emp) {
+      var d = (_stats.porEmpresa && _stats.porEmpresa[emp]) || {total:0,entregados:0,pendientes:0,pct:0};
+      return '<div class="op-cum-row">' +
+        '<span class="op-cum-empresa">' + emp + '</span>' +
+        '<div style="flex:1">' +
+          '<div class="op-cum-nums">' +
+            '<span>' + d.total + ' tot</span>' +
+            '<span class="grn">' + d.entregados + ' ent</span>' +
+            '<span>' + d.pendientes + ' pend</span>' +
+          '</div>' +
+          '<div class="op-bar op-cum-bar-wrap"><div class="op-bar-fill grn" data-pct="' + d.pct + '" style="width:0%"></div></div>' +
+        '</div>' +
+        '<span class="op-cum-pct">' + d.pct + '%</span>' +
+        '</div>';
+    }).join('');
+    setTimeout(function(){cumEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},120);
+  }
+
+  // ── TASK 05: Riesgos Operativos ──────────────────────────────────────
+  var riesEl = document.getElementById('pe-riesgos-op');
+  if (riesEl) {
+    var ris = _stats.riesgos  || {};
+    var cal = _stats.calidad  || {};
+    var RISKS = [
+      { icon:'⏳', label:'Pendientes aprobación', val: ris.pendienteAprobacion||0,    thresh:1 },
+      { icon:'↩',  label:'Pendientes devolución', val: ris.pendienteDevolucion||0,    thresh:1 },
+      { icon:'👤', label:'Sin técnico asignado',  val: cal.sinTecnico||0,             thresh:1 },
+      { icon:'📍', label:'Sin ciudad',             val: cal.sinCiudad||0,              thresh:1 },
+      { icon:'🏢', label:'Sin empresa',            val: cal.sinEmpresa||0,             thresh:1 },
+      { icon:'🔖', label:'Sin serial',             val: cal.sinSerial||0,              thresh:5 },
+      { icon:'📄', label:'Sin acta',               val: _stats.total - (_stats.actas||0), thresh:10 },
+    ];
+    riesEl.innerHTML = RISKS.map(function(r) {
+      var cls = r.val === 0 ? 'zero' : r.val >= r.thresh*3 ? 'crit' : 'warn';
+      return '<div class="op-risk-item">' +
+        '<span class="op-risk-icon">' + r.icon + '</span>' +
+        '<span class="op-risk-label">' + r.label + '</span>' +
+        '<span class="op-risk-val ' + cls + '">' + r.val + '</span>' +
+        '</div>';
     }).join('');
   }
-  // STAB-v09.1 TASK 6+7: usar buildDashboardStats para RAEE y estados
-    // (_stats definida arriba)
-  var _raeeD = _stats.raeeDistrib || {};
-  var _estD  = _stats.estados || {};
-  // Destino RAEE
-  set('pe-destino-raee',    _raeeD['RAEE']                    || 0);
-  set('pe-destino-venta',   _raeeD['Venta interna empleado']  || _raeeD['Venta interna'] || 0);
-  set('pe-destino-reasign', _raeeD['Reasignable']             || _raeeD['Reasignación interna'] || 0);
-  set('pe-destino-donacion',_raeeD['Donación']                || _raeeD['Donacion'] || 0);
-  // Distribución de estados (TASK 7)
-  // Auditoria Final: Backup por empresa
-  var peBackupEl = document.getElementById('pe-backup-list');
-  if (peBackupEl) {
-    // STAB-v12.1: porEmpresa canónico
-    var _peHBT2 = (_stats.porEmpresa && _stats.porEmpresa['HBT']) || { total:0, operativos:0, backup:0 };
-    var _peHGS2 = (_stats.porEmpresa && _stats.porEmpresa['HGS']) || { total:0, operativos:0, backup:0 };
-    var _bk = { hbtBackup: _peHBT2.backup, hgsBackup: _peHGS2.backup,
-               hbtOperativos: _peHBT2.operativos, hgsOperativos: _peHGS2.operativos,
-               total: _stats.total, totalBackups: _stats.totalBackups };
-    peBackupEl.innerHTML =
-      '<div style="display:flex;gap:16px">' +
-      '<div><strong>' + (_bk.hbtBackup||0) + '</strong><div style="font-size:10px;color:var(--text-3)">HBT backup</div></div>' +
-      '<div><strong>' + (_bk.hgsBackup||0) + '</strong><div style="font-size:10px;color:var(--text-3)">HGS backup</div></div>' +
-      '<div><strong>' + (_bk.hbtOperativos||0) + '</strong><div style="font-size:10px;color:var(--text-3)">HBT operativos</div></div>' +
-      '<div><strong>' + (_bk.hgsOperativos||0) + '</strong><div style="font-size:10px;color:var(--text-3)">HGS operativos</div></div>' +
-      '</div>' +
-      '<div style="font-size:10px;color:var(--text-3);margin-top:6px">Total: ' + ((_bk.hbtOperativos||0)+(_bk.hgsOperativos||0)) + ' op + ' + ((_bk.hbtBackup||0)+(_bk.hgsBackup||0)) + ' bk = ' + ((_bk.total||0)+(_bk.totalBackups||0)) + '</div>';
+
+  // ── TASK 06: Distribución de estados (mejorada) ──────────────────────
+  if (window.renderEstadosChart) renderEstadosChart(_stats);
+
+  // ── TASK 07: Cuello de botella ───────────────────────────────────────
+  var botEl = document.getElementById('pe-botella');
+  if (botEl) {
+    var pipe   = _stats.pipeline || [];
+    var bottle = _stats.cueloBotella || {};
+    var maxPipe = pipe.reduce(function(a,b){ return Math.max(a,b.count); },1);
+    var sorted = pipe.filter(function(p){ return p.count>0; })
+                     .sort(function(a,b){ return b.count-a.count; });
+    if (sorted.length === 0) {
+      botEl.innerHTML = '<div style="color:var(--text-3);font-size:11px">Sin datos</div>';
+    } else {
+      var top = sorted[0];
+      var topPct = Math.round(top.count / Math.max(_stats.total,1) * 100);
+      botEl.innerHTML =
+        '<div class="op-bottle-main">' +
+          '<div class="op-bottle-estado">' + esc(top.estado) + '</div>' +
+          '<div class="op-bottle-nums">' +
+            '<span class="op-bottle-count">' + top.count + '</span>' +
+            '<span class="op-bottle-pct">' + topPct + '% del total</span>' +
+          '</div>' +
+          '<div class="op-bar"><div class="op-bar-fill" data-pct="' + topPct + '" style="width:0%"></div></div>' +
+        '</div>' +
+        '<div class="op-bottle-others">' +
+          sorted.slice(1,4).map(function(p) {
+            var pct2 = Math.round(p.count / Math.max(_stats.total,1) * 100);
+            return '<div class="op-bottle-other-row">' +
+              '<span>' + esc(p.estado.replace('equipo nuevo','').replace('equipo anterior','').trim()) + '</span>' +
+              '<span>' + p.count + ' · ' + pct2 + '%</span></div>';
+          }).join('') +
+        '</div>';
+      setTimeout(function(){botEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},140);
+    }
   }
-  // Devoluciones
+
+  // ── TASK 08: Calidad del dato ────────────────────────────────────────
+  var calEl = document.getElementById('pe-calidad');
+  if (calEl) {
+    var c = _stats.calidad || {};
+    var QUALITY = [
+      { label:'Sin serial',   val: c.sinSerial||0  },
+      { label:'Sin ciudad',   val: c.sinCiudad||0  },
+      { label:'Sin empresa',  val: c.sinEmpresa||0 },
+      { label:'Sin técnico',  val: c.sinTecnico||0 },
+      { label:'Sin acta',     val: c.sinActa||0    },
+      { label:'Sin AF',       val: c.sinAF||0      },
+    ];
+    var totalActivos = _stats.total || 1;
+    calEl.innerHTML = QUALITY.map(function(q) {
+      var pct = Math.round(q.val/totalActivos*100);
+      var cls = q.val===0 ? 'ok' : pct>20 ? 'crit' : 'warn';
+      return '<div class="op-quality-row">' +
+        '<span class="op-quality-label">' + q.label + '</span>' +
+        '<span class="op-quality-val ' + cls + '">' + q.val + '</span>' +
+        '</div>';
+    }).join('');
+  }
+
+  // ── Destino RAEE (compat) ─────────────────────────────────────────────
+  var _raeeD = _stats.raeeDistrib || {};
+  set('pe-destino-raee',    _raeeD['RAEE']                   || 0);
+  set('pe-destino-venta',   _raeeD['Venta interna empleado'] || _raeeD['Venta interna'] || 0);
+  set('pe-destino-reasign', _raeeD['Reasignable']            || _raeeD['Reasignación interna'] || 0);
+  set('pe-destino-donacion',_raeeD['Donación']               || _raeeD['Donacion'] || 0);
+
+  // ── Devoluciones ─────────────────────────────────────────────────────
   var peDevEl = document.getElementById('pe-devoluciones-list');
   if (peDevEl) {
     peDevEl.innerHTML =
       '<div style="display:flex;gap:16px;flex-wrap:wrap">' +
-      '<div><strong>' + (_stats.devoluciones||0) + '</strong><div style="font-size:10px;color:var(--text-3)">Iniciadas</div></div>' +
-      '<div><strong>' + (_stats.devolucionesPendientes||0) + '</strong><div style="font-size:10px;color:var(--text-3)">Pendientes recepción</div></div>' +
+      '<div><strong>' + (_stats.devoluciones||0) + '</strong>' +
+        '<div style="font-size:10px;color:var(--text-3)">Iniciadas</div></div>' +
+      '<div><strong>' + (_stats.devolucionesPendientes||0) + '</strong>' +
+        '<div style="font-size:10px;color:var(--text-3)">Pendientes recepción</div></div>' +
       '</div>';
   }
-  // STAB-v10 TASK 5+6: renderizar gráficos
-  if (window.renderRaeeDonut)    renderRaeeDonut(_stats);
-  if (window.renderEstadosChart) renderEstadosChart(_stats);
 
-  var peEstEl = document.getElementById('pe-estados-list');
-  if (peEstEl && false) {
-    var stKeys = Object.keys(_estD).sort();
-    peEstEl.innerHTML = stKeys.length ? stKeys.map(function(st) {
-      return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-light)">'+
-        '<span style="font-size:11px">'+esc(st)+'</span>'+
-        '<span style="font-size:11px;font-weight:700">'+_estD[st]+'</span></div>';
-    }).join('') : '<div style="color:var(--text-3);font-size:11px">Sin datos</div>';
-  }
-  // Distribución RAEE completa (TASK 6)
-  var peRaeeEl = document.getElementById('pe-raee-labels');
-  if (peRaeeEl) {
-    var rKeys = Object.keys(_raeeD).sort();
-    peRaeeEl.innerHTML = rKeys.length ? rKeys.map(function(r) {
-      return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-light)">'+
-        '<span style="font-size:11px">'+esc(r)+'</span>'+
-        '<span style="font-size:11px;font-weight:700">'+_raeeD[r]+'</span></div>';
-    }).join('') : '<div style="color:var(--text-3);font-size:11px">Sin clasificación</div>';
-  }
+  // ── Aprobaciones compat ───────────────────────────────────────────────
+  set('pe-correccion', 0);
+  set('pe-bloqueados',  0);
 }
 window.renderPanelEjecutivo = renderPanelEjecutivo;
 

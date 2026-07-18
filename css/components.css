@@ -1148,3 +1148,71 @@ body.sb-collapsed #app-footer {
 .risk-label{font-size:12px;font-weight:600}
 .risk-sub{display:block;font-size:10px;color:var(--text-3);font-weight:400}
 .risk-count{font-size:20px;font-weight:900;font-family:var(--font-condensed,sans-serif)}
+
+/* ════════════════════════════════════════════════════════
+   STAB-v14 — Panel Seguimiento: tokens operativos
+   Extiende el sistema de diseño existente. Solo tokens
+   necesarios para los paneles nuevos.
+   ════════════════════════════════════════════════════════ */
+
+/* ── Task 01/02: Empresa compact ── */
+.op-empresa-block{background:var(--bg-2,#f9f9f9);border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--accent)}
+.op-empresa-block:last-child{margin-bottom:0}
+.op-empresa-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.op-empresa-name{font-family:'Inter Tight',sans-serif;font-size:14px;font-weight:800;color:var(--accent)}
+.op-empresa-total{font-size:11px;color:var(--text-3)}
+.op-empresa-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:6px}
+.op-empresa-stat{text-align:center}
+.op-empresa-val{font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:900;display:block;line-height:1}
+.op-empresa-lbl{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.3px;margin-top:1px}
+.op-bar{height:5px;background:var(--border,#e5e5e5);border-radius:3px;overflow:hidden}
+.op-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),#FF4D70);border-radius:3px;width:0%;transition:width .9s cubic-bezier(.4,0,.2,1)}
+.op-bar-fill.grn{background:linear-gradient(90deg,var(--green),#22c55e)}
+
+/* ── Task 03: Técnico compact ── */
+.op-tec-row{padding:7px 0;border-bottom:1px solid var(--border-light,#f0f0f0)}
+.op-tec-row:last-child{border-bottom:none;padding-bottom:0}
+.op-tec-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.op-tec-name{font-size:12px;font-weight:700;color:var(--text-1)}
+.op-tec-pct{font-family:'Inter Tight',sans-serif;font-size:13px;font-weight:900;color:var(--accent)}
+.op-tec-stats{display:flex;gap:10px;font-size:10px;color:var(--text-3);margin-bottom:4px}
+.op-tec-stats .grn{color:var(--green)}
+.op-tec-stats .acc{color:var(--accent)}
+
+/* ── Task 05: Riesgos Operativos ── */
+.op-risk-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border-light,#f0f0f0)}
+.op-risk-item:last-child{border-bottom:none}
+.op-risk-icon{font-size:13px;flex-shrink:0;width:18px;text-align:center}
+.op-risk-label{flex:1;font-size:11px;color:var(--text-2)}
+.op-risk-val{font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:900;min-width:28px;text-align:right}
+.op-risk-val.zero{color:var(--green)}
+.op-risk-val.warn{color:var(--amber)}
+.op-risk-val.crit{color:var(--accent)}
+
+/* ── Task 07: Cuello de botella ── */
+.op-bottle-main{margin-bottom:10px}
+.op-bottle-estado{font-size:12px;font-weight:700;color:var(--text-1);margin-bottom:3px}
+.op-bottle-nums{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
+.op-bottle-count{font-family:'Inter Tight',sans-serif;font-size:26px;font-weight:900;color:var(--accent);line-height:1}
+.op-bottle-pct{font-size:12px;font-weight:700;color:var(--text-3)}
+.op-bottle-others{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.op-bottle-other-row{display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);padding:2px 0;border-bottom:1px solid var(--border-light,#f0f0f0)}
+.op-bottle-other-row:last-child{border-bottom:none}
+
+/* ── Task 08: Calidad del dato ── */
+.op-quality-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border-light,#f0f0f0)}
+.op-quality-row:last-child{border-bottom:none}
+.op-quality-label{flex:1;font-size:11px;color:var(--text-2)}
+.op-quality-val{font-family:'Inter Tight',sans-serif;font-size:14px;font-weight:900;min-width:24px;text-align:right}
+.op-quality-val.ok{color:var(--green)}
+.op-quality-val.warn{color:var(--amber)}
+.op-quality-val.crit{color:var(--accent)}
+
+/* ── Task 04: Cumplimiento por empresa ── */
+.op-cum-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-light,#f0f0f0)}
+.op-cum-row:last-child{border-bottom:none;padding-bottom:0}
+.op-cum-empresa{font-size:12px;font-weight:700;width:36px;flex-shrink:0}
+.op-cum-nums{display:flex;gap:8px;font-size:10px;color:var(--text-3);flex:1}
+.op-cum-nums .grn{color:var(--green)}
+.op-cum-pct{font-family:'Inter Tight',sans-serif;font-size:13px;font-weight:900;width:36px;text-align:right;flex-shrink:0}
+.op-cum-bar-wrap{width:100%;margin-top:3px}
