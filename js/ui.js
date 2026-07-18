@@ -6,23 +6,17 @@
 function renderResumen() {
   try {
   // GH3.39.2 P2/P3: ÚNICA fuente de verdad — calculateProjectMetrics()
-  var m = window.calculateProjectMetrics ? calculateProjectMetrics() : {
-    totalEquipos: (window.USERS||[]).length,
-    totalColaboradores: (window.USERS||[]).filter(function(u){return !isBackup(u);}).length,
-    totalBackups: 0, hbt: 0, hgs: 0, pendientes: 0, entregados: 0, enProceso: 0, estados: {}
-  };
+  // STAB-v09.1 TASK 8: fuente única de verdad — buildDashboardStats()
+  var m = window.DashboardStats ? DashboardStats.get() : calculateProjectMetrics();
 
-  const real = getReal(); // para actas y compatibilidad
-  const total = m.totalColaboradores;
-  const entregados   = (m.estados && m.estados['Entregado'] !== undefined)
-    ? m.estados['Entregado']
-    : real.filter(u=>u.estado==='Entregado'||u.estado==='Completado'||u.estado==='Entregado equipo nuevo').length;
-  const alistamiento = (m.estados && m.estados['Alistamiento'] !== undefined)
-    ? m.estados['Alistamiento']
-    : real.filter(u=>u.estado==='Alistamiento').length;
-  const proceso = m.enProceso;
-  const pendientes = m.pendientes;
-  const actas = real.filter(u => u.acta_firmada).length;
+  // STAB-v09.1 TASK 3: KPIs por hitos canónicos de buildDashboardStats
+  const real        = getReal();
+  const total       = m.totalColaboradores || 0;
+  const entregados  = m.entregados   || 0;  // hito: fecha_entrega OR estado>=Entregado
+  const alistamiento= (m.estados && m.estados['Alistamiento']) || 0;
+  const proceso     = m.proceso      || m.enProceso || 0;
+  const pendientes  = m.pendientes   || 0;
+  const actas       = m.actas        || 0;  // hito: fecha_firma_acta
   const pct = m.totalColaboradores > 0 ? Math.round(entregados / m.totalColaboradores * 100) : 0;
   var _setText = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = (v !== undefined && v !== null) ? String(v) : ''; };
   
@@ -32,13 +26,13 @@ function renderResumen() {
   _setText('h-entregados', entregados);
   _setText('h-pct', pct + '%');
   
-  _setText('h-empresas', 'HBT ' + m.hbt + ' \u00b7 HGS ' + m.hgs);
+  _setText('h-empresas', 'HBT + HGS'); // STAB-v10: sin números de empresa en hero
   var _lkpiC = document.getElementById('lkpi-colabs');
   if (_lkpiC) _lkpiC.textContent = m.totalColaboradores;
   var _lkpiCS = document.getElementById('lkpi-colabs-sub');
   if (_lkpiCS) _lkpiCS.textContent = 'colaboradores activos';
   var _lkpiE = document.getElementById('lkpi-empresas');
-  if (_lkpiE) _lkpiE.textContent = 'HBT ' + m.hbt + ' \u00b7 HGS ' + m.hgs;
+  if (_lkpiE) _lkpiE.textContent = 'HBT + HGS';
   
   const _allCount   = m.totalEquipos;
   const _backupCount = m.totalBackups;
@@ -48,10 +42,19 @@ function renderResumen() {
   _setText('k-alistamiento',alistamiento);
   _setText('k-pendientes',  pendientes);
   _setText('k-actas',       actas);
+  // P1 STAB-v10.1: nuevas tarjetas operativas
+  var _enEnvio = m.enEnvio || 0;
+  var _devPend = m.devolucionesPendientes || 0;
+  var _porApr  = window.ApprovalService ? ApprovalService.getQueue().length : 0;
+  _setText('k-en-envio',       _enEnvio);
+  _setText('k-por-aprobar',    _porApr);
+  _setText('k-dev-pendientes', _devPend);
   var _bcEl = document.getElementById('k-backup');
   if (_bcEl) _bcEl.textContent = _backupCount;
   var _bcSubEl = document.getElementById('k-backup-sub');
-  if (_bcSubEl) _bcSubEl.textContent = m.hbt + ' HBT · ' + m.hgs + ' HGS (backup)';
+  // STAB-v12.1: usar porEmpresa.backup
+  var _peAll = m.porEmpresa || {};
+  if (_bcSubEl) _bcSubEl.textContent = ((_peAll['HBT']||{}).backup||0) + ' HBT · ' + ((_peAll['HGS']||{}).backup||0) + ' HGS (backup)';
   
   _setText('b-usuarios', _allCount);
   const provName = (DataService.providerName ? DataService.providerName() : 'Mock');
@@ -92,55 +95,46 @@ function renderResumen() {
 }
 
 function renderEmpresaChart() {
+  // STAB-v09.1 TASK 4: usar buildDashboardStats para consistencia total
+  var _bds = window.DashboardStats ? DashboardStats.get() : calculateProjectMetrics();
   const data = ['HBT', 'HGS'].map(emp => {
-    const all = DataService.getRenewals({ empresa: emp });
+    // STAB-v12.1: fuente única porEmpresa
+    var d = (_bds.porEmpresa && _bds.porEmpresa[emp]) || { total:0, operativos:0, backup:0, pendientes:0, proceso:0, envio:0, entregados:0, actas:0, cerrados:0, pct:0 };
     return {
-      label: emp, total: all.length,
-      backup: all.filter(u => isBackup(u)).length,
-      // GH3.22 P8: estados canónicos + aliases legacy para consistencia
-      entregados: all.filter(u => {
-        const s = u.estado || '';
-        return s === 'Entregado equipo nuevo' || s === 'Pendiente devolución equipo anterior' ||
-               s === 'En tránsito equipo anterior' || s === 'Equipo anterior recibido' ||
-               s === 'Renovación completada' || s === 'Pendiente aprobación' ||
-               s === 'Cerrado' || s === 'Entregado' || s === 'Completado';
-      }).length,
-      proceso: all.filter(u => {
-        const s = u.estado || '';
-        return s === 'Alistamiento' || s === 'Programado' ||
-               s === 'En tránsito equipo nuevo' || s === 'En tránsito';
-      }).length,
-      pend: all.filter(u => u.estado === 'Pendiente').length,
+      label: emp, total: d.total, operativos: d.operativos, backup: d.backup,
+      entregados: d.entregados, proceso: d.proceso, envio: d.envio,
+      actas: d.actas, pend: d.pendientes, cerrados: d.cerrados, pct: d.pct,
     };
   });
+
   $('empresa-chart').innerHTML = data.map(d => {
-    const pct = d.total > 0 ? Math.round(d.entregados / d.total * 100) : 0;
-    return '<div class="chart-row"><div class="chart-row-head"><div class="chart-row-name">' + d.label + '</div><div class="chart-row-stat"><strong>' + d.total + '</strong> equipos · ' + d.entregados + ' entregados (<strong>' + pct + '%</strong>)</div></div><div class="chart-bar">' +
-      (d.entregados ? '<div class="chart-bar-seg" style="width:' + (d.entregados/d.total*100) + '%; background: var(--green)"></div>' : '') +
-      (d.proceso ? '<div class="chart-bar-seg" style="width:' + (d.proceso/d.total*100) + '%; background: var(--amber)"></div>' : '') +
-      (d.pend ? '<div class="chart-bar-seg" style="width:' + (d.pend/d.total*100) + '%; background: var(--blue)"></div>' : '') +
-      (d.backup ? '<div class="chart-bar-seg" style="width:' + (d.backup/d.total*100) + '%; background: #FCD34D"></div>' : '') +
-      '</div><div class="chart-legend"><div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--green)"></span>Entregados ' + d.entregados + '</div><div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--amber)"></span>En proceso ' + d.proceso + '</div><div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--blue)"></span>Pendientes ' + d.pend + '</div>' +
-      (d.backup ? '<div class="chart-legend-item"><span class="chart-legend-dot" style="background: #FCD34D"></span>Backup ' + d.backup + '</div>' : '') +
-      '</div></div>';
+    const pct = d.pct; // viene de porEmpresa canónico    return '<div class="chart-row">' +'<div class="chart-row-head">' +'<div class="chart-row-name">' + d.label + '</div>' +'<div class="chart-row-stat"><strong>' + d.total + '</strong> op · <span style="opacity:.6">' + d.backup + ' bk</span> · <strong>' + pct + '%</strong></div>' +'</div>' +'<div style="font-size:10px;color:var(--text-3);margin:2px 0;display:flex;gap:10px">' +'<span>Entregados: '+d.entregados+'</span>' +'<span>En proceso: '+d.proceso+'</span>' +'<span>Pendientes: '+d.pend+'</span>' +'</div>' +'<div class="chart-bar">' +(d.entregados ? '<div class="chart-bar-seg" style="width:' + (d.entregados/Math.max(d.total,1)*100) + '%;background:var(--green)"></div>' : '') +(d.proceso    ? '<div class="chart-bar-seg" style="width:' + (d.proceso/Math.max(d.total,1)*100)    + '%;background:var(--amb)"></div>' : '') +(d.pend       ? '<div class="chart-bar-seg" style="width:' + (d.pend/Math.max(d.total,1)*100)       + '%;background:var(--accent)"></div>' : '') +'</div>' +'</div>';
   }).join('');
 }
 
 function renderTecnicoChart() {
-  const techs = window.CONFIG.technicians;
+  const _roleT = window.state && state.user && (state.user.role || state.user.rol);
+  const _esTecnicoT = window.state && state.user && state.user.esTecnico;
+  // STAB-v09.2 ÍTEM 6: técnico solo ve su propia tarjeta
+  const techs = (_roleT === 'tecnico' && _esTecnicoT)
+    ? [_esTecnicoT]
+    : window.CONFIG.technicians;
   const colors = ['var(--accent)', 'var(--blue)', 'var(--green)', 'var(--text-4)'];
+  // STAB-v09.1 TASK 5: usar buildDashboardStats para consistencia total
+  var _bds2 = window.DashboardStats ? DashboardStats.compute(getReal()) : calculateProjectMetrics();
+  var _ptMap = _bds2.porTecnico || {};
   const data = techs.map((t, i) => {
-    const mine = t === 'Sin asignar'
-      ? getReal().filter(u => !u.tecnico)
-      : getReal().filter(u => (u.tecnico || '').toLowerCase() === t.toLowerCase());
-    return { tec: t, color: colors[i], total: mine.length,
-      entregados: mine.filter(u => u.estado === 'Entregado' || u.estado === 'Completado').length };
+    // P0: lookup case-insensitive — Excel puede tener 'CRISTIAN' vs config 'Cristian'
+    var _tKey2 = Object.keys(_ptMap).find(function(k){ return k.toLowerCase() === t.toLowerCase(); }) || t;
+    var d = _ptMap[_tKey2] || { asignados:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
+    return { tec: t, color: colors[i], total: d.asignados,
+      pendientes: d.pendientes, entregados: d.entregados, proceso: d.proceso, finalizados: d.finalizados, pct: d.pct };
   }).filter(d => d.total > 0);
   $('tecnico-chart').innerHTML = data.map(d => {
-    const pct = d.total > 0 ? Math.round(d.entregados / d.total * 100) : 0;
-    return '<div class="chart-row"><div class="chart-row-head"><div class="chart-row-name">' + d.tec + '</div><div class="chart-row-stat"><strong>' + d.total + '</strong> · ' + pct + '%</div></div><div class="chart-bar"><div class="chart-bar-seg" style="width:' + pct + '%; background: ' + d.color + '"></div></div></div>';
+    return '<div class="chart-row">' +'<div class="chart-row-head"><div class="chart-row-name" style="font-weight:700">' + esc(d.tec) + '</div>' +'<div class="chart-row-val">' + d.total + ' asig · <span style="color:var(--accent)">' + d.entregados + ' entregados</span> · <strong>' + d.pct + '%</strong></div></div>' +'<div style="font-size:10px;color:var(--text-3);display:flex;gap:10px;margin:2px 0">' +'<span>Pend:' + d.pendientes + '</span><span>Proc:' + d.proceso + '</span><span style="color:var(--green)">Fin:' + d.finalizados + '</span>' +'</div>' +'<div class="chart-bar"><div class="chart-bar-seg" style="width:' + Math.min(d.entregados/Math.max(d.total,1)*100,100) + '%;background:' + d.color + '"></div></div>' +'</div>';
   }).join('');
 }
+
 
 function renderMap() {
   const svg = $('map-svg');
@@ -192,7 +186,21 @@ function filterByCity(city) {
   setTimeout(() => { $('search-input').value = city; renderUsuarios(); }, 100);
 }
 window.filterByCity = filterByCity;
+// Auditoria Final: filtro multi-estado para tarjeta 'En envío'
+function setMultiStateFilter(estados) {
+  goView('usuarios');
+  setTimeout(function() {
+    var sel = $('filter-estado');
+    if (sel) { sel.value = ''; }
+    // Filtrar manualmente en memoria
+    if (window.state) state.multiStateFilter = estados;
+    renderUsuarios();
+  }, 100);
+}
+window.setMultiStateFilter = setMultiStateFilter;
+
 function setStateFilter(estado) {
+  if (window.state) state.multiStateFilter = null; // limpiar multi-filter
   goView('usuarios');
   setTimeout(() => { $('filter-estado').value = estado; renderUsuarios(); }, 100);
 }
@@ -220,6 +228,10 @@ function getFiltered() {
     if (tec && (u.tecnico || '').toLowerCase() !== tec.toLowerCase()) return false;
     if (proj && u.proyecto !== proj) return false;
     if (est && u.estado !== est) return false;
+    // Auditoría Final: soporte de multiStateFilter (tarjeta En envío)
+    if (window.state && state.multiStateFilter && state.multiStateFilter.length) {
+      if (state.multiStateFilter.indexOf(u.estado) < 0) return false;
+    }
     if (q) {
       const blob = [u.nombre, u.cedula, u.usuario, u.correo, u.ciudad, u.serial, u.hostname, u.placa, u.empresa, u.proyecto, u.eq_ant_af, u.eq_nvo_af, u.eq_ant_serial, u.eq_ant_hostname, u.eq_nvo_serial, u.eq_nvo_hostname, u.proyecto, u.marca, u.modelo].join(' ').toLowerCase();
       if (blob.indexOf(q) < 0) return false;
@@ -274,16 +286,18 @@ function renderUsuarios() {
 function renderTecnicos() {
   const techs = window.CONFIG.technicians;
   const real = getReal();
+  // STAB-v10.1 P0+P2: reutilizar buildDashboardStats por técnico
+  var _bdsAll = window.DashboardStats ? DashboardStats.compute(real) : {};
+  var _ptAll  = _bdsAll.porTecnico || {};
   $('tec-grid').innerHTML = techs.map(t => {
-    const mine = t === 'Sin asignar' 
-      ? real.filter(u => !u.tecnico)
-      : real.filter(u => (u.tecnico || '').toLowerCase() === t.toLowerCase());
-    const total = mine.length;
-    const pend = mine.filter(u => u.estado === 'Pendiente').length;
-    const proc = mine.filter(u => u.estado === 'Alistamiento' || u.estado === 'En tránsito').length;
-    const ent = mine.filter(u => u.estado === 'Entregado' || u.estado === 'Completado').length;
-    const acta = mine.filter(u => u.acta_firmada).length;
-    const pct = total > 0 ? Math.round(ent / total * 100) : 0;
+    var _tKey = Object.keys(_ptAll).find(function(k){ return k.toLowerCase() === t.toLowerCase(); }) || t;
+    var _d = _ptAll[_tKey] || { asignados:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
+    const total = _d.asignados;
+    const pend  = _d.pendientes;
+    const proc  = _d.proceso;
+    const ent   = _d.entregados;
+    const acta  = _d.actas || 0; // Auditoria Final: usa porTecnico.actas
+    const pct   = _d.pct;
     const cls = t.toLowerCase() === 'sin asignar' ? 'unassigned' : t.toLowerCase();
     const initials = t === 'Sin asignar' ? '—' : t.substring(0, 2).toUpperCase();
     return '<div class="tec-card ' + cls + '" onclick="openTecnicoDetail(\'' + t.replace(/\'/g, "\\\'") + '\')" style="cursor:pointer"><div class="tec-head"><div class="tec-avatar">' + initials + '</div><div><div class="tec-name">' + t + '</div><div class="tec-meta">' + total + ' equipos asignados · click para detalle</div></div></div><div class="tec-stats"><div class="tec-stat"><div class="tec-stat-label">Pendientes</div><div class="tec-stat-val">' + pend + '</div></div><div class="tec-stat"><div class="tec-stat-label">En proceso</div><div class="tec-stat-val amb">' + proc + '</div></div><div class="tec-stat"><div class="tec-stat-label">Entregados</div><div class="tec-stat-val grn">' + ent + '</div></div><div class="tec-stat"><div class="tec-stat-label">Actas</div><div class="tec-stat-val blu">' + acta + '</div></div></div><div class="tec-progress"><div class="tec-progress-bar" style="width: ' + pct + '%"></div></div><div class="tec-progress-text">' + pct + '% completado</div></div>';
@@ -310,10 +324,10 @@ function renderTecnicoDetail() {
   const pend = mine.filter(u => u.estado === 'Pendiente').length;
   const alist = mine.filter(u => u.estado === 'Alistamiento').length;
   const proc = mine.filter(u => u.estado === 'Alistamiento' || u.estado === 'En tránsito' || u.estado === 'Programado' || (u.estado || '').indexOf('tránsito') >= 0).length;
-  const ent = mine.filter(u => u.estado === 'Entregado' || u.estado === 'Completado' || u.estado === 'Cerrado' || (u.estado || '').indexOf('Entregado') >= 0).length;
-  const acta = mine.filter(u => u.acta_firmada).length;
-  const pct = total > 0 ? Math.round(ent / total * 100) : 0;
-  
+  var _bdsD = window.DashboardStats ? DashboardStats.compute(mine) : {};
+  const ent  = _bdsD.entregados || 0;  // P0: usa milestone logic
+  const acta = _bdsD.actas      || 0;  // P0: usa milestone logic
+  const pct  = total > 0 ? Math.round(ent / total * 100) : 0; // STAB-v11 TASK 03
   // Ciudad principal
   const ciudades = {};
   mine.forEach(u => { if (u.ciudad) ciudades[u.ciudad] = (ciudades[u.ciudad] || 0) + 1; });
@@ -386,23 +400,9 @@ function enterDashboard() {
 window.enterDashboard = enterDashboard;
 
 // ═══ PREVIEW VISITANTE (botón para super_admin / gestor_activos) ═══
-function previewVisitante() {
-  if (!can('panel.preview')) {
-    toast('Sin permisos para previsualizar el Vista de Seguimiento', 'warning');
-    return;
-  }
-  notify({
-    level: 'info', category: 'system',
-    title: 'Vista de Seguimiento · Vista previa',
-    message: 'El Vista de Seguimiento (modo Visitante) estará disponible en la siguiente fase de desarrollo.'
-  });
-}
-window.previewVisitante = previewVisitante;
+// STAB-v10 TASK 8: previewVisitante eliminado previewVisitante;
 
-function updatePreviewButton() {
-  const btn = $('btn-preview-visitante');
-  if (btn) btn.style.display = can('panel.preview') ? 'flex' : 'none';
-}
+// STAB-v10: updatePreviewButton eliminado
 
 function updateAprobacionesItem() {
   const item = document.getElementById('sb-aprobaciones');
@@ -425,27 +425,44 @@ window.updateAprobacionesItem = updateAprobacionesItem;
 
 // ═══ CIUDADES ═══
 function renderCiudades() {
+  // Auditoría Final: usa TODOS los registros para que Σ = total equipos
+  var allRecords = DataService.getRenewals({});
   const cityMap = {};
-  DataService.getRenewals({}).forEach(u => {
+  allRecords.forEach(u => {
     const c = u.ciudad ? u.ciudad : 'Sin ciudad';
     if (!cityMap[c]) cityMap[c] = { total: 0, entregados: 0, backup: 0 };
     cityMap[c].total++;
     if (isBackup(u)) cityMap[c].backup++;
-    if (u.estado === 'Entregado' || u.estado === 'Completado') cityMap[c].entregados++;
+    if (u.fecha_entrega || ['Entregado equipo nuevo','Pendiente devolución equipo anterior','En tránsito equipo anterior','Equipo anterior recibido','Renovación completada','Pendiente aprobación','Cerrado','Entregado','Completado'].indexOf(u.estado) >= 0) cityMap[c].entregados++;
   });
   const sorted = Object.entries(cityMap).sort((a,b) => b[1].total - a[1].total);
+  // STAB-v11 TASK 07: fuente única — buildDashboardStats para KPIs
+  var _bdsGlobal = window.DashboardStats ? DashboardStats.compute(allRecords) : {};
   $('cities-grid').innerHTML = sorted.map(entry => {
     const city = entry[0], s = entry[1];
     const pct = s.total > 0 ? Math.round(s.entregados / s.total * 100) : 0;
-    return '<div class="city-card" onclick="filterByCity(\'' + esc(city).replace(/'/g, "\\'") + '\')"><div class="city-head"><div class="city-name">' + esc(city) + '</div><div class="city-count">' + s.total + '</div></div><div class="city-meta">' + s.entregados + ' entregados' + (s.backup ? ' · ' + s.backup + ' backup' : '') + ' (' + pct + '%)</div><div class="city-bar"><div class="city-bar-fill" style="width: ' + pct + '%"></div></div></div>';
+    return '<div class="city-card" onclick="filterByCity(\'' + esc(city).replace(/\'/g, "\\\'") + '\')">' +
+      '<div class="city-card-name">' + esc(city) + '</div>' +
+      '<div class="city-card-total">' + s.total + '</div>' +
+      '<div class="city-card-sub">' + s.entregados + ' entregados · ' + pct + '%</div>' +
+      '</div>';
   }).join('');
+  // STAB-v11 TASK 05: city KPI table eliminado — solo vive en Reportes Ejecutivos
 }
 
 // ═══ DEVOLUCIONES ═══
 function renderDevoluciones() {
   // F3.7 · RBAC: técnico solo ve sus propias devoluciones
   const isTecnico = state.user.role === 'tecnico';
-  const allReal = getReal().filter(u => u.eq_ant_serial || u.eq_ant_marca || u.estado_devolucion);
+  // STAB-v12 TASK 01: regla funcional oficial
+  // lista_recoleccion === true AND estado_devolucion IN ('Pendiente', 'Solicitada')
+  const EXCLUIR_DEV = ['Recibida en bodega','Equipo anterior recibido','Cerrada','Completada','Cancelada','No aplica'];
+  const allReal = getReal().filter(u =>
+    u.lista_recoleccion === true &&
+    u.estado_devolucion &&
+    (u.estado_devolucion === 'Pendiente' || u.estado_devolucion === 'Solicitada') &&
+    EXCLUIR_DEV.indexOf(u.estado_devolucion) < 0
+  );
   const data = isTecnico
     ? allReal.filter(u => (u.tecnico || '').toLowerCase() === (state.user.name || '').toLowerCase())
     : allReal;
@@ -475,6 +492,99 @@ function getReportBase() {
   });
 }
 
+// STAB-v12 TASK 06 — renderReportesEjecutivos: Dashboard gerencial completo
+function renderReportesEjecutivos() {
+  var ejEl = document.getElementById('view-ejecutivos-content');
+  if (!ejEl) return;
+  var all   = window.DataService ? DataService.getRenewals({}) : [];
+  var _bds  = window.DashboardStats ? DashboardStats.compute(all) : {};
+  var activos = all.filter(function(u){ return !isBackup(u); });
+
+  // ── Panel 1: Cumplimiento por empresa ──
+  var p1 = ['HBT','HGS'].map(function(emp) {
+    // STAB-v12.1: porEmpresa canónico con operativos/backup/envio/actas
+    var d = (_bds.porEmpresa && _bds.porEmpresa[emp]) || { total:0, operativos:0, backup:0, pendientes:0, proceso:0, envio:0, entregados:0, actas:0, cerrados:0, pct:0 };
+    return '<div class="exec-empresa-card">' +
+      '<div class="exec-empresa-label">' + emp + '</div>' +
+      '<div class="exec-empresa-grid">' +
+      '<div><div class="exec-stat-v">' + d.total + '</div><div class="exec-stat-l">Total</div></div>' +
+      '<div><div class="exec-stat-v">' + d.operativos + '</div><div class="exec-stat-l">Operativos</div></div>' +
+      '<div><div class="exec-stat-v">' + d.backup + '</div><div class="exec-stat-l">Backup</div></div>' +
+      '<div><div class="exec-stat-v acc">' + d.pendientes + '</div><div class="exec-stat-l">Pendientes</div></div>' +
+      '<div><div class="exec-stat-v amb">' + d.proceso + '</div><div class="exec-stat-l">Proceso</div></div>' +
+      '<div><div class="exec-stat-v grn">' + d.entregados + '</div><div class="exec-stat-l">Entregados</div></div>' +
+      '<div><div class="exec-stat-v">' + d.actas + '</div><div class="exec-stat-l">Actas</div></div>' +
+      '<div><div class="exec-stat-v">' + d.cerrados + '</div><div class="exec-stat-l">Cerrados</div></div>' +
+      '<div><div class="exec-stat-v grn" style="font-size:18px">' + d.pct + '%</div><div class="exec-stat-l">Avance</div></div>' +
+      '</div>' +
+      '<div class="exec-bar-wrap"><div class="exec-bar" style="width:0%" data-pct="' + d.pct + '"></div></div>' +
+      '</div>';
+  }).join('');
+
+  // ── Panel 2: Ranking técnicos ──
+  var ptAll = _bds.porTecnico || {};
+  var tecRanking = Object.keys(ptAll).map(function(t){ var d=ptAll[t]; return Object.assign({tec:t},d); })
+    .filter(function(d){ return d.asignados > 0; })
+    .sort(function(a,b){ return b.pct - a.pct; });
+  var p2 = '<table class="tbl"><thead><tr><th>Técnico</th><th>Asignados</th><th>Pendientes</th><th>Proceso</th><th>Envío</th><th>Entregados</th><th>Actas</th><th>Cerrados</th><th>%</th></tr></thead><tbody>' +
+    tecRanking.map(function(d) {
+      return '<tr><td class="td-strong">' + esc(d.tec) + '</td><td>' + d.asignados + '</td><td>' + d.pendientes + '</td><td>' + d.proceso + '</td><td>' + (d.enEnvio||0) + '</td><td style="color:var(--green)">' + d.entregados + '</td><td>' + (d.actas||0) + '</td><td>' + d.finalizados + '</td><td><strong>' + d.pct + '%</strong></td></tr>';
+    }).join('') + '</tbody></table>';
+
+  // ── Panel 3: Pipeline ──
+  var pipe = _bds.pipeline || [];
+  var pipeMax = pipe.reduce(function(a,b){ return Math.max(a,b.count); }, 1);
+  var bottle = _bds.cueloBotella || {};
+  var p3 = '<div class="exec-pipeline">' + pipe.map(function(s) {
+    var pct = Math.round(s.count / pipeMax * 100);
+    var isBottle = s.estado === bottle.estado && s.count > 0;
+    return '<div class="pipe-step' + (isBottle ? ' pipe-bottle' : '') + '">' +
+      '<div class="pipe-bar-wrap"><div class="pipe-bar" style="width:0%" data-pct="' + pct + '" data-bottle="' + isBottle + '"></div></div>' +
+      '<div class="pipe-label">' + esc(s.estado.replace('equipo nuevo','').replace('equipo anterior','').trim()) + '</div>' +
+      '<div class="pipe-count">' + s.count + '</div>' +
+      '</div>';
+  }).join('') + '</div>' + (bottle.estado ? '<div class="pipe-bottle-note">⚠ Cuello de botella: ' + esc(bottle.estado) + ' (' + (bottle.count||0) + ' equipos)</div>' : '');
+
+  // ── Panel 4: Calidad de datos ──
+  var cal = _bds.calidad || {};
+  var p4 = '<table class="tbl"><thead><tr><th>Campo</th><th>Sin datos</th><th>% incompleto</th></tr></thead><tbody>' +
+    [['Sin técnico',cal.sinTecnico],['Sin ciudad',cal.sinCiudad],['Sin empresa',cal.sinEmpresa],
+     ['Sin serial',cal.sinSerial],['Sin acta',cal.sinActa]].map(function(r) {
+      var pct = cal.total > 0 ? Math.round(r[1]/cal.total*100) : 0;
+      var cls = pct > 20 ? 'color:var(--accent)' : pct > 5 ? 'color:var(--amber)' : 'color:var(--green)';
+      return '<tr><td>' + r[0] + '</td><td style="' + cls + ';font-weight:700">' + (r[1]||0) + '</td><td>' + pct + '%</td></tr>';
+    }).join('') + '</tbody></table>';
+
+  // ── Panel 5: Riesgos ──
+  var ris = _bds.riesgos || {};
+  var p5 = '<div class="exec-riesgos">' +
+    [['Sin movimiento',ris.sinMovimiento,'Equipos en Pendiente sin avance'],
+     ['Pend. aprobación',ris.pendienteAprobacion,'Esperando validación gerencia'],
+     ['Pend. devolución',ris.pendienteDevolucion,'Lista recolección sin recibir'],
+     ['Registros incompletos',ris.registrosIncompletos,'Sin técnico/ciudad/empresa']]
+    .filter(function(r){ return (r[1]||0) > 0; })
+    .map(function(r) {
+      return '<div class="risk-row"><div class="risk-label">' + r[0] + '<span class="risk-sub">' + r[2] + '</span></div>' +
+        '<div class="risk-count" style="color:' + ((r[1]||0) > 10 ? 'var(--accent)' : 'var(--amber)') + '">' + (r[1]||0) + '</div></div>';
+    }).join('') + '</div>';
+
+  // ── Construir HTML ──
+  ejEl.innerHTML =
+    '<div class="exec-section"><div class="exec-section-title">Cumplimiento por empresa</div>' + p1 + '</div>' +
+    '<div class="exec-section"><div class="exec-section-title">Ranking técnicos</div>' + p2 + '</div>' +
+    '<div class="exec-section"><div class="exec-section-title">Pipeline REN26</div>' + p3 + '</div>' +
+    '<div class="exec-section"><div class="exec-section-title">Calidad de datos</div>' + p4 + '</div>' +
+    '<div class="exec-section"><div class="exec-section-title">Riesgos ejecutivos</div>' + p5 + '</div>';
+  // Animar barras
+  setTimeout(function() {
+    ejEl.querySelectorAll('[data-pct]').forEach(function(b){
+      b.style.width = b.dataset.pct + '%';
+      if (b.dataset.bottle === 'true') b.style.background = 'var(--accent)';
+    });
+  }, 80);
+}
+window.renderReportesEjecutivos = renderReportesEjecutivos;
+
 function renderReportes() {
   populateProjectFilter('rep-filter-proyecto');
   state.repFilters = {
@@ -485,13 +595,16 @@ function renderReportes() {
   };
   const base = getReportBase();
   $('rep-base-count').textContent = base.length + ' de ' + (window.calculateProjectMetrics ? calculateProjectMetrics().totalColaboradores : getReal().length) + ' base';
-  $('r-alistamiento').textContent = base.filter(u => u.estado === 'Alistamiento').length;
-  $('r-entregados').textContent = base.filter(u => u.estado === 'Entregado' || u.estado === 'Completado').length;
-  $('r-actas').textContent = base.filter(u => u.acta_firmada).length;
-  $('r-devoluciones').textContent = base.filter(u => u.recibido_bodega).length;
-  $('r-finalizados').textContent = base.filter(u => u.estado === 'Completado' && u.acta_firmada).length;
-  $('r-feedback').textContent = base.filter(u => (u.feedback || 0) > 0).length;
-  if (state.reportFilter) setReport(state.reportFilter);
+  // Auditoria Final: usar buildDashboardStats para consistencia con Dashboard
+  var _bdsR = window.DashboardStats ? DashboardStats.compute(base) : {};
+  $('r-alistamiento').textContent = _bdsR.proceso    || 0; // proceso activo
+  $('r-entregados').textContent   = _bdsR.entregados || 0;
+  $('r-actas').textContent        = _bdsR.actas      || 0;
+  $('r-devoluciones').textContent = _bdsR.devoluciones || 0;
+  $('r-finalizados').textContent  = _bdsR.finalizados || 0;
+  $('r-feedback').textContent     = base.filter(function(u){ return (u.feedback||0) > 0; }).length;
+  // STAB-v12 TASK 06: tablero gerencial ejecutivo
+  if (window.renderReportesEjecutivos) renderReportesEjecutivos();
 }
 
 function setReport(type, btn) {
@@ -500,14 +613,14 @@ function setReport(type, btn) {
   const base = getReportBase();
   let filtered = [], title = '';
   switch(type) {
-    case 'alistamiento': filtered = base.filter(u => u.estado === 'Alistamiento'); title = 'REP-01 · En Alistamiento'; break;
-    case 'entregados': filtered = base.filter(u => u.estado === 'Entregado' || u.estado === 'Completado'); title = 'REP-02 · Entregados'; break;
-    case 'actas': filtered = base.filter(u => u.acta_firmada); title = 'REP-03 · Actas firmadas'; break;
-    case 'devoluciones': filtered = base.filter(u => u.recibido_bodega); title = 'REP-04 · Devoluciones recibidas'; break;
-    case 'finalizados': filtered = base.filter(u => u.estado === 'Completado' && u.acta_firmada); title = 'REP-05 · Finalizados'; break;
-    case 'feedback': filtered = base.filter(u => (u.feedback || 0) > 0); title = 'REP-06 · Con feedback'; break;
+    case 'alistamiento': filtered = base.filter(u => u.estado && u.estado !== 'Pendiente'); title = 'REP-01 · Alistamiento (cualquier avance)'; break;
+    case 'entregados':   filtered = base.filter(u => u.fecha_entrega||u.fecha_envio_acta||u.fecha_firma_acta||u.acta_entrega_url); title = 'REP-02 · Entregados'; break;
+    case 'actas':        filtered = base.filter(u => u.fecha_firma_acta); title = 'REP-03 · Actas firmadas'; break;
+    case 'devoluciones': filtered = base.filter(u => u.fecha_solicitud_devolucion); title = 'REP-04 · Proceso devolución iniciado'; break;
+    case 'finalizados':  filtered = base.filter(u => u.estado === 'Completado'); title = 'REP-05 · Finalizados'; break;
+    case 'feedback':     filtered = base.filter(u => (u.feedback||0) > 0); title = 'REP-06 · Con feedback'; break;
+    case 'raee':         filtered = base.filter(u => u.recomendacion_raee); title = 'REP-07 · Clasificación Tecnológica'; break;
   }
-  const activeFilters = [];
   if (state.repFilters.empresa) activeFilters.push(state.repFilters.empresa);
   if (state.repFilters.tipo) activeFilters.push(state.repFilters.tipo);
   if (state.repFilters.proyecto) activeFilters.push(state.repFilters.proyecto);
@@ -570,7 +683,15 @@ function openEditModal(id) {
   const u = DataService.getRenewal(id);
   _currentRecord = u;  // GH3.28
   if (!u) return;
-  state.editingId = id;
+  state.editingId      = id;
+  state.editingVersion = (u.version !== undefined ? Number(u.version) : -1); // RC-07 TASK 2
+  // STAB-v09.2 ÍTEM 11: reiniciar scroll del modal al abrir
+  setTimeout(function() {
+    var mb = document.getElementById('modal-body');
+    if (mb) mb.scrollTop = 0;
+    var tl = document.querySelector('#seccion-timeline');
+    if (tl) tl.scrollLeft = 0;
+  }, 0);
   $('modal-eyebrow').textContent = isBackup(u) ? 'BACKUP ' + u.empresa : (u.empresa + ' · ' + (u.tipo || 'EQUIPO') + ' · ID ' + u.id);
   $('modal-title').textContent = (u.nombre || ('BACKUP ' + u.empresa)) + (u.serial ? ' · ' + u.serial : '');
   const projects = Array.from(new Set(DataService.getRenewals({}).map(x => x.proyecto).filter(p => p))).sort();
@@ -1103,7 +1224,7 @@ function renderAprobaciones() {
       '<td style="padding:8px 10px;text-align:center">' + esc(r.empresa || '—') + '</td>' +
       '<td style="padding:8px 10px;text-align:center">' + esc(r.tecnico || '—') + '</td>' +
       '<td style="padding:8px 10px;text-align:center"><span style="background:var(--amber-l);color:var(--amber);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">Pendiente</span></td>' +
-      '<td style="padding:8px 10px;text-align:center"><button class="btn" style="font-size:10px;padding:4px 10px" data-id="' + id + '" onclick="openEditModal(this.dataset.id)">Revisar</button></td>' +
+      '<td style="padding:8px 10px;text-align:center"><button class="btn" style="font-size:10px;padding:4px 10px" onclick="openEditModal(' + id + ')">Revisar</button></td>' +
       '</tr>';
   }).join('');
   content.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--accent);color:#fff">' +
@@ -1113,9 +1234,76 @@ function renderAprobaciones() {
 }
 window.renderAprobaciones = renderAprobaciones;
 
+// STAB-v10 TASK 5 — Donut RAEE (Chart.js en pe-raee-canvas)
+function renderRaeeDonut(stats) {
+  var canvas = document.getElementById('pe-raee-canvas');
+  if (!canvas) return;
+  var raeeD = stats.raeeDistrib || {};
+  // Mapear a 3 categorías oficiales
+  var cats = {
+    'RAEE':                  raeeD['RAEE'] || 0,
+    'Reasignable':           (raeeD['Reasignable'] || 0) + (raeeD['Reasignación interna'] || 0),
+    'Reutilizable/Obsoleto': raeeD['Reutilizable'] || raeeD['Obsoleto'] || raeeD['Venta interna empleado'] || raeeD['Venta interna'] || raeeD['Donación'] || raeeD['Donacion'] || 0,
+  };
+  // Añadir categorías no cubiertas
+  Object.keys(raeeD).forEach(function(k) {
+    if (!cats['RAEE'] && k === 'RAEE') cats['RAEE'] = raeeD[k];
+    if (!['RAEE','Reasignable','Reasignación interna','Reutilizable','Obsoleto','Venta interna empleado','Venta interna','Donación','Donacion'].includes(k)) {
+      cats[k] = (cats[k] || 0) + raeeD[k];
+    }
+  });
+  var keys = Object.keys(cats).filter(function(k){ return cats[k] > 0; });
+  var vals = keys.map(function(k){ return cats[k]; });
+  var total = vals.reduce(function(a,b){ return a+b; }, 0);
+  if (total === 0) { var ll = document.getElementById('pe-raee-labels'); if(ll) ll.innerHTML = '<div style="color:var(--text-3);font-size:11px;padding:12px 0">Sin evaluaciones</div>'; return; }
+  var COLORS = ['#C00000','#1565C0','#2E7D32','#E65100','#7B1FA2'];
+  if (canvas._chart) { canvas._chart.destroy(); delete canvas._chart; }
+  if (typeof Chart === 'undefined') return;
+  canvas.width = 120; canvas.height = 120;
+  canvas._chart = new Chart(canvas.getContext('2d'), {
+    type: 'doughnut',
+    data: { labels: keys, datasets: [{ data: vals, backgroundColor: keys.map(function(k,i){ return COLORS[i%COLORS.length]; }), borderWidth: 2, borderColor: 'var(--bg)' }] },
+    options: {
+      cutout: '68%', responsive: false, animation: { duration: 600 },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c){ return c.label + ': ' + c.raw + ' (' + Math.round(c.raw/total*100) + '%)'; } } } }
+    }
+  });
+  var ll = document.getElementById('pe-raee-labels');
+  if (ll) ll.innerHTML = '<div style="font-size:18px;font-weight:900;text-align:center;color:var(--text-1)">' + total + '</div>' +
+    '<div style="font-size:9px;color:var(--text-3);text-align:center;margin-bottom:8px">evaluados</div>' +
+    keys.map(function(k,i){ return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">' +
+      '<span style="width:9px;height:9px;border-radius:50%;background:'+COLORS[i%COLORS.length]+';flex-shrink:0"></span>' +
+      '<span style="font-size:10px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(k) + '</span>' +
+      '<span style="font-size:10px;font-weight:700">' + cats[k] + '</span>' +
+      '<span style="font-size:9px;color:var(--text-3)">' + Math.round(cats[k]/total*100) + '%</span></div>'; }).join('');
+}
+window.renderRaeeDonut = renderRaeeDonut;
+
+// STAB-v10 TASK 6 — Distribución de estados (barras HTML)
+function renderEstadosChart(stats) {
+  var el = document.getElementById('pe-estados-list');
+  if (!el) return;
+  var estados = stats.estados || {};
+  var keys = Object.keys(estados).sort(function(a,b){ return estados[b]-estados[a]; });
+  var max = keys.length ? estados[keys[0]] : 1;
+  el.innerHTML = keys.map(function(st) {
+    var count = estados[st];
+    var pct = max ? Math.round(count/max*100) : 0;
+    return '<div style="margin-bottom:6px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px">' +
+      '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px">' + esc(st) + '</span>' +
+      '<span style="font-weight:700;flex-shrink:0;margin-left:4px">' + count + '</span></div>' +
+      '<div style="background:var(--bg-2,#f0f0f0);height:5px;border-radius:3px">' +
+      '<div style="width:'+pct+'%;height:100%;background:var(--accent);border-radius:3px;transition:width .4s"></div></div>' +
+      '</div>';
+  }).join('') || '<div style="color:var(--text-3);font-size:11px">Sin datos de estado</div>';
+}
+window.renderEstadosChart = renderEstadosChart;
+
 function renderPanelEjecutivo() {
   var role = window.state && state.user && (state.user.role || state.user.rol);
-  var allowed = ['super_admin', 'gestor_activos', 'director_ti', 'gerencia'];
+  // STAB-v09.2 ÍTEM 3+4: técnico puede ver Seguimiento
+  var allowed = ['super_admin', 'gestor_activos', 'director_ti', 'gerencia', 'tecnico'];
   if (role && allowed.indexOf(role) < 0) {
     var vp = document.getElementById('view-panel');
     if (vp) vp.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-3)">Vista no disponible para este rol.</div>';
@@ -1123,6 +1311,8 @@ function renderPanelEjecutivo() {
   }
   var records = window.DataService ? DataService.getRenewals({}) : [];
   var total = records.length;
+  // STAB-v11 TASK 04: definir _stats ANTES de cualquier uso
+  var _stats = window.DashboardStats ? DashboardStats.compute(records.filter(function(r){ return !isBackup(r); })) : {};
   var done  = records.filter(function(r) { return r.estado === 'Renovación completada' || r.estado === 'Cerrado'; }).length;
   var proc  = records.filter(function(r) { return r.estado !== 'Pendiente' && r.estado !== 'Renovación completada' && r.estado !== 'Cerrado'; }).length;
   var pend  = records.filter(function(r) { return r.estado === 'Pendiente'; }).length;
@@ -1132,12 +1322,20 @@ function renderPanelEjecutivo() {
   var set = function(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
   set('pe-total', total); set('pe-completados', done); set('pe-proceso', proc);
   set('pe-pendientes', pend); set('pe-actas', actas); set('pe-aprobaciones', aprob);
-  var pf = document.getElementById('pe-prog-fill'); if (pf) pf.style.width = pct + '%';
+  // Auditoría Final: KPIs adicionales en panel
+  set('pe-entregados', _stats.entregados  || 0);
+  set('pe-en-envio',   _stats.enEnvio     || 0);
+  set('pe-backup',     _stats.totalBackups|| 0);
+  set('pe-cerrados',   _stats.finalizados || 0);
+  // STAB-v12 TASK 04: usar setTimeout para triggear la transición CSS
+  var pf = document.getElementById('pe-prog-fill');
+  if (pf) { pf.style.width = '0%'; requestAnimationFrame(function(){ setTimeout(function(){ pf.style.width = pct+'%'; }, 50); }); }
   set('pe-prog-pct', pct + '%');
-  var hbt = records.filter(function(r) { return r.empresa === 'HBT'; }).length;
-  var hgs = records.filter(function(r) { return r.empresa === 'HGS'; }).length;
-  set('pe-hbt-n', hbt); set('pe-hgs-n', hgs);
-  if (total) { set('pe-hbt-pct', Math.round(hbt/total*100)+'%'); set('pe-hgs-pct', Math.round(hgs/total*100)+'%'); }
+  // STAB-v12.1: usar porEmpresa canónico (elimina cálculo duplicado)
+  var _peHBT = (_stats.porEmpresa && _stats.porEmpresa['HBT']) || { total:0, operativos:0, backup:0, pct:0 };
+  var _peHGS = (_stats.porEmpresa && _stats.porEmpresa['HGS']) || { total:0, operativos:0, backup:0, pct:0 };
+  set('pe-hbt-n', _peHBT.total); set('pe-hgs-n', _peHGS.total);
+  if (total) { set('pe-hbt-pct', _peHBT.pct + '%'); set('pe-hgs-pct', _peHGS.pct + '%'); }
   var ptEl = document.getElementById('pe-por-tecnico');
   if (ptEl) {
     var byTec = {};
@@ -1146,10 +1344,66 @@ function renderPanelEjecutivo() {
       return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span>' + esc(t) + '</span><strong>' + byTec[t] + '</strong></div>';
     }).join('');
   }
-  set('pe-destino-raee',    records.filter(function(r) { return r.recomendacion_raee === 'RAEE'; }).length);
-  set('pe-destino-venta',   records.filter(function(r) { return r.recomendacion_raee === 'Venta interna'; }).length);
-  set('pe-destino-reasign', records.filter(function(r) { return r.recomendacion_raee === 'Reasignacion'; }).length);
-  set('pe-destino-donacion',records.filter(function(r) { return r.recomendacion_raee === 'Donacion'; }).length);
+  // STAB-v09.1 TASK 6+7: usar buildDashboardStats para RAEE y estados
+    // (_stats definida arriba)
+  var _raeeD = _stats.raeeDistrib || {};
+  var _estD  = _stats.estados || {};
+  // Destino RAEE
+  set('pe-destino-raee',    _raeeD['RAEE']                    || 0);
+  set('pe-destino-venta',   _raeeD['Venta interna empleado']  || _raeeD['Venta interna'] || 0);
+  set('pe-destino-reasign', _raeeD['Reasignable']             || _raeeD['Reasignación interna'] || 0);
+  set('pe-destino-donacion',_raeeD['Donación']                || _raeeD['Donacion'] || 0);
+  // Distribución de estados (TASK 7)
+  // Auditoria Final: Backup por empresa
+  var peBackupEl = document.getElementById('pe-backup-list');
+  if (peBackupEl) {
+    // STAB-v12.1: porEmpresa canónico
+    var _peHBT2 = (_stats.porEmpresa && _stats.porEmpresa['HBT']) || { total:0, operativos:0, backup:0 };
+    var _peHGS2 = (_stats.porEmpresa && _stats.porEmpresa['HGS']) || { total:0, operativos:0, backup:0 };
+    var _bk = { hbtBackup: _peHBT2.backup, hgsBackup: _peHGS2.backup,
+               hbtOperativos: _peHBT2.operativos, hgsOperativos: _peHGS2.operativos,
+               total: _stats.total, totalBackups: _stats.totalBackups };
+    peBackupEl.innerHTML =
+      '<div style="display:flex;gap:16px">' +
+      '<div><strong>' + (_bk.hbtBackup||0) + '</strong><div style="font-size:10px;color:var(--text-3)">HBT backup</div></div>' +
+      '<div><strong>' + (_bk.hgsBackup||0) + '</strong><div style="font-size:10px;color:var(--text-3)">HGS backup</div></div>' +
+      '<div><strong>' + (_bk.hbtOperativos||0) + '</strong><div style="font-size:10px;color:var(--text-3)">HBT operativos</div></div>' +
+      '<div><strong>' + (_bk.hgsOperativos||0) + '</strong><div style="font-size:10px;color:var(--text-3)">HGS operativos</div></div>' +
+      '</div>' +
+      '<div style="font-size:10px;color:var(--text-3);margin-top:6px">Total: ' + ((_bk.hbtOperativos||0)+(_bk.hgsOperativos||0)) + ' op + ' + ((_bk.hbtBackup||0)+(_bk.hgsBackup||0)) + ' bk = ' + ((_bk.total||0)+(_bk.totalBackups||0)) + '</div>';
+  }
+  // Devoluciones
+  var peDevEl = document.getElementById('pe-devoluciones-list');
+  if (peDevEl) {
+    peDevEl.innerHTML =
+      '<div style="display:flex;gap:16px;flex-wrap:wrap">' +
+      '<div><strong>' + (_stats.devoluciones||0) + '</strong><div style="font-size:10px;color:var(--text-3)">Iniciadas</div></div>' +
+      '<div><strong>' + (_stats.devolucionesPendientes||0) + '</strong><div style="font-size:10px;color:var(--text-3)">Pendientes recepción</div></div>' +
+      '</div>';
+  }
+  // STAB-v10 TASK 5+6: renderizar gráficos
+  if (window.renderRaeeDonut)    renderRaeeDonut(_stats);
+  if (window.renderEstadosChart) renderEstadosChart(_stats);
+
+  var peEstEl = document.getElementById('pe-estados-list');
+  if (peEstEl && false) {
+    var stKeys = Object.keys(_estD).sort();
+    peEstEl.innerHTML = stKeys.length ? stKeys.map(function(st) {
+      return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-light)">'+
+        '<span style="font-size:11px">'+esc(st)+'</span>'+
+        '<span style="font-size:11px;font-weight:700">'+_estD[st]+'</span></div>';
+    }).join('') : '<div style="color:var(--text-3);font-size:11px">Sin datos</div>';
+  }
+  // Distribución RAEE completa (TASK 6)
+  var peRaeeEl = document.getElementById('pe-raee-labels');
+  if (peRaeeEl) {
+    var rKeys = Object.keys(_raeeD).sort();
+    peRaeeEl.innerHTML = rKeys.length ? rKeys.map(function(r) {
+      return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-light)">'+
+        '<span style="font-size:11px">'+esc(r)+'</span>'+
+        '<span style="font-size:11px;font-weight:700">'+_raeeD[r]+'</span></div>';
+    }).join('') : '<div style="color:var(--text-3);font-size:11px">Sin clasificación</div>';
+  }
 }
 window.renderPanelEjecutivo = renderPanelEjecutivo;
 
@@ -1193,9 +1447,16 @@ function closeModal(force) {
   // RC-01 T17: DirtyForm eliminado
   var bg = document.getElementById('modal-bg');
   if (bg) bg.classList.remove('active');
-  if (window.state) state.editingId = null;
+  if (window.state) { state.editingId = null; state.editingVersion = undefined; } // RC-07 TASK 9
 }
 window.closeModal = closeModal;
+
+// RC1-HOTFIX-01: cerrar modal de confirmación
+function closeConfirmSave() {
+  var bg = document.getElementById('confirm-save-bg');
+  if (bg) bg.classList.remove('active');
+}
+window.closeConfirmSave = closeConfirmSave;
 
 // _showSyncStatus
 function _showSyncStatus(status) {
@@ -1283,10 +1544,36 @@ function saveRecord() {
       }
     }
 
+    // RC-07 TASK 3: verificar VERSION antes del PATCH (sin llamada Graph extra)
+    var _formVer    = window.state && state.editingVersion !== undefined ? state.editingVersion : -1;
+    var _cachedVer  = window.SynchronizationManager ? SynchronizationManager.getCachedVersion(id) : undefined;
+    if (_formVer >= 0 && _cachedVer !== undefined && Number(_cachedVer) > Number(_formVer)) {
+      // RC-07 TASK 4: CONFLICTO — otro usuario modificó el registro
+      if (window.toast) toast('⚠ Conflicto: este registro fue actualizado por otro usuario mientras lo estabas editando. La información será recargada antes de continuar.', 'warning');
+      if (window.closeModal) closeModal(true);
+      var _conflictId = id;
+      if (window.DataService && DataService.reloadFromProvider) {
+        DataService.reloadFromProvider().then(function() {
+          if (window.renderResumen) renderResumen();
+          if (window.openEditModal) openEditModal(_conflictId);
+        });
+      }
+      return;
+    }
+
+    // RC-07 TASK 5: incrementar VERSION en los cambios antes del PATCH
+    var _currentU = window.DataService ? DataService.getRenewal(id) : null;
+    if (_currentU) changes.version = (Number(_currentU.version) || 0) + 1;
+
     if (window.DataService) DataService.updateRenewal(id, changes, window.state && state.user);
-    if (window.DataService) DataService.updateRenewal(id, changes, window.state && state.user);
+    // STAB-v11 TASK 01: auto-enqueue cuando estado cambia a 'Pendiente aprobación'
+    if (changes.estado === 'Pendiente aprobación' && window.ApprovalService && ApprovalService.requestValidation) {
+      try { ApprovalService.requestValidation(id, window.state && state.user); }
+      catch(e) { /* silencioso — puede no cumplir todos los checklist aún */ }
+    }
     // RC-07 Fix 2: cerrar modal y refrescar inmediatamente
     if (window.closeModal) closeModal(true);
+    if (window.DashboardStats) DashboardStats.invalidate(); // TASK 02: invalidar caché
     if (window.renderResumen) renderResumen();
     // RC-01 T12: _F7_FIELDS vacío — estado_entrega_equipo_nuevo
     // tiene entrada en SP_FIELD_MAP (EstadoEntregaEquipoNuevo).
@@ -1306,8 +1593,9 @@ function saveRecord() {
           if (window.toast) toast('✓ Guardado · Sincronizado', 'success');
           if (window._showSyncStatus) _showSyncStatus('ok');
           // Propagar a otros usuarios: 1 tick tras 1.5s de propagación Graph
-          if (window.SynchronizationManager && SynchronizationManager.requestTick) {
-            SynchronizationManager.requestTick(1500);
+          if (window.SynchronizationManager) {
+            if (SynchronizationManager.recordActivity) SynchronizationManager.recordActivity(); // RC-07 TASK 6
+            if (SynchronizationManager.requestTick)   SynchronizationManager.requestTick(1500); // RC-07 TASK 7
           }
         })
         .catch(function(err) {
@@ -1440,3 +1728,84 @@ window.attachFieldValidation = function() {
     });
   });
 };
+// STAB-v10 TASK 1 — Vista Equipos Backup (layout nativo, mismo que Usuarios)
+function renderBackup() {
+  var vp = document.getElementById('view-backup');
+  if (!vp) return;
+  var allBackups = (window.USERS || []).filter(function(u) { return isBackup(u); });
+  // Filtros
+  var srch  = ((document.getElementById('bk-srch')           || {}).value || '').toLowerCase();
+  var fEmp  = (document.getElementById('bk-filter-empresa')  || {}).value || '';
+  var fTipo = (document.getElementById('bk-filter-tipo')     || {}).value || '';
+  var fCiu  = (document.getElementById('bk-filter-ciudad')   || {}).value || '';
+  var data  = allBackups.filter(function(u) {
+    if (fEmp  && u.empresa !== fEmp) return false;
+    if (fTipo && (u.eq_ant_tipo||'').toUpperCase() !== fTipo.toUpperCase()) return false;
+    if (fCiu  && u.ciudad !== fCiu) return false;
+    if (srch) {
+      var hay = [u.nombre,u.eq_ant_serial,u.eq_ant_marca,u.eq_ant_modelo,u.ciudad,u.empresa,u.eq_ant_tipo].join(' ').toLowerCase();
+      if (!hay.includes(srch)) return false;
+    }
+    return true;
+  });
+  var uniq = function(arr){ return arr.filter(function(v,i,a){ return v && a.indexOf(v)===i; }).sort(); };
+  var pill = function(arr, id, ph, val) {
+    return '<select class="filter-pill" id="'+id+'" onchange="renderBackup()">' +
+      '<option value="">' + ph + '</option>' +
+      arr.map(function(v){ return '<option'+(v===val?' selected':'')+'>'+esc(v)+'</option>'; }).join('') +
+      '</select>';
+  };
+  // Estadísticas rápidas
+  var hbtCount = allBackups.filter(function(u){ return u.empresa==='HBT'; }).length;
+  var hgsCount = allBackups.filter(function(u){ return u.empresa==='HGS'; }).length;
+
+  vp.innerHTML =
+    '<div class="hero compact">' +
+    '<div class="hero-inner">' +
+    '<div class="hero-eyebrow">Repositorio de Hardware</div>' +
+    '<h1 class="hero-title">Equipos <strong>Backup</strong></h1>' +
+    '<p class="hero-sub">' + allBackups.length + ' equipos disponibles · HBT ' + hbtCount + ' · HGS ' + hgsCount + '</p>' +
+    '</div></div>' +
+    '<div class="section">' +
+    '<div class="toolbar">' +
+    '<div class="search-box">' +
+    '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+    '<input type="text" id="bk-srch" placeholder="Buscar por nombre, serial, marca, modelo..." value="' + esc(srch) + '" oninput="renderBackup()" style="flex:1">' +
+    '</div>' +
+    pill(uniq(allBackups.map(function(u){return u.empresa;})), 'bk-filter-empresa', 'Todas las empresas', fEmp) +
+    pill(uniq(allBackups.map(function(u){return u.eq_ant_tipo;})), 'bk-filter-tipo', 'Todos los tipos', fTipo) +
+    pill(uniq(allBackups.map(function(u){return u.ciudad;})), 'bk-filter-ciudad', 'Todas las ciudades', fCiu) +
+    '<span class="filter-count">' + data.length + ' de ' + allBackups.length + ' equipos</span>' +
+    '</div>' +
+    '<div class="tbl-wrap"><div class="tbl-scroll"><table class="tbl">' +
+    '<thead><tr>' +
+    '<th>ID</th><th>Empresa</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serial (ant.)</th><th>Placa</th><th>Ciudad</th><th>Estado</th><th></th>' +
+    '</tr></thead><tbody>' +
+    (data.length === 0
+      ? '<tr><td colspan="10"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Sin equipos backup disponibles</div><div class="empty-sub">No se encontraron resultados con los filtros actuales</div></div></td></tr>'
+      : data.map(function(u) {
+          var safeId = String(u.id).replace(/'/g,'');
+          var estCls = ConfigService && ConfigService.badgeClass ? ConfigService.badgeClass(u.estado||'pendiente') : 'badge-pendiente';
+          return '<tr onclick="openEditModal('+safeId+')">' +
+            '<td class="td-id">'+esc(u.id||'—')+'</td>' +
+            '<td><span class="badge badge-'+(u.empresa||'').toLowerCase()+'">'+esc(u.empresa||'—')+'</span></td>' +
+            '<td>'+esc(u.eq_ant_tipo||'—')+'</td>' +
+            '<td class="td-strong">'+esc(u.eq_ant_marca||'—')+'</td>' +
+            '<td>'+esc(u.eq_ant_modelo||'—')+'</td>' +
+            '<td class="td-mono">'+esc(u.eq_ant_serial||'—')+'</td>' +
+            '<td class="td-mono">'+esc(u.eq_ant_placa||'—')+'</td>' +
+            '<td class="td-soft">'+esc(u.ciudad||'—')+'</td>' +
+            '<td><span class="badge '+estCls+'">'+esc(u.estado||'Pendiente')+'</span></td>' +
+            '<td class="td-actions" onclick="event.stopPropagation()">' +
+            '<button class="row-action" onclick="openEditModal('+safeId+')" title="Editar">✏</button>' +
+            '</td></tr>';
+        }).join('')) +
+    '</tbody></table></div></div>' +
+    '</div>';
+  // Focus en el buscador solo si no hay filtros activos
+  var bkSrch = document.getElementById('bk-srch');
+  if (bkSrch && !srch) bkSrch.focus();
+}
+window.renderBackup = renderBackup;;;
+
+

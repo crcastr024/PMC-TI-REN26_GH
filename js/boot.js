@@ -51,19 +51,28 @@ function _applyRBAC(role, userEmail) {
   // ── RBAC-03: Ocultar vistas por rol ──────────────────────────────────────
   // roles técnico / consulta / visitante no acceden a vistas ejecutivas
   // GH3.39.1 FC-11: Técnico puede ver panel — solo se restringe admin/permisos
-  var RESTRICTED_VIEWS = ['aprobaciones', 'roles', 'configuracion', 'reportes-ejecutivos', 'administracion', 'permisos'];
+  var RESTRICTED_VIEWS = [
+    // STAB-v09.2 TASK 4: técnico solo se restringe de ajustes, aprobaciones y admin
+    'roles', 'configuracion', 'reportes-ejecutivos', 'administracion'
+  ];
+  var TECNICO_RESTRICTED = ['ajustes']; // ajustes siempre solo para admin
   var isTecnico  = (role === 'tecnico');
   var isConsulta = (role === 'consulta' || role === 'visitante');
   var isRestricted = isTecnico || isConsulta;
 
-  if (isRestricted) {
-    // Ocultar items del nav para roles restringidos
-    document.querySelectorAll('.sb-item').forEach(function(item) {
-      var view = item.dataset && item.dataset.view;
-      if (view && RESTRICTED_VIEWS.some(function(rv) { return view.indexOf(rv) >= 0; })) {
-        item.style.display = 'none';
-      }
-    });
+  // STAB-v09.2 TASK 4: aplicar restricciones por rol
+  document.querySelectorAll('.sb-item').forEach(function(item) {
+    var view = item.dataset && item.dataset.view;
+    if (!view) return;
+    var blocked = false;
+    if (isRestricted && RESTRICTED_VIEWS.some(function(rv) { return view.indexOf(rv) >= 0; })) blocked = true;
+    if (isTecnico  && TECNICO_RESTRICTED.some(function(rv) { return view === rv; })) blocked = true;
+    if (blocked) item.style.display = 'none';
+  });
+  // Panel/Seguimiento visible para técnico (STAB-v09.2 TASK 4)
+  var panelItem = document.getElementById('sb-panel');
+  if (panelItem && (isTecnico || ['gestor_activos','super_admin','director_ti','gerencia'].indexOf(role) >= 0)) {
+    panelItem.style.display = '';
   }
 
   // ── RBAC-04: Ocultar el role-switcher para todos excepto Super Admin ──────
@@ -314,7 +323,25 @@ async function boot() {
 
 
       // Iniciar sincronización automática (RC1 GL-5 preservado)
-      SynchronizationManager.start((window.APP_CONFIG && window.APP_CONFIG.refreshInterval) || 30000 /* RC-06: 30s */);
+      SynchronizationManager.start();
+  // RC-1 Fix: escuchar modo offline del SynchronizationManager
+  if (window.EventBus) {
+    EventBus.subscribe('provider.sync.offline', function(payload) {
+      var banner = document.getElementById('sync-offline-banner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'sync-offline-banner';
+        banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#B45309;color:#fff;text-align:center;padding:8px 16px;font-size:12px;font-weight:600;z-index:9999;';
+        banner.innerHTML = '⚠ Sin conexión con SharePoint — Los datos pueden estar desactualizados. Reintentando en 5 min.';
+        document.body.appendChild(banner);
+      }
+    });
+    EventBus.subscribe('provider.sync.finished', function() {
+      var banner = document.getElementById('sync-offline-banner');
+      if (banner) banner.remove();
+    });
+  }
+ // RC-07: intervalos adaptativos (15/60/120s)
 
 
     } catch(err) {
@@ -443,7 +470,7 @@ function _bootCore() {
     }
   });
   // Botón preview visitante (visible solo para roles que tienen panel.preview)
-  updatePreviewButton();
+  // (updatePreviewButton eliminado STAB-v10)
   updateAprobacionesItem();
   updateRoleBadge();
   // RC-03 T1: updateSidebarByRole absorbida por _applyRBAC
@@ -1616,50 +1643,6 @@ function submitBlock() {
 }
 window.submitBlock = submitBlock;
 
-// ── DEP-01.6: Modal "Solicitar validación de cierre" ─────────────────
-function openValidationModal() {
-  var editingId = window.state && state.editingId;
-  if (!editingId) return;
-  var bg = document.getElementById('val-modal-bg');
-  if (!bg) return;
-  var eyebrow = document.getElementById('val-modal-eyebrow');
-  if (eyebrow) eyebrow.textContent = 'Registro #' + editingId;
-  var body = document.getElementById('val-modal-body');
-  if (body) {
-    var r = window.DataService ? DataService.getRenewal(editingId) : null;
-    body.innerHTML = r
-      ? '<p style="font-size:13px;color:var(--text-2);line-height:1.6">Solicitar revisión y aprobación de cierre para:<br>' +
-        '<strong>' + (r.nombre || '—') + '</strong> · ' + (r.empresa || '—') + '</p>'
-      : '<p style="font-size:13px;color:var(--text-2)">Registro #' + editingId + '</p>';
-  }
-  bg.classList.add('active');
-}
-window.openValidationModal = openValidationModal;
-
-function closeValidationModal() {
-  var bg = document.getElementById('val-modal-bg');
-  if (bg) bg.classList.remove('active');
-}
-window.closeValidationModal = closeValidationModal;
-
-function submitValidation() {
-  var editingId = window.state && state.editingId;
-  if (!editingId) { closeValidationModal(); return; }
-  // RC-06 item 8: cambiar estado + guardar + cerrar modal + notificar
-  var changes = { estado: StateMachine.states.PENDIENTE_APROBACION };
-  if (window.DataService) DataService.updateRenewal(editingId, changes, window.state && state.user);
-  if (window.saveRecord) saveRecord();
-  closeValidationModal();
-  // Cerrar modal de edición también
-  var modalBg = document.getElementById('modal-bg');
-  if (modalBg) modalBg.classList.remove('active');
-  if (window.state) state.editingId = null;
-  // Actualizar la tabla con el nuevo estado
-  if (window.renderResumen) renderResumen();
-  if (window.renderView) renderView(window.state ? state.view : 'resumen');
-  if (window.toast) toast('Validación solicitada · Estado actualizado a Pendiente aprobación', 'success');
-}
-window.submitValidation = submitValidation;
-
+// STAB-v12: openValidationModal eliminado
 // ── DEP-01.7: RC2_doLogin — export faltante ──────────────────────────
 window.RC2_doLogin = RC2_doLogin;

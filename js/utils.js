@@ -42,7 +42,16 @@ const cap = (s) => {
 const isBackup = (r) => !!(r && r.nombre && String(r.nombre).trim().toUpperCase().startsWith('BACKUP'));
 window.isBackup = isBackup;
 
-const getReal   = () => window.USERS.filter(u => !isBackup(u));
+const getReal = () => {
+  // STAB-v09.2 ÍTEM 5: técnico solo ve sus propios registros
+  var _role      = window.state && state.user && (state.user.role || state.user.rol);
+  var _esTecnico = window.state && state.user && state.user.esTecnico;
+  var _base = window.USERS.filter(u => !isBackup(u));
+  if (_role === 'tecnico' && _esTecnico) {
+    return _base.filter(u => (u.tecnico||'').toLowerCase() === _esTecnico.toLowerCase());
+  }
+  return _base;
+};
 const getBackup = () => window.USERS.filter(u =>  isBackup(u));
 
 const STORAGE = {
@@ -846,9 +855,11 @@ const VIEW_TITLES = {
   resumen: 'Resumen', usuarios: 'Usuarios', tecnicos: 'Por técnico',
   'tecnico-detail': 'Detalle del técnico',
   'aprobaciones': 'Aprobaciones',
-  'panel': 'Vista de Seguimiento',
+  'panel': 'Seguimiento',                  // STAB-v09.2 ÍTEM 3: renombrado
   'home-tecnico': 'Mi Cola · Técnico',
-  ciudades: 'Por ciudad', devoluciones: 'Devoluciones', reportes: 'Reportes',
+  ciudades: 'Por ciudad', devoluciones: 'Devoluciones',
+  reportes: 'Ejecutivos',                   // STAB-v09.2 ÍTEM 2
+  backup: 'Equipos Backup',                 // STAB-v09.2 ÍTEM 8
   actividad: 'Actividad', ajustes: 'Ajustes'
 };
 
@@ -862,8 +873,8 @@ const AuthorizationService = {
   // GH3.39.1 FC-11: permisos actualizados — Técnico puede ver Vista de Seguimiento, Ciudades, Técnicos, Devoluciones
   _PERMISSIONS: {
     super_admin:    ['*'],
-    gestor_activos: ['resumen','usuarios','reportes','actividad','configuracion','aprobaciones','panel-ejecutivo','panel','ciudades','tecnico','devoluciones'],
-    tecnico:        ['usuarios','actividad','panel-ejecutivo','ciudades','tecnico','devoluciones','mi-cola','resumen'],
+    gestor_activos: ['resumen','usuarios','reportes','actividad','configuracion','aprobaciones','backup','panel-ejecutivo','panel','ciudades','tecnico','devoluciones'],
+    tecnico:        ['usuarios','resumen','actividad','panel','ciudades','tecnicos','devoluciones','reportes','backup','home-tecnico'],
     consulta:       ['usuarios','resumen'],
     visitante:      ['resumen'],
   },
@@ -910,6 +921,7 @@ function renderView(id) {
       case 'aprobaciones': renderAprobaciones(); break;
       case 'panel': renderPanelEjecutivo(); break;
       case 'home-tecnico': renderHomeTecnico(); break;
+      case 'backup': if (window.renderBackup) renderBackup(); break; // STAB-v09.2
     }
   } catch(e) { console.error('[renderView]', id, e); toast('Error en vista ' + id, 'warning'); }
 }

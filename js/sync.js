@@ -82,13 +82,27 @@ window.RefreshManager = RefreshManager;
 // MVP · SynchronizationManager — polling cada 10s, delta por _VERSION
 // ────────────────────────────────────────────────────────────────────
 const SynchronizationManager = (() => {
-  let _timer        = null;
-  let _lastETag     = null;
-  let _running      = false;
-  let _interval     = 30000; // RC-06: 30 segundos — reduce llamadas Graph 3x
-  let _versionCache = {};    // id → _version
-  let _pendingTick  = null;   // RC-06 TASK 7: debounce de requestTick
-  let _tickActive   = false;  // RC-06 TASK 6: lock global tick activo
+  let _timer         = null;
+  let _lastETag      = null;
+  let _running       = false;
+  let _tickActive    = false;   // RC-06/07 TASK 9: lock global
+  let _pendingTick   = null;    // RC-07 TASK 7: debounce requestTick
+  let _versionCache  = {};      // id → VERSION (columna Excel)
+  let _lastActivity  = 0;       // RC-07 TASK 6: timestamp última actividad
+  // RC-1 Fix: detección de modo offline
+  let _failStreak    = 0;       // fallos consecutivos de red
+  const FAIL_OFFLINE_THRESHOLD = 3;     // después de 3 fallos → offline mode
+  const INTERVAL_OFFLINE       = 300000; // 5 min — espera entre reintentos offline
+  // RC-07 TASK 6 — Intervalos adaptativos
+  var INTERVAL_INACTIVE = 60000;  // 60s — usuario inactivo
+  var INTERVAL_ACTIVE   = 15000;  // 15s — actividad reciente (< 2 min)
+  var INTERVAL_HIDDEN   = 120000; // 120s — pestaña oculta
+  function _getInterval() {
+    if (_failStreak >= FAIL_OFFLINE_THRESHOLD) return INTERVAL_OFFLINE; // modo offline
+    if (typeof document !== 'undefined' && document.hidden) return INTERVAL_HIDDEN;
+    if (Date.now() - _lastActivity < 120000) return INTERVAL_ACTIVE;
+    return INTERVAL_INACTIVE;
+  }
 
   function isExcelMode() {
     return (window.APP_CONFIG && window.APP_CONFIG.dataSource === 'excel')
@@ -120,13 +134,13 @@ const SynchronizationManager = (() => {
 
       // Nivel 2: Descargar solo columnas ID + _VERSION
       const { headers, rows } = await WorkbookLoader.loadColumns(
-        TableRegistry.RENOVACIONES, ['ID', '_VERSION']
+        TableRegistry.RENOVACIONES, ['ID', 'VERSION']
       ).catch(() => ({ headers: [], rows: [] }));
 
       if (headers.length === 0) { _running = false; return; }
 
       const idIdx  = headers.findIndex(h => h.toUpperCase() === 'ID');
-      const verIdx = headers.findIndex(h => h.toUpperCase() === '_VERSION');
+      const verIdx = headers.findIndex(h => h.toUpperCase() === 'VERSION');
 
       const changedIds = [];
       rows.forEach(row => {
@@ -172,7 +186,7 @@ const SynchronizationManager = (() => {
         });
         // Actualizar cache de versiones
         allHeaders.forEach((h, colIdx) => {
-          if (h.toUpperCase() === '_VERSION') {
+          if (h.toUpperCase() === 'VERSION') {
             allRows.forEach((row) => {
               const idColIdx = allHeaders.findIndex(h2 => h2.toUpperCase() === 'ID');
               if (idColIdx >= 0) _versionCache[Number(row[idColIdx])] = Number(row[colIdx] || 0);
@@ -184,62 +198,78 @@ const SynchronizationManager = (() => {
       }
 
       EventBus.publish('provider.refresh',      { changedIds, timestamp: Date.now() });
+      _failStreak = 0; // RC-1 Fix: reset streak tras éxito
       EventBus.publish('provider.sync.finished', { changedIds, timestamp: Date.now() });
 
     } catch(err) {
-      console.error('[SyncManager] tick error:', err.message);
-      EventBus.publish('provider.sync.failed', { error: err.message });
+      // RC-1 Fix: detectar errores de conectividad para backoff offline
+      var isNetErr = err.graphCode === 'NETWORK_ERROR' || err.graphCode === 'DNS_FAILURE' ||
+                     err.message.indexOf('ERR_NAME_NOT_RESOLVED') >= 0 ||
+                     err.message.indexOf('Failed to fetch') >= 0 ||
+                     err.message.indexOf('NETWORK_ERROR') >= 0;
+      if (isNetErr) {
+        _failStreak++;
+        if (_failStreak === 1 || _failStreak % 5 === 0) {
+          // Solo loguear en el primero y cada 5 para no inundar la consola
+          console.warn('[SyncManager] Sin conectividad con Graph (' + _failStreak + ' intentos). Próximo reintento en ' + (_failStreak >= FAIL_OFFLINE_THRESHOLD ? '5min' : _getInterval()/1000 + 's') + '.');
+        }
+        if (_failStreak >= FAIL_OFFLINE_THRESHOLD) {
+          EventBus.publish('provider.sync.offline', { streak: _failStreak });
+        }
+      } else {
+        _failStreak = 0; // resetear si el error no es de red
+        console.error('[SyncManager] tick error:', err.message);
+        EventBus.publish('provider.sync.failed', { error: err.message });
+      }
     } finally {
       _running = false;
       _tickActive = false; // RC-06 TASK 6: liberar lock
     }
   }
 
+  // RC-07 TASK 6: scheduling adaptativo con setTimeout recursivo
+  function _scheduleNext() {
+    if (_timer) { clearTimeout(_timer); clearInterval(_timer); } // GH3.5: clearInterval compat
+    _timer = setTimeout(async function() { await tick(); _scheduleNext(); }, _getInterval());
+  }
+
   return {
-    start(intervalMs) {
-      if (intervalMs) _interval = intervalMs;
-      if (_timer) clearInterval(_timer);
-      _timer = setInterval(tick, _interval);
-
-
-      // RC1 GL-5: reducir polling cuando el tab está oculto (ahorro de red)
+    start() {
+      _scheduleNext();
       if (typeof document !== 'undefined') {
-        document.addEventListener('visibilitychange', () => {
-          if (document.hidden) {
-            if (_timer) clearInterval(_timer);
-            _timer = setInterval(tick, _interval * 5); // RC-06: 150s cuando oculto (30s×5)
-
-          } else {
-            if (_timer) clearInterval(_timer);
-            _timer = setInterval(tick, _interval);
-            tick(); // tick inmediato al volver al tab
-
+        document.addEventListener('visibilitychange', function() {
+          if (!document.hidden) {
+            if (_timer) clearTimeout(_timer);
+            tick().then(function() { _scheduleNext(); });
           }
         });
       }
     },
     stop() {
-      if (_timer) clearInterval(_timer);
+      if (_timer) clearTimeout(_timer);
       _timer = null;
-
     },
     tick,
-    // RC-06 TASK 7: tick con debounce — N llamadas en < delayMs → 1 sola ejecución
+    // RC-07 TASK 7: requestTick con debounce
     requestTick(delayMs) {
       delayMs = typeof delayMs === 'number' ? delayMs : 1500;
       if (_pendingTick) clearTimeout(_pendingTick);
-      _pendingTick = setTimeout(function() {
-        _pendingTick = null;
-        tick();
-      }, delayMs);
+      _pendingTick = setTimeout(function() { _pendingTick = null; tick(); }, delayMs);
     },
-    isTickActive:  () => _tickActive,       // RC-06 TASK 6: estado del lock
+    // RC-07 TASK 6: registrar actividad → intervalo activo 15s
+    recordActivity() {
+      _lastActivity = Date.now();
+      if (_timer) {
+        clearTimeout(_timer);
+        _timer = setTimeout(async function() { await tick(); _scheduleNext(); }, INTERVAL_ACTIVE);
+      }
+    },
+    // RC-07 TASK 3: versión cacheada de un registro (sin llamada Graph)
+    getCachedVersion(id) { return _versionCache[Number(id)]; },
+    isTickActive:  () => _tickActive,
     isRunning:     () => !!_timer,
-    setInterval: (ms) => { _interval = ms; },
-
     onReconnect: async function() {
-
-      _lastETag = null; // forzar recarga
+      _lastETag = null;
       await WriteQueue.flush();
       await tick();
     },

@@ -27,6 +27,8 @@ window.CONFIG = {
   appShort: 'PMC-REN26',
   technicians: ['CRISTIAN', 'SANTIAGO', 'NICOLAS'],  // GH3.22 P3: valores reales del Excel
   version: 'v8.8.4-RC1-PRODUCTION',
+  // Etiquetas de roles — GH2.6: 'Técnico' como etiqueta display
+  roleDisplay: { SUPER_ADMIN:'Super Admin', GESTOR_ACTIVOS:'Gestor Activos', TECNICO:'Técnico', GERENCIA:'Gerencia', VISITANTE:'Visitante' },
 };
 
 // ════════════════════════════════════════════════════════════════════
@@ -205,7 +207,8 @@ window.FIELD_COLUMN_ALIASES = {
   'nombre_archivo':     'NOMBRE_ARCHIVO_ACTA',
   'acta_entrega_url':   'ACTA_ENTREGA_URL',
   'fecha_envio_acta':   'FECHA_ACTA_ENVIADA',
-  'fecha_firma_acta':   'FECHA_ACTA_FIRMADA',
+  'fecha_firma_acta':       'FECHA_ACTA_FIRMADA',
+  'estado_entrega_equipo_nuevo': 'ESTADO_ENTREGA_EQUIPO_NUEVO', // RC1-HOTFIX-01
   'feedback':           'CALIFICACION_FEEDBACK',
 
   // 6 · Devolución del equipo anterior

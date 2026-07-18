@@ -7,67 +7,250 @@
 
 
 // ════════════════════════════════════════════════════════════════════
-// GH3.39.1 P2/P3 — calculateProjectMetrics()
-// ÚNICA fuente de verdad para todos los dashboards.
-// Todos los módulos deben consumir esta función.
 // ════════════════════════════════════════════════════════════════════
-function calculateProjectMetrics() {
-  var all = window.USERS || [];
-  var backups  = all.filter(function(u){ return isBackup(u); });
-  var activos  = all.filter(function(u){ return !isBackup(u); });
+// STAB-v09.1 TASK 1 — buildDashboardStats(users)
+// ÚNICA fuente de verdad para todos los KPIs del sistema.
+// Todos los renderers consumen este objeto.
+// ════════════════════════════════════════════════════════════════════
+function buildDashboardStats(users) {
+  var all     = users || window.USERS || [];
+  var backups = all.filter(function(u){ return isBackup(u); });
+  var activos = all.filter(function(u){ return !isBackup(u); });
 
-  // Totales
-  var totalEquipos      = all.length;          // 146
-  var totalColaboradores = activos.length;       // 141
-  var totalBackups      = backups.length;        // 5
+  // TASK 3 — estados canónicos de proceso (sin Pendiente, sin Completado/Cancelado)
+  var PROC_ST = ['Alistamiento','Programado','En tránsito equipo nuevo',
+    'Entregado equipo nuevo','Pendiente devolución equipo anterior',
+    'En tránsito equipo anterior','Equipo anterior recibido',
+    'Pendiente aprobación','Cerrado'];
+  // Estados que significan "ya entregado" (hito acumulativo — no disminuye)
+  var ENTREGADO_ST = ['Entregado equipo nuevo','Pendiente devolución equipo anterior',
+    'En tránsito equipo anterior','Equipo anterior recibido',
+    'Renovación completada','Pendiente aprobación','Cerrado',
+    'Entregado','Completado'];
 
-  // Por empresa (todos los equipos, incluyendo backups)
-  var hbt = all.filter(function(u){ return u.empresa === 'HBT'; });
-  var hgs = all.filter(function(u){ return u.empresa === 'HGS'; });
+  var pendientes   = activos.filter(function(u){ return u.estado === 'Pendiente'; }).length;
+  var proceso      = activos.filter(function(u){ return PROC_ST.indexOf(u.estado) >= 0; }).length;
+  var entregados   = activos.filter(function(u){
+    return u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0;
+  }).length;
+  var actas        = activos.filter(function(u){ return !!u.fecha_firma_acta; }).length;
+  var finalizados  = activos.filter(function(u){
+    return u.estado === 'Renovación completada' || u.estado === 'Completado';
+  }).length;
+  var devoluciones = activos.filter(function(u){ return !!u.fecha_solicitud_devolucion; }).length;
+  // STAB-v10.1 P1: nuevos KPIs operativos
+  var enEnvio = activos.filter(function(u){ return u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo'; }).length;
+  var devolucionesPendientes = activos.filter(function(u){ return (u.lista_recoleccion || !!u.fecha_solicitud_devolucion) && !u.fecha_recepcion_bodega; }).length;
+  var raee         = activos.filter(function(u){ return u.recomendacion_raee === 'RAEE'; }).length;
+  var reasignables = activos.filter(function(u){
+    return u.recomendacion_raee === 'Reasignable' || u.recomendacion_raee === 'Reasignación interna';
+  }).length;
 
-  // Por estado (solo activos)
+  // Por empresa — breakdown completo (TASK 4)
+  // ════════════════════════════════════════════════════════
+  // STAB-v12.1: porEmpresa — objeto canónico único
+  // operativos + backup = total  (invariante garantizado)
+  // ════════════════════════════════════════════════════════
+  var porEmpresa = {};
+  ['HBT','HGS'].forEach(function(emp) {
+    var euAll = all.filter(function(u){ return u.empresa === emp; });      // todos (87)
+    var euOp  = activos.filter(function(u){ return u.empresa === emp; }); // activos (84)
+    var euBk  = backups.filter(function(u){ return u.empresa === emp; }); // backup (3)
+    var ent   = euOp.filter(function(u){ return u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0; });
+    var fin   = euOp.filter(function(u){ return u.estado === 'Renovación completada' || u.estado === 'Completado'; });
+    porEmpresa[emp] = {
+      total:      euAll.length,  // invariante: operativos + backup
+      operativos: euOp.length,   // solo activos (sin backup)
+      backup:     euBk.length,   // solo backup
+      pendientes: euOp.filter(function(u){ return u.estado === 'Pendiente'; }).length,
+      proceso:    euOp.filter(function(u){ return PROC_ST.indexOf(u.estado) >= 0; }).length,
+      envio:      euOp.filter(function(u){ return u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo'; }).length,
+      entregados: ent.length,
+      actas:      euOp.filter(function(u){ return !!u.fecha_firma_acta; }).length,
+      cerrados:   fin.length,
+      pct:        euOp.length ? Math.round(ent.length / euOp.length * 100) : 0,
+    };
+  });
+
+  var porTecnico = {};
+  activos.forEach(function(u) {
+    var t = u.tecnico || 'Sin asignar';
+    if (!porTecnico[t]) porTecnico[t] = { asignados:0, pendientes:0, proceso:0, enEnvio:0, entregados:0, actas:0, finalizados:0, pct:0 };
+    var d = porTecnico[t];
+    d.asignados++;
+    if (u.estado === 'Pendiente') d.pendientes++;
+    if (u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo') d.enEnvio++;
+    if (PROC_ST.indexOf(u.estado) >= 0) d.proceso++;
+    if (u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0) d.entregados++;
+    if (!!u.fecha_firma_acta) d.actas++;
+    if (u.estado === 'Renovación completada' || u.estado === 'Completado') d.finalizados++;
+  });
+  Object.keys(porTecnico).forEach(function(t) {
+    var d = porTecnico[t];
+    d.pct = d.asignados ? Math.round(d.entregados / d.asignados * 100) : 0;
+  });
+
+  // Por ciudad
+  var porCiudad = {};
+  activos.forEach(function(u) {
+    var c = (window.CityNormalizer ? CityNormalizer.normalize(u.ciudad) : (u.ciudad||'Sin ciudad')).trim()||'Sin ciudad';
+    porCiudad[c] = (porCiudad[c] || 0) + 1;
+  });
+
+  // Distribución de estados (TASK 7)
   var estados = {};
-  activos.forEach(function(u){
+  activos.forEach(function(u) {
     var st = u.estado || 'Sin estado';
     estados[st] = (estados[st] || 0) + 1;
   });
 
-  // Por técnico
-  var porTecnico = {};
-  activos.forEach(function(u){
-    var t = u.tecnico || 'Sin asignar';
-    porTecnico[t] = (porTecnico[t] || 0) + 1;
+  // STAB-v12 TASK 08: campos extendidos para Reporte Ejecutivo
+  // Calidad de datos
+  var calidad = {
+    sinTecnico:  activos.filter(function(u){ return !u.tecnico; }).length,
+    sinCiudad:   activos.filter(function(u){ return !u.ciudad; }).length,
+    sinEmpresa:  activos.filter(function(u){ return !u.empresa; }).length,
+    sinSerial:   activos.filter(function(u){ return !u.eq_ant_serial && !u.eq_nvo_serial; }).length,
+    sinAF:       activos.filter(function(u){ return !u.eq_nvo_af && !u.eq_ant_af; }).length,
+    sinActa:     activos.filter(function(u){ return !u.fecha_firma_acta; }).length,
+    sinEnvio:    activos.filter(function(u){ return !u.programado && !u.fecha_entrega; }).length,
+    total:       activos.length,
+  };
+  // Pipeline (estados en orden del flujo)
+  var PIPELINE_ORDER = ['Pendiente','Alistamiento','Programado','En tránsito equipo nuevo',
+    'Entregado equipo nuevo','Pendiente devolución equipo anterior','En tránsito equipo anterior',
+    'Equipo anterior recibido','Pendiente aprobación','Renovación completada','Cerrado'];
+  var pipelineRaw = {};
+  activos.forEach(function(u){ var s=u.estado||'Sin estado'; pipelineRaw[s]=(pipelineRaw[s]||0)+1; });
+  var pipeline = PIPELINE_ORDER.map(function(s){ return { estado:s, count:pipelineRaw[s]||0 }; });
+  // Encontrar cuello de botella (estado con mayor acumulación en proceso)
+  var bottle = pipeline.slice(1,-2).reduce(function(a,b){ return b.count > a.count ? b : a; }, pipeline[0]);
+  // Riesgos ejecutivos
+  var riesgos = {
+    sinMovimiento:        activos.filter(function(u){ return u.estado === 'Pendiente'; }).length,
+    pendienteAprobacion:  activos.filter(function(u){ return u.estado === 'Pendiente aprobación'; }).length,
+    pendienteDevolucion:  activos.filter(function(u){ return u.lista_recoleccion && !u.fecha_recepcion_bodega; }).length,
+    registrosIncompletos: activos.filter(function(u){ return !u.tecnico || !u.ciudad || !u.empresa; }).length,
+  };
+  // Aprobaciones
+  var aprobaciones = {
+    pendientes:  activos.filter(function(u){ return u.estado === 'Pendiente aprobación'; }).length,
+    completadas: activos.filter(function(u){ return u.estado === 'Renovación completada' || u.estado === 'Cerrado'; }).length,
+    rechazadas:  0, // depende de ApprovalService
+  };
+
+  // Distribución RAEE (TASK 6)
+  var raeeDistrib = {};
+  activos.forEach(function(u) {
+    if (u.recomendacion_raee) {
+      raeeDistrib[u.recomendacion_raee] = (raeeDistrib[u.recomendacion_raee] || 0) + 1;
+    }
   });
 
-  // Por ciudad (normalizada)
-  var porCiudad = {};
-  activos.forEach(function(u){
-    var c = (window.CityNormalizer ? CityNormalizer.normalize(u.ciudad) : (u.ciudad||'Sin ciudad')).trim() || 'Sin ciudad';
-    porCiudad[c] = (porCiudad[c] || 0) + 1;
-  });
-
-  // Destino RAEE
-  var raee        = activos.filter(function(u){ return u.recomendacion_raee === 'RAEE'; }).length;
-  var reasignable = activos.filter(function(u){ return u.recomendacion_raee === 'Reasignable'; }).length;
-  var donacion    = activos.filter(function(u){ return u.recomendacion_raee === 'Donación'; }).length;
+  // hbt/hgs cuentan TODOS (incluyendo backup) — compatible con calculateProjectMetrics original
+  // STAB-v12.1: aliases derivados de porEmpresa (fuente canónica)
+  var hbt   = porEmpresa['HBT'] ? porEmpresa['HBT'].total      : 0;
+  var hgs   = porEmpresa['HGS'] ? porEmpresa['HGS'].total      : 0;
+  var hbtOp = porEmpresa['HBT'] ? porEmpresa['HBT'].operativos : 0;
+  var hgsOp = porEmpresa['HGS'] ? porEmpresa['HGS'].operativos : 0;
+  var hbtBk = porEmpresa['HBT'] ? porEmpresa['HBT'].backup     : 0;
+  var hgsBk = porEmpresa['HGS'] ? porEmpresa['HGS'].backup     : 0;
 
   return {
-    totalEquipos:       totalEquipos,        // P3: siempre 146
-    totalColaboradores: totalColaboradores,  // 141
-    totalBackups:       totalBackups,        // 5
-    hbt:                hbt.length,          // P3: siempre 88
-    hgs:                hgs.length,          // P3: siempre 58
-    pendientes:         estados['Pendiente']      || estados['PENDIENTE'] || 0,
-    entregados:         estados['Entregado']      || 0,
-    enProceso:          (totalColaboradores - (estados['Pendiente'] || estados['PENDIENTE'] || 0) - (estados['Entregado'] || 0)),
-    raee:               raee,
-    reasignables:       reasignable,
-    donaciones:         donacion,
-    porEmpresa:         { HBT: hbt.length, HGS: hgs.length },
-    porTecnico:         porTecnico,
-    porCiudad:          porCiudad,
-    estados:            estados,
+    // Totales
+    total:              activos.length,
+    totalEquipos:       all.length,
+    totalColaboradores: activos.length,
+    totalBackups:       backups.length,
+    hbt: hbt, hgs: hgs,
+    hbtOperativos: hbtOp, hgsOperativos: hgsOp, // STAB-v10: solo activos
+    hbtBackup:     hbtBk, hgsBackup:     hgsBk,  // STAB-v10: solo backup
+    // KPIs por hito
+    pendientes:   pendientes,
+    proceso:      proceso,
+    enProceso:    proceso,         // alias backward compat
+    entregados:   entregados,
+    actas:        actas,
+    finalizados:  finalizados,
+    backup:       backups.length,
+    devoluciones: devoluciones,
+    enEnvio: enEnvio,                           // P1: Programado + En tránsito equipo nuevo
+    devolucionesPendientes: devolucionesPendientes, // P1: en lista recolección sin recibir
+    raee:         raee,
+    reasignables: reasignables,
+    // Breakdowns
+    porEmpresa:   porEmpresa,
+    porTecnico:   porTecnico,
+    porCiudad:    porCiudad,
+    estados:      estados,
+    raeeDistrib:  raeeDistrib,
+    // STAB-v12 T08: campos extendidos
+    calidad:      calidad,
+    pipeline:     pipeline,
+    cueloBotella: bottle,
+    riesgos:      riesgos,
+    aprobaciones: aprobaciones,
   };
+}
+window.buildDashboardStats = buildDashboardStats;
+
+// ════════════════════════════════════════════════════════════════════
+// STAB-v13 TASK 02 — DashboardStats Service (RC-1)
+// Fuente única de estadísticas para todos los renderers.
+// buildDashboardStats() es la implementación privada.
+// Los renderers solo pueden usar DashboardStats.get() o .compute()
+// ════════════════════════════════════════════════════════════════════
+var DashboardStats = (function() {
+  var _cache    = null;
+  var _ts       = 0;
+  var _TTL_MS   = 500;   // ms de validez del caché global
+
+  return {
+    /** Devuelve estadísticas globales (window.USERS). Resultado cacheado 500 ms. */
+    get: function() {
+      var now = Date.now();
+      if (!_cache || (now - _ts) > _TTL_MS) {
+        _cache = buildDashboardStats(window.USERS || []);
+        _ts    = now;
+      }
+      return _cache;
+    },
+
+    /** Estadísticas sobre un subconjunto (no cacheadas). Usado por vistas filtradas. */
+    compute: function(users) {
+      return buildDashboardStats(users || []);
+    },
+
+    /** Fuerza recalculo en el próximo .get(). */
+    invalidate: function() {
+      _cache = null;
+      _ts    = 0;
+    },
+
+    /** Recalcula y devuelve inmediatamente (sin esperar al TTL). */
+    refresh: function() {
+      this.invalidate();
+      return this.get();
+    },
+  };
+})();
+window.DashboardStats = DashboardStats;
+
+// getBDS() — alias legacy para compatibilidad transitoria
+function getBDS(users) {
+  return users && users !== (window.USERS||[]) ? DashboardStats.compute(users) : DashboardStats.get();
+}
+window.getBDS = getBDS;
+
+// GH3.39.1 P2/P3 — calculateProjectMetrics()
+// ÚNICA fuente de verdad para todos los dashboards.
+// Todos los módulos deben consumir esta función.
+// ════════════════════════════════════════════════════════════════════
+// STAB-v13: getBDS() y cache migrado a DashboardStats Service
+
+// STAB-v09.1: calculateProjectMetrics es ahora un wrapper de buildDashboardStats
+function calculateProjectMetrics() {
+  return buildDashboardStats(window.USERS || []);
 }
 window.calculateProjectMetrics = calculateProjectMetrics;
 
