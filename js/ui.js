@@ -1312,11 +1312,12 @@ function renderPanelEjecutivo() {
   }
   var records = window.DataService ? DataService.getRenewals({}) : [];
   var total   = records.length;
-  // STAB-v14: _stats es la ÚNICA fuente — sin records.filter() en renderers
+  // Fuente única: DashboardStats.compute() sobre activos (sin backup)
   var _stats  = window.DashboardStats ? DashboardStats.compute(records.filter(function(r){ return !isBackup(r); })) : {};
+  var _allStats = window.DashboardStats ? DashboardStats.get() : {};
   var set = function(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
 
-  // ── Hero KPIs (sin cambio) ────────────────────────────────────────────
+  // ── Hero KPIs ────────────────────────────────────────────────────────
   set('pe-total',       _stats.total      || 0);
   set('pe-completados', _stats.finalizados || 0);
   set('pe-proceso',     _stats.proceso     || 0);
@@ -1325,7 +1326,7 @@ function renderPanelEjecutivo() {
   set('pe-aprobaciones',_stats.aprobaciones ? _stats.aprobaciones.pendientes : 0);
   set('pe-entregados',  _stats.entregados  || 0);
   set('pe-en-envio',    _stats.enEnvio     || 0);
-  set('pe-backup',      _stats.totalBackups|| 0);
+  set('pe-backup',      _allStats.totalBackups || 0);
   set('pe-cerrados',    _stats.finalizados || 0);
   var pct = total ? Math.round((_stats.finalizados||0) / total * 100) : 0;
   set('pe-prog-pct', pct + '%');
@@ -1334,188 +1335,176 @@ function renderPanelEjecutivo() {
   set('pe-pct-sub', 'de '+total+' equipos');
   set('pe-sub', 'Renovación Tecnológica 2026 · HBT + HGS');
 
-  // ── TASK 02: Por empresa (dense) ──────────────────────────────────────
+  // ── T02: Por empresa (dense) ─────────────────────────────────────────
   var empEl = document.getElementById('pe-empresa-new');
   if (empEl) {
-    var EMPS = ['HBT','HGS'];
-    empEl.innerHTML = EMPS.map(function(emp) {
+    empEl.innerHTML = ['HBT','HGS'].map(function(emp) {
       var d = (_stats.porEmpresa && _stats.porEmpresa[emp]) || {total:0,operativos:0,backup:0,pendientes:0,entregados:0,pct:0};
-      var barPct = Math.min(d.pct, 100);
+      var bp = Math.min(d.pct, 100);
       return '<div class="op-empresa-block">' +
-        '<div class="op-empresa-head">' +
-          '<span class="op-empresa-name">' + emp + '</span>' +
-          '<span class="op-empresa-total">' + d.total + ' equipos</span>' +
-        '</div>' +
+        '<div class="op-empresa-head"><span class="op-empresa-name">'+emp+'</span><span class="op-empresa-total">'+d.total+' equipos</span></div>' +
         '<div class="op-empresa-grid">' +
-          '<div class="op-empresa-stat"><span class="op-empresa-val">' + d.operativos + '</span><span class="op-empresa-lbl">operativos</span></div>' +
-          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--text-3)">' + d.backup + '</span><span class="op-empresa-lbl">backup</span></div>' +
-          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--green)">' + d.entregados + '</span><span class="op-empresa-lbl">entregados</span></div>' +
-          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--accent)">' + d.pendientes + '</span><span class="op-empresa-lbl">pendientes</span></div>' +
-          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--green)">' + d.pct + '%</span><span class="op-empresa-lbl">avance</span></div>' +
+          '<div class="op-empresa-stat"><span class="op-empresa-val">'+d.operativos+'</span><span class="op-empresa-lbl">oper.</span></div>' +
+          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--text-3)">'+d.backup+'</span><span class="op-empresa-lbl">backup</span></div>' +
+          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--green)">'+d.entregados+'</span><span class="op-empresa-lbl">entregados</span></div>' +
+          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--accent)">'+d.pendientes+'</span><span class="op-empresa-lbl">pendientes</span></div>' +
+          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--green)">'+d.pct+'%</span><span class="op-empresa-lbl">avance</span></div>' +
         '</div>' +
-        '<div class="op-bar"><div class="op-bar-fill grn" data-pct="' + barPct + '" style="width:0%"></div></div>' +
+        '<div class="op-bar"><div class="op-bar-fill grn" data-pct="'+bp+'" style="width:0%"></div></div>' +
         '</div>';
     }).join('');
-    // también actualizar IDs compat
-    set('pe-hbt-n', (_stats.porEmpresa&&_stats.porEmpresa['HBT'])||{total:0}); // silencioso
     setTimeout(function(){empEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},80);
   }
 
-  // ── TASK 03: Por técnico (dense, ordenado por asignados) ─────────────
+  // ── T03: Por técnico (dense, ordenado) ───────────────────────────────
   var tecEl = document.getElementById('pe-tecnico-new');
   if (tecEl) {
     var ptMap = _stats.porTecnico || {};
     var tecList = Object.keys(ptMap).map(function(t){ return Object.assign({tec:t}, ptMap[t]); })
       .filter(function(d){ return d.asignados > 0; })
       .sort(function(a,b){ return b.asignados - a.asignados; });
-    var maxAsig = tecList.length ? tecList[0].asignados : 1;
     tecEl.innerHTML = tecList.length ? tecList.map(function(d) {
-      var barPct = Math.round(d.entregados / Math.max(d.asignados,1) * 100);
+      var bp = Math.round(d.entregados / Math.max(d.asignados,1) * 100);
       return '<div class="op-tec-row">' +
-        '<div class="op-tec-head">' +
-          '<span class="op-tec-name">' + esc(d.tec) + '</span>' +
-          '<span class="op-tec-pct">' + barPct + '%</span>' +
-        '</div>' +
-        '<div class="op-tec-stats">' +
-          '<span>' + d.asignados + ' asig</span>' +
-          '<span class="grn">' + d.entregados + ' ent</span>' +
-          '<span class="acc">' + d.pendientes + ' pend</span>' +
-          '<span>' + d.proceso + ' proc</span>' +
-        '</div>' +
-        '<div class="op-bar"><div class="op-bar-fill" data-pct="' + barPct + '" style="width:0%"></div></div>' +
+        '<div class="op-tec-head"><span class="op-tec-name">'+esc(d.tec)+'</span><span class="op-tec-pct">'+bp+'%</span></div>' +
+        '<div class="op-tec-stats"><span>'+d.asignados+' asig</span><span class="grn">'+d.entregados+' ent</span><span class="acc">'+d.pendientes+' pend</span><span>'+d.proceso+' proc</span></div>' +
+        '<div class="op-bar"><div class="op-bar-fill" data-pct="'+bp+'" style="width:0%"></div></div>' +
         '</div>';
-    }).join('') : '<div style="color:var(--text-3);font-size:11px">Sin datos de técnicos</div>';
+    }).join('') : '<div style="color:var(--text-3);font-size:11px;padding:8px 0">Sin datos de técnicos</div>';
     setTimeout(function(){tecEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},100);
   }
 
-  // ── TASK 04: Cumplimiento por empresa ────────────────────────────────
+  // ── T04: Cumplimiento por empresa ────────────────────────────────────
   var cumEl = document.getElementById('pe-cumplimiento');
   if (cumEl) {
-    var EMPS2 = ['HBT','HGS'];
-    cumEl.innerHTML = EMPS2.map(function(emp) {
+    cumEl.innerHTML = ['HBT','HGS'].map(function(emp) {
       var d = (_stats.porEmpresa && _stats.porEmpresa[emp]) || {total:0,entregados:0,pendientes:0,pct:0};
       return '<div class="op-cum-row">' +
-        '<span class="op-cum-empresa">' + emp + '</span>' +
-        '<div style="flex:1">' +
-          '<div class="op-cum-nums">' +
-            '<span>' + d.total + ' tot</span>' +
-            '<span class="grn">' + d.entregados + ' ent</span>' +
-            '<span>' + d.pendientes + ' pend</span>' +
-          '</div>' +
-          '<div class="op-bar op-cum-bar-wrap"><div class="op-bar-fill grn" data-pct="' + d.pct + '" style="width:0%"></div></div>' +
-        '</div>' +
-        '<span class="op-cum-pct">' + d.pct + '%</span>' +
-        '</div>';
+        '<span class="op-cum-empresa">'+emp+'</span>' +
+        '<div style="flex:1"><div class="op-cum-nums"><span>'+d.total+' tot</span><span class="grn">'+d.entregados+' ent</span><span>'+d.pendientes+' pend</span></div>' +
+        '<div class="op-bar op-cum-bar-wrap"><div class="op-bar-fill grn" data-pct="'+d.pct+'" style="width:0%"></div></div></div>' +
+        '<span class="op-cum-pct">'+d.pct+'%</span></div>';
     }).join('');
     setTimeout(function(){cumEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},120);
   }
 
-  // ── TASK 05: Riesgos Operativos ──────────────────────────────────────
+  // ── T05: Riesgos Operativos ──────────────────────────────────────────
   var riesEl = document.getElementById('pe-riesgos-op');
   if (riesEl) {
-    var ris = _stats.riesgos  || {};
-    var cal = _stats.calidad  || {};
+    var ris = _stats.riesgos || {};
+    var cal = _stats.calidad || {};
+    var sinActa = Math.max(0, (_stats.total||0) - (_stats.actas||0));
     var RISKS = [
-      { icon:'⏳', label:'Pendientes aprobación', val: ris.pendienteAprobacion||0,    thresh:1 },
-      { icon:'↩',  label:'Pendientes devolución', val: ris.pendienteDevolucion||0,    thresh:1 },
-      { icon:'👤', label:'Sin técnico asignado',  val: cal.sinTecnico||0,             thresh:1 },
-      { icon:'📍', label:'Sin ciudad',             val: cal.sinCiudad||0,              thresh:1 },
-      { icon:'🏢', label:'Sin empresa',            val: cal.sinEmpresa||0,             thresh:1 },
-      { icon:'🔖', label:'Sin serial',             val: cal.sinSerial||0,              thresh:5 },
-      { icon:'📄', label:'Sin acta',               val: _stats.total - (_stats.actas||0), thresh:10 },
+      {icon:'⏳', label:'Pend. aprobación',   val: ris.pendienteAprobacion||0,  thresh:1},
+      {icon:'↩',  label:'Pend. devolución',   val: ris.pendienteDevolucion||0,  thresh:1},
+      {icon:'👤', label:'Sin técnico',         val: cal.sinTecnico||0,           thresh:1},
+      {icon:'📍', label:'Sin ciudad',          val: cal.sinCiudad||0,            thresh:1},
+      {icon:'🏢', label:'Sin empresa',         val: cal.sinEmpresa||0,           thresh:1},
+      {icon:'🔖', label:'Sin serial',          val: cal.sinSerial||0,            thresh:5},
+      {icon:'📄', label:'Sin acta',            val: sinActa,                     thresh:10},
     ];
     riesEl.innerHTML = RISKS.map(function(r) {
-      var cls = r.val === 0 ? 'zero' : r.val >= r.thresh*3 ? 'crit' : 'warn';
-      return '<div class="op-risk-item">' +
-        '<span class="op-risk-icon">' + r.icon + '</span>' +
-        '<span class="op-risk-label">' + r.label + '</span>' +
-        '<span class="op-risk-val ' + cls + '">' + r.val + '</span>' +
-        '</div>';
+      var cls = r.val===0?'zero':r.val>=r.thresh*3?'crit':'warn';
+      return '<div class="op-risk-item"><span class="op-risk-icon">'+r.icon+'</span><span class="op-risk-label">'+r.label+'</span><span class="op-risk-val '+cls+'">'+r.val+'</span></div>';
     }).join('');
   }
 
-  // ── TASK 06: Distribución de estados (mejorada) ──────────────────────
+  // ── T06: Distribución de estados ─────────────────────────────────────
   if (window.renderEstadosChart) renderEstadosChart(_stats);
 
-  // ── TASK 07: Cuello de botella ───────────────────────────────────────
+  // ── T07: Cuello de botella ────────────────────────────────────────────
   var botEl = document.getElementById('pe-botella');
   if (botEl) {
     var pipe   = _stats.pipeline || [];
-    var bottle = _stats.cueloBotella || {};
-    var maxPipe = pipe.reduce(function(a,b){ return Math.max(a,b.count); },1);
-    var sorted = pipe.filter(function(p){ return p.count>0; })
-                     .sort(function(a,b){ return b.count-a.count; });
+    var sorted = pipe.filter(function(p){ return p.count>0; }).sort(function(a,b){ return b.count-a.count; });
     if (sorted.length === 0) {
-      botEl.innerHTML = '<div style="color:var(--text-3);font-size:11px">Sin datos</div>';
+      botEl.innerHTML = '<div style="color:var(--text-3);font-size:11px;padding:8px 0">Sin registros en proceso</div>';
     } else {
-      var top = sorted[0];
+      var top    = sorted[0];
       var topPct = Math.round(top.count / Math.max(_stats.total,1) * 100);
       botEl.innerHTML =
         '<div class="op-bottle-main">' +
-          '<div class="op-bottle-estado">' + esc(top.estado) + '</div>' +
-          '<div class="op-bottle-nums">' +
-            '<span class="op-bottle-count">' + top.count + '</span>' +
-            '<span class="op-bottle-pct">' + topPct + '% del total</span>' +
-          '</div>' +
-          '<div class="op-bar"><div class="op-bar-fill" data-pct="' + topPct + '" style="width:0%"></div></div>' +
+          '<div class="op-bottle-estado">'+esc(top.estado)+'</div>' +
+          '<div class="op-bottle-nums"><span class="op-bottle-count">'+top.count+'</span><span class="op-bottle-pct">'+topPct+'% del total</span></div>' +
+          '<div class="op-bar"><div class="op-bar-fill" data-pct="'+topPct+'" style="width:0%"></div></div>' +
         '</div>' +
         '<div class="op-bottle-others">' +
           sorted.slice(1,4).map(function(p) {
-            var pct2 = Math.round(p.count / Math.max(_stats.total,1) * 100);
-            return '<div class="op-bottle-other-row">' +
-              '<span>' + esc(p.estado.replace('equipo nuevo','').replace('equipo anterior','').trim()) + '</span>' +
-              '<span>' + p.count + ' · ' + pct2 + '%</span></div>';
+            var p2 = Math.round(p.count/Math.max(_stats.total,1)*100);
+            var label = p.estado.replace('equipo nuevo','').replace('equipo anterior','').trim();
+            return '<div class="op-bottle-other-row"><span>'+esc(label)+'</span><span>'+p.count+' · '+p2+'%</span></div>';
           }).join('') +
         '</div>';
       setTimeout(function(){botEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},140);
     }
   }
 
-  // ── TASK 08: Calidad del dato ────────────────────────────────────────
+  // ── T08: Calidad del dato (con barras) ────────────────────────────────
   var calEl = document.getElementById('pe-calidad');
   if (calEl) {
     var c = _stats.calidad || {};
+    var tot = Math.max(_stats.total||0, 1);
+    var sinActaCalidad = Math.max(0, (_stats.total||0) - (_stats.actas||0));
     var QUALITY = [
-      { label:'Sin serial',   val: c.sinSerial||0  },
-      { label:'Sin ciudad',   val: c.sinCiudad||0  },
-      { label:'Sin empresa',  val: c.sinEmpresa||0 },
-      { label:'Sin técnico',  val: c.sinTecnico||0 },
-      { label:'Sin acta',     val: c.sinActa||0    },
-      { label:'Sin AF',       val: c.sinAF||0      },
+      {label:'Sin serial',  val: c.sinSerial||0},
+      {label:'Sin ciudad',  val: c.sinCiudad||0},
+      {label:'Sin empresa', val: c.sinEmpresa||0},
+      {label:'Sin técnico', val: c.sinTecnico||0},
+      {label:'Sin acta',    val: sinActaCalidad},
+      {label:'Sin AF',      val: c.sinAF||0},
     ];
-    var totalActivos = _stats.total || 1;
     calEl.innerHTML = QUALITY.map(function(q) {
-      var pct = Math.round(q.val/totalActivos*100);
-      var cls = q.val===0 ? 'ok' : pct>20 ? 'crit' : 'warn';
+      var pct = Math.round(q.val/tot*100);
+      var cls = q.val===0?'ok':pct>20?'crit':'warn';
       return '<div class="op-quality-row">' +
-        '<span class="op-quality-label">' + q.label + '</span>' +
-        '<span class="op-quality-val ' + cls + '">' + q.val + '</span>' +
+        '<span class="op-quality-label">'+q.label+'</span>' +
+        '<div style="flex:1;margin:0 8px"><div class="op-bar" style="height:4px"><div class="op-bar-fill" style="width:'+pct+'%;background:'+(cls==='ok'?'var(--green)':cls==='crit'?'var(--accent)':'var(--amber)')+'"></div></div></div>' +
+        '<span class="op-quality-val '+cls+'">'+q.val+'</span>' +
         '</div>';
     }).join('');
   }
 
-  // ── Destino RAEE (compat) ─────────────────────────────────────────────
-  var _raeeD = _stats.raeeDistrib || {};
-  set('pe-destino-raee',    _raeeD['RAEE']                   || 0);
-  set('pe-destino-venta',   _raeeD['Venta interna empleado'] || _raeeD['Venta interna'] || 0);
-  set('pe-destino-reasign', _raeeD['Reasignable']            || _raeeD['Reasignación interna'] || 0);
-  set('pe-destino-donacion',_raeeD['Donación']               || _raeeD['Donacion'] || 0);
-
-  // ── Devoluciones ─────────────────────────────────────────────────────
-  var peDevEl = document.getElementById('pe-devoluciones-list');
-  if (peDevEl) {
-    peDevEl.innerHTML =
-      '<div style="display:flex;gap:16px;flex-wrap:wrap">' +
-      '<div><strong>' + (_stats.devoluciones||0) + '</strong>' +
-        '<div style="font-size:10px;color:var(--text-3)">Iniciadas</div></div>' +
-      '<div><strong>' + (_stats.devolucionesPendientes||0) + '</strong>' +
-        '<div style="font-size:10px;color:var(--text-3)">Pendientes recepción</div></div>' +
-      '</div>';
+  // ── Devoluciones (completo) ───────────────────────────────────────────
+  var devEl = document.getElementById('pe-devoluciones-list');
+  if (devEl) {
+    var devTotal = _stats.devoluciones        || 0;
+    var devPend  = _stats.devolucionesPendientes || 0;
+    var devRec   = Math.max(0, devTotal - devPend);
+    devEl.innerHTML =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">' +
+        '<div style="background:var(--bg-2,#f9f9f9);border-radius:6px;padding:8px;border-left:3px solid var(--accent)">' +
+          '<div style="font-family:Inter Tight,sans-serif;font-size:22px;font-weight:900;color:var(--accent)">'+devPend+'</div>' +
+          '<div style="font-size:10px;color:var(--text-3)">Pend. recepción</div>' +
+        '</div>' +
+        '<div style="background:var(--bg-2,#f9f9f9);border-radius:6px;padding:8px;border-left:3px solid var(--green)">' +
+          '<div style="font-family:Inter Tight,sans-serif;font-size:22px;font-weight:900;color:var(--green)">'+devRec+'</div>' +
+          '<div style="font-size:10px;color:var(--text-3)">Recibidas</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="panel-stat-row"><span class="panel-stat-label">Total iniciadas</span><span class="panel-stat-val">'+devTotal+'</span></div>';
   }
 
-  // ── Aprobaciones compat ───────────────────────────────────────────────
-  set('pe-correccion', 0);
-  set('pe-bloqueados',  0);
+  // ── Aprobaciones (con estructura aunque sea 0) ────────────────────────
+  var aprob = _stats.aprobaciones || {pendientes:0, completadas:0, rechazadas:0};
+  set('pe-aprobaciones', aprob.pendientes);
+  set('pe-correccion', aprob.rechazadas || 0);
+  set('pe-bloqueados', 0);
+  // Subtítulo contextual
+  var subEl = document.querySelector('#view-panel .panel-kpi-sub');
+  if (aprob.pendientes === 0) {
+    var pSub = document.getElementById('view-panel') && document.querySelector('#view-panel .panel-kpi-sub');
+    // no cambiar el subtítulo del hero — el de aprobaciones está en el HTML estático
+  }
+
+  // ── Destino RAEE ─────────────────────────────────────────────────────
+  var _raeeD = _stats.raeeDistrib || {};
+  var _allRaee = _allStats.raeeDistrib || _raeeD;
+  set('pe-destino-raee',    _allRaee['RAEE']                    || _raeeD['RAEE'] || 0);
+  set('pe-destino-venta',   _allRaee['Venta interna empleado']  || _allRaee['Venta interna'] || 0);
+  set('pe-destino-reasign', _allRaee['Reasignable']             || _allRaee['Reasignación interna'] || 0);
+  set('pe-destino-donacion',_allRaee['Donación']                || _allRaee['Donacion'] || 0);
+  var destTotal = Object.values(_allRaee).reduce(function(s,v){return s+v;},0);
+  set('pe-destino-total', destTotal > 0 ? destTotal+' con recomendación RAEE' : 'Sin recomendación asignada aún');
 }
 window.renderPanelEjecutivo = renderPanelEjecutivo;
 
