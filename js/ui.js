@@ -610,30 +610,37 @@ function renderReportes() {
 
 function setReport(type, btn) {
   state.reportFilter = type;
-  $$('.report-card').forEach(c => c.classList.toggle('active', c.dataset.rep === type));
-  const base = getReportBase();
-  let filtered = [], title = '';
+  $$('.report-card').forEach(function(c) { c.classList.toggle('active', c.dataset.rep === type); });
+  var base = getReportBase();
+  var filtered = [], title = '';
+  // BUG-02 fix: break en cada case para evitar fall-through
+  // BUG-03 fix: state.repFilters inicializado con guard
+  if (!state.repFilters) state.repFilters = {};
   switch(type) {
-    case 'alistamiento': filtered = base.filter(u => u.estado && u.estado !== 'Pendiente'); title = 'REP-01 · Alistamiento (cualquier avance)'; break;
-    case 'entregados':   filtered = base.filter(u => u.fecha_entrega||u.fecha_envio_acta||u.fecha_firma_acta||u.acta_entrega_url); title = 'REP-02 · Entregados'; break;
-    case 'actas':        filtered = base.filter(u => u.fecha_firma_acta); title = 'REP-03 · Actas firmadas'; break;
-    case 'devoluciones': filtered = base.filter(u => u.fecha_solicitud_devolucion); title = 'REP-04 · Proceso devolución iniciado'; break;
-    case 'finalizados':  filtered = base.filter(u => u.estado === 'Completado'); title = 'REP-05 · Finalizados'; break;
-    case 'feedback':     filtered = base.filter(u => (u.feedback||0) > 0); title = 'REP-06 · Con feedback'; break;
-    case 'raee':         filtered = base.filter(u => u.recomendacion_raee); title = 'REP-07 · Clasificación Tecnológica'; break;
+    case 'alistamiento': filtered = base.filter(function(u){ return u.estado && u.estado !== 'Pendiente'; }); title = 'REP-01 · En proceso'; break;
+    case 'entregados':   filtered = base.filter(function(u){ return u.fecha_entrega||u.fecha_envio_acta||u.fecha_firma_acta||u.acta_entrega_url; }); title = 'REP-02 · Entregados'; break;
+    case 'actas':        filtered = base.filter(function(u){ return !!u.fecha_firma_acta; }); title = 'REP-03 · Actas firmadas'; break;
+    case 'devoluciones': filtered = base.filter(function(u){ return !!u.fecha_solicitud_devolucion; }); title = 'REP-04 · En devolución'; break;
+    case 'finalizados':  filtered = base.filter(function(u){ return u.estado === 'Renovación completada' || u.estado === 'Completado'; }); title = 'REP-05 · Finalizados'; break;
+    case 'feedback':     filtered = base.filter(function(u){ return (u.feedback||0) > 0; }); title = 'REP-06 · Con feedback'; break;
+    case 'raee':         filtered = base.filter(function(u){ return !!u.recomendacion_raee; }); title = 'REP-07 · Clasificación RAEE'; break;
+    default:             filtered = base; title = 'Reporte general'; break;
   }
+  // BUG-01 fix: declarar activeFilters antes de usarlo
+  var activeFilters = [];
   if (state.repFilters.empresa) activeFilters.push(state.repFilters.empresa);
-  if (state.repFilters.tipo) activeFilters.push(state.repFilters.tipo);
-  if (state.repFilters.proyecto) activeFilters.push(state.repFilters.proyecto);
+  if (state.repFilters.tipo)    activeFilters.push(state.repFilters.tipo);
+  if (state.repFilters.proyecto)activeFilters.push(state.repFilters.proyecto);
   if (state.repFilters.tecnico) activeFilters.push(state.repFilters.tecnico);
-  const filterLabel = activeFilters.length > 0 ? ' · ' + activeFilters.join(' · ') : '';
-  
+  var filterLabel = activeFilters.length > 0 ? ' · ' + activeFilters.join(' · ') : '';
   if (filtered.length === 0) {
-    $('report-detail').innerHTML = '<div class="panel-head"><div><div class="panel-title">' + title + filterLabel + '</div></div></div><div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/></svg></div><div class="empty-title">Sin registros</div><div class="empty-msg">No hay equipos en esta categoría con los filtros aplicados</div></div>';
+    $('report-detail').innerHTML = '<div class="panel-head"><div><div class="panel-title">' + title + filterLabel + '</div><div class="panel-sub">Sin resultados con los filtros actuales</div></div></div>';
     return;
   }
-  $('report-detail').innerHTML = '<div class="panel-head"><div><div class="panel-title">' + title + filterLabel + '</div><div class="panel-sub">' + filtered.length + ' registros</div></div></div><div class="tbl-wrap" style="border:none;border-radius:0;box-shadow:none"><div class="tbl-scroll"><table class="tbl"><thead><tr><th>ID</th><th>Emp</th><th>Tipo</th><th>Nombre</th><th>Ciudad</th><th>Proyecto</th><th>Técnico</th><th>Estado</th>' + (type === 'feedback' ? '<th>Feedback</th>' : '<th>Acta</th>') + '</tr></thead><tbody>' +
-    filtered.map(u => '<tr onclick="openEditModal(' + u.id + ')"><td class="td-id">' + u.id + '</td><td><span class="badge badge-' + u.empresa.toLowerCase() + '">' + esc(u.empresa) + '</span></td><td><span class="badge badge-' + ((u.tipo || '').toUpperCase() === 'TORRE' ? 'torre' : 'portatil') + '">' + esc(u.tipo) + '</span></td><td class="td-strong">' + esc(u.nombre) + '</td><td class="td-soft">' + esc(u.ciudad) + '</td><td class="td-soft">' + esc(u.proyecto) + '</td><td class="td-soft">' + esc(u.tecnico) + '</td><td><span class="badge ' + ConfigService.badgeClass(u.estado) + '">' + esc(u.estado) + '</span></td><td style="text-align:center">' + (type === 'feedback' ? renderStarsDisplay(u.feedback) : (u.acta_firmada ? '✓' : '—')) + '</td></tr>').join('') + '</tbody></table></div></div>';
+  $('report-detail').innerHTML = '<div class="panel-head"><div><div class="panel-title">' + title + filterLabel + '</div><div class="panel-sub">' + filtered.length + ' registros</div></div></div>' +
+    '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Empresa</th><th>Técnico</th><th>Ciudad</th></tr></thead><tbody>' +
+    filtered.map(function(u) { return '<tr onclick="openEditModal('+u.id+')" style="cursor:pointer"><td class="td-id">'+u.id+'</td><td>'+esc(u.nombre||'—')+'</td><td>'+esc(u.estado||'—')+'</td><td>'+esc(u.empresa||'—')+'</td><td>'+esc(u.tecnico||'—')+'</td><td>'+esc(u.ciudad||'—')+'</td></tr>'; }).join('') +
+    '</tbody></table></div>';
 }
 window.setReport = setReport;
 
@@ -1302,52 +1309,53 @@ function renderEstadosChart(stats) {
 window.renderEstadosChart = renderEstadosChart;
 
 function renderPanelEjecutivo() {
-  // ── RBAC ─────────────────────────────────────────────────────────────
   var role = window.state && state.user && (state.user.role || state.user.rol);
-  var allowed = ['super_admin', 'gestor_activos', 'director_ti', 'gerencia', 'tecnico'];
+  var allowed = ['super_admin','gestor_activos','director_ti','gerencia','tecnico'];
   if (role && allowed.indexOf(role) < 0) {
     var vp = document.getElementById('view-panel');
     if (vp) vp.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-3)">Vista no disponible para tu rol</div>';
     return;
   }
-  var records = window.DataService ? DataService.getRenewals({}) : [];
-  var total   = records.length;
-  // Fuente única: DashboardStats.compute() sobre activos (sin backup)
-  var _stats  = window.DashboardStats ? DashboardStats.compute(records.filter(function(r){ return !isBackup(r); })) : {};
+  var records   = window.DataService ? DataService.getRenewals({}) : [];
+  // TASK 04/08: _allStats tiene window.USERS completo (activos + backup) → porEmpresa correcto
   var _allStats = window.DashboardStats ? DashboardStats.get() : {};
-  var set = function(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
+  // _stats para KPIs operativos (activos únicamente)
+  var _stats    = window.DashboardStats ? DashboardStats.compute(records.filter(function(r){ return !isBackup(r); })) : {};
+  var total     = _stats.total || 0;
+  var set = function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
 
-  // ── Hero KPIs ────────────────────────────────────────────────────────
-  set('pe-total',       _stats.total      || 0);
-  set('pe-completados', _stats.finalizados || 0);
-  set('pe-proceso',     _stats.proceso     || 0);
-  set('pe-pendientes',  _stats.pendientes  || 0);
-  set('pe-actas',       _stats.actas       || 0);
-  set('pe-aprobaciones',_stats.aprobaciones ? _stats.aprobaciones.pendientes : 0);
-  set('pe-entregados',  _stats.entregados  || 0);
-  set('pe-en-envio',    _stats.enEnvio     || 0);
-  set('pe-backup',      _allStats.totalBackups || 0);
-  set('pe-cerrados',    _stats.finalizados || 0);
-  var pct = total ? Math.round((_stats.finalizados||0) / total * 100) : 0;
-  set('pe-prog-pct', pct + '%');
-  var pf = document.getElementById('pe-prog-fill');
-  if (pf) { pf.style.width='0%'; requestAnimationFrame(function(){ setTimeout(function(){ pf.style.width=pct+'%'; },50); }); }
+  // ── Hero KPIs ────────────────────────────────────────────────────
+  set('pe-total',        total);
+  set('pe-completados',  _stats.finalizados || 0);
+  set('pe-proceso',      _stats.proceso     || 0);
+  set('pe-pendientes',   _stats.pendientes  || 0);
+  set('pe-actas',        _stats.actas       || 0);
+  set('pe-aprobaciones', _stats.aprobaciones ? _stats.aprobaciones.pendientes : 0);
+  set('pe-entregados',   _stats.entregados  || 0);
+  set('pe-en-envio',     _stats.enEnvio     || 0);
+  set('pe-backup',       _allStats.totalBackups || 0);
+  set('pe-cerrados',     _stats.finalizados || 0);
+  var pct = total ? Math.round((_stats.finalizados||0)/total*100) : 0;
+  set('pe-prog-pct', pct+'%');
   set('pe-pct-sub', 'de '+total+' equipos');
   set('pe-sub', 'Renovación Tecnológica 2026 · HBT + HGS');
+  var pf = document.getElementById('pe-prog-fill');
+  if (pf) { pf.style.width='0%'; requestAnimationFrame(function(){ setTimeout(function(){ pf.style.width=pct+'%'; },50); }); }
 
-  // ── T02: Por empresa (dense) ─────────────────────────────────────────
+  // ── Por empresa (dense) ──────────────────────────────────────────
   var empEl = document.getElementById('pe-empresa-new');
   if (empEl) {
+    // TASK 04: usar _allStats.porEmpresa para incluir backup en totales
     empEl.innerHTML = ['HBT','HGS'].map(function(emp) {
-      var d = (_stats.porEmpresa && _stats.porEmpresa[emp]) || {total:0,operativos:0,backup:0,pendientes:0,entregados:0,pct:0};
-      var bp = Math.min(d.pct, 100);
+      var d = (_allStats.porEmpresa && _allStats.porEmpresa[emp]) || {total:0,operativos:0,backup:0,pendientes:0,entregados:0,pct:0};
+      var bp = Math.min(d.pct,100);
       return '<div class="op-empresa-block">' +
         '<div class="op-empresa-head"><span class="op-empresa-name">'+emp+'</span><span class="op-empresa-total">'+d.total+' equipos</span></div>' +
         '<div class="op-empresa-grid">' +
           '<div class="op-empresa-stat"><span class="op-empresa-val">'+d.operativos+'</span><span class="op-empresa-lbl">oper.</span></div>' +
           '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--text-3)">'+d.backup+'</span><span class="op-empresa-lbl">backup</span></div>' +
-          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--green)">'+d.entregados+'</span><span class="op-empresa-lbl">entregados</span></div>' +
-          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--accent)">'+d.pendientes+'</span><span class="op-empresa-lbl">pendientes</span></div>' +
+          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--green)">'+d.entregados+'</span><span class="op-empresa-lbl">ent.</span></div>' +
+          '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--accent)">'+d.pendientes+'</span><span class="op-empresa-lbl">pend.</span></div>' +
           '<div class="op-empresa-stat"><span class="op-empresa-val" style="color:var(--green)">'+d.pct+'%</span><span class="op-empresa-lbl">avance</span></div>' +
         '</div>' +
         '<div class="op-bar"><div class="op-bar-fill grn" data-pct="'+bp+'" style="width:0%"></div></div>' +
@@ -1356,72 +1364,57 @@ function renderPanelEjecutivo() {
     setTimeout(function(){empEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},80);
   }
 
-  // ── T03: Por técnico (dense, ordenado) ───────────────────────────────
+  // ── Por técnico (dense, ordenado) ────────────────────────────────
   var tecEl = document.getElementById('pe-tecnico-new');
   if (tecEl) {
     var ptMap = _stats.porTecnico || {};
-    var tecList = Object.keys(ptMap).map(function(t){ return Object.assign({tec:t}, ptMap[t]); })
-      .filter(function(d){ return d.asignados > 0; })
-      .sort(function(a,b){ return b.asignados - a.asignados; });
+    var tecList = Object.keys(ptMap).map(function(t){ return Object.assign({tec:t},ptMap[t]); })
+      .filter(function(d){ return d.asignados>0; })
+      .sort(function(a,b){ return b.asignados-a.asignados; });
     tecEl.innerHTML = tecList.length ? tecList.map(function(d) {
-      var bp = Math.round(d.entregados / Math.max(d.asignados,1) * 100);
+      var bp = Math.round(d.entregados/Math.max(d.asignados,1)*100);
       return '<div class="op-tec-row">' +
         '<div class="op-tec-head"><span class="op-tec-name">'+esc(d.tec)+'</span><span class="op-tec-pct">'+bp+'%</span></div>' +
         '<div class="op-tec-stats"><span>'+d.asignados+' asig</span><span class="grn">'+d.entregados+' ent</span><span class="acc">'+d.pendientes+' pend</span><span>'+d.proceso+' proc</span></div>' +
         '<div class="op-bar"><div class="op-bar-fill" data-pct="'+bp+'" style="width:0%"></div></div>' +
         '</div>';
-    }).join('') : '<div style="color:var(--text-3);font-size:11px;padding:8px 0">Sin datos de técnicos</div>';
+    }).join('') : '<div style="color:var(--text-3);font-size:11px;padding:8px 0">Sin datos</div>';
     setTimeout(function(){tecEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},100);
   }
 
-  // ── T04: Cumplimiento por empresa ────────────────────────────────────
+  // ── Cumplimiento por empresa (TASK 04) ───────────────────────────
   var cumEl = document.getElementById('pe-cumplimiento');
   if (cumEl) {
+    // TASK 04: usar _allStats.porEmpresa (total real = asignados + backup)
     cumEl.innerHTML = ['HBT','HGS'].map(function(emp) {
-      var d = (_stats.porEmpresa && _stats.porEmpresa[emp]) || {total:0,entregados:0,pendientes:0,pct:0};
+      var d = (_allStats.porEmpresa && _allStats.porEmpresa[emp]) || {total:0,operativos:0,backup:0,entregados:0,pendientes:0,pct:0};
       return '<div class="op-cum-row">' +
         '<span class="op-cum-empresa">'+emp+'</span>' +
-        '<div style="flex:1"><div class="op-cum-nums"><span>'+d.total+' tot</span><span class="grn">'+d.entregados+' ent</span><span>'+d.pendientes+' pend</span></div>' +
-        '<div class="op-bar op-cum-bar-wrap"><div class="op-bar-fill grn" data-pct="'+d.pct+'" style="width:0%"></div></div></div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:9px;color:var(--text-3);display:flex;gap:10px;margin-bottom:2px">' +
+            '<span>'+d.operativos+' asig · '+d.backup+' bk · <strong>'+d.total+' total</strong></span>' +
+          '</div>' +
+          '<div class="op-cum-nums"><span class="grn">'+d.entregados+' ent</span><span>'+d.pendientes+' pend</span></div>' +
+          '<div class="op-bar op-cum-bar-wrap"><div class="op-bar-fill grn" data-pct="'+d.pct+'" style="width:0%"></div></div>' +
+        '</div>' +
         '<span class="op-cum-pct">'+d.pct+'%</span></div>';
     }).join('');
     setTimeout(function(){cumEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},120);
   }
 
-  // ── T05: Riesgos Operativos ──────────────────────────────────────────
-  var riesEl = document.getElementById('pe-riesgos-op');
-  if (riesEl) {
-    var ris = _stats.riesgos || {};
-    var cal = _stats.calidad || {};
-    var sinActa = Math.max(0, (_stats.total||0) - (_stats.actas||0));
-    var RISKS = [
-      {icon:'⏳', label:'Pend. aprobación',   val: ris.pendienteAprobacion||0,  thresh:1},
-      {icon:'↩',  label:'Pend. devolución',   val: ris.pendienteDevolucion||0,  thresh:1},
-      {icon:'👤', label:'Sin técnico',         val: cal.sinTecnico||0,           thresh:1},
-      {icon:'📍', label:'Sin ciudad',          val: cal.sinCiudad||0,            thresh:1},
-      {icon:'🏢', label:'Sin empresa',         val: cal.sinEmpresa||0,           thresh:1},
-      {icon:'🔖', label:'Sin serial',          val: cal.sinSerial||0,            thresh:5},
-      {icon:'📄', label:'Sin acta',            val: sinActa,                     thresh:10},
-    ];
-    riesEl.innerHTML = RISKS.map(function(r) {
-      var cls = r.val===0?'zero':r.val>=r.thresh*3?'crit':'warn';
-      return '<div class="op-risk-item"><span class="op-risk-icon">'+r.icon+'</span><span class="op-risk-label">'+r.label+'</span><span class="op-risk-val '+cls+'">'+r.val+'</span></div>';
-    }).join('');
-  }
-
-  // ── T06: Distribución de estados ─────────────────────────────────────
+  // ── Distribución de estados ───────────────────────────────────────
   if (window.renderEstadosChart) renderEstadosChart(_stats);
 
-  // ── T07: Cuello de botella ────────────────────────────────────────────
+  // ── Cuello de botella ─────────────────────────────────────────────
   var botEl = document.getElementById('pe-botella');
   if (botEl) {
     var pipe   = _stats.pipeline || [];
     var sorted = pipe.filter(function(p){ return p.count>0; }).sort(function(a,b){ return b.count-a.count; });
-    if (sorted.length === 0) {
+    if (!sorted.length) {
       botEl.innerHTML = '<div style="color:var(--text-3);font-size:11px;padding:8px 0">Sin registros en proceso</div>';
     } else {
       var top    = sorted[0];
-      var topPct = Math.round(top.count / Math.max(_stats.total,1) * 100);
+      var topPct = Math.round(top.count/Math.max(total,1)*100);
       botEl.innerHTML =
         '<div class="op-bottle-main">' +
           '<div class="op-bottle-estado">'+esc(top.estado)+'</div>' +
@@ -1429,82 +1422,76 @@ function renderPanelEjecutivo() {
           '<div class="op-bar"><div class="op-bar-fill" data-pct="'+topPct+'" style="width:0%"></div></div>' +
         '</div>' +
         '<div class="op-bottle-others">' +
-          sorted.slice(1,4).map(function(p) {
-            var p2 = Math.round(p.count/Math.max(_stats.total,1)*100);
-            var label = p.estado.replace('equipo nuevo','').replace('equipo anterior','').trim();
-            return '<div class="op-bottle-other-row"><span>'+esc(label)+'</span><span>'+p.count+' · '+p2+'%</span></div>';
-          }).join('') +
-        '</div>';
+        sorted.slice(1,4).map(function(p){
+          var p2=Math.round(p.count/Math.max(total,1)*100);
+          var lbl=p.estado.replace('equipo nuevo','').replace('equipo anterior','').trim();
+          return '<div class="op-bottle-other-row"><span>'+esc(lbl)+'</span><span>'+p.count+' · '+p2+'%</span></div>';
+        }).join('')+'</div>';
       setTimeout(function(){botEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},140);
     }
   }
 
-  // ── T08: Calidad del dato (con barras) ────────────────────────────────
-  var calEl = document.getElementById('pe-calidad');
-  if (calEl) {
-    var c = _stats.calidad || {};
-    var tot = Math.max(_stats.total||0, 1);
-    var sinActaCalidad = Math.max(0, (_stats.total||0) - (_stats.actas||0));
-    var QUALITY = [
-      {label:'Sin serial',  val: c.sinSerial||0},
-      {label:'Sin ciudad',  val: c.sinCiudad||0},
-      {label:'Sin empresa', val: c.sinEmpresa||0},
-      {label:'Sin técnico', val: c.sinTecnico||0},
-      {label:'Sin acta',    val: sinActaCalidad},
-      {label:'Sin AF',      val: c.sinAF||0},
-    ];
-    calEl.innerHTML = QUALITY.map(function(q) {
-      var pct = Math.round(q.val/tot*100);
-      var cls = q.val===0?'ok':pct>20?'crit':'warn';
-      return '<div class="op-quality-row">' +
-        '<span class="op-quality-label">'+q.label+'</span>' +
-        '<div style="flex:1;margin:0 8px"><div class="op-bar" style="height:4px"><div class="op-bar-fill" style="width:'+pct+'%;background:'+(cls==='ok'?'var(--green)':cls==='crit'?'var(--accent)':'var(--amber)')+'"></div></div></div>' +
-        '<span class="op-quality-val '+cls+'">'+q.val+'</span>' +
-        '</div>';
-    }).join('');
+  // ── TASK 06: Novedades (equipos cruzados) ────────────────────────
+  var novedades = _allStats.novedades || [];
+  set('pe-novedades-count', novedades.length);
+  var novListEl = document.getElementById('pe-novedades-list');
+  if (novListEl) {
+    if (novedades.length === 0) {
+      novListEl.innerHTML = '<div style="color:var(--green);font-size:11px">Sin equipos cruzados</div>';
+    } else {
+      novListEl.innerHTML = '<div style="overflow:auto;max-height:160px">' +
+        '<table style="width:100%;border-collapse:collapse;font-size:10px">' +
+        '<thead><tr style="background:var(--accent);color:#fff">' +
+        '<th style="padding:4px 6px">Usuario</th>' +
+        '<th style="padding:4px 6px">Emp. usuario</th>' +
+        '<th style="padding:4px 6px">Emp. activo</th>' +
+        '<th style="padding:4px 6px">AF</th>' +
+        '<th style="padding:4px 6px">Serial</th>' +
+        '<th style="padding:4px 6px">Ciudad</th>' +
+        '</tr></thead>' +
+        '<tbody>' +
+        novedades.map(function(n,i){
+          return '<tr style="background:'+(i%2===0?'var(--bg-2,#f9f9f9)':'#fff')+'">'+
+            '<td style="padding:3px 6px">'+esc(n.nombre)+'</td>'+
+            '<td style="padding:3px 6px;color:var(--accent);font-weight:700">'+n.empresaUsuario+'</td>'+
+            '<td style="padding:3px 6px;color:var(--green);font-weight:700">'+n.empresa+'</td>'+
+            '<td style="padding:3px 6px">'+n.af+'</td>'+
+            '<td style="padding:3px 6px">'+n.serial+'</td>'+
+            '<td style="padding:3px 6px">'+esc(n.ciudad)+'</td>'+
+            '</tr>';
+        }).join('') +
+        '</tbody></table></div>';
+    }
   }
 
-  // ── Devoluciones (completo) ───────────────────────────────────────────
+  // ── Devoluciones ─────────────────────────────────────────────────
   var devEl = document.getElementById('pe-devoluciones-list');
   if (devEl) {
-    var devTotal = _stats.devoluciones        || 0;
-    var devPend  = _stats.devolucionesPendientes || 0;
-    var devRec   = Math.max(0, devTotal - devPend);
+    var devPend = _stats.devolucionesPendientes || 0;
+    var devRec  = Math.max(0, (_stats.devoluciones||0) - devPend);
     devEl.innerHTML =
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">' +
-        '<div style="background:var(--bg-2,#f9f9f9);border-radius:6px;padding:8px;border-left:3px solid var(--accent)">' +
-          '<div style="font-family:Inter Tight,sans-serif;font-size:22px;font-weight:900;color:var(--accent)">'+devPend+'</div>' +
-          '<div style="font-size:10px;color:var(--text-3)">Pend. recepción</div>' +
-        '</div>' +
-        '<div style="background:var(--bg-2,#f9f9f9);border-radius:6px;padding:8px;border-left:3px solid var(--green)">' +
-          '<div style="font-family:Inter Tight,sans-serif;font-size:22px;font-weight:900;color:var(--green)">'+devRec+'</div>' +
-          '<div style="font-size:10px;color:var(--text-3)">Recibidas</div>' +
-        '</div>' +
+        '<div style="background:var(--bg-2,#f9f9f9);border-radius:6px;padding:8px;border-left:3px solid var(--accent)"><div style="font-family:Inter Tight,sans-serif;font-size:22px;font-weight:900;color:var(--accent)">'+devPend+'</div><div style="font-size:10px;color:var(--text-3)">Pend. recepción</div></div>' +
+        '<div style="background:var(--bg-2,#f9f9f9);border-radius:6px;padding:8px;border-left:3px solid var(--green)"><div style="font-family:Inter Tight,sans-serif;font-size:22px;font-weight:900;color:var(--green)">'+devRec+'</div><div style="font-size:10px;color:var(--text-3)">Recibidas</div></div>' +
       '</div>' +
-      '<div class="panel-stat-row"><span class="panel-stat-label">Total iniciadas</span><span class="panel-stat-val">'+devTotal+'</span></div>';
+      '<div class="panel-stat-row"><span class="panel-stat-label">Total iniciadas</span><span class="panel-stat-val">'+(_stats.devoluciones||0)+'</span></div>';
   }
 
-  // ── Aprobaciones (con estructura aunque sea 0) ────────────────────────
-  var aprob = _stats.aprobaciones || {pendientes:0, completadas:0, rechazadas:0};
+  // ── Aprobaciones ─────────────────────────────────────────────────
+  var aprob = _stats.aprobaciones || {pendientes:0,completadas:0,rechazadas:0};
   set('pe-aprobaciones', aprob.pendientes);
-  set('pe-correccion', aprob.rechazadas || 0);
-  set('pe-bloqueados', 0);
-  // Subtítulo contextual
-  var subEl = document.querySelector('#view-panel .panel-kpi-sub');
-  if (aprob.pendientes === 0) {
-    var pSub = document.getElementById('view-panel') && document.querySelector('#view-panel .panel-kpi-sub');
-    // no cambiar el subtítulo del hero — el de aprobaciones está en el HTML estático
-  }
+  set('pe-correccion',   aprob.rechazadas   || 0);
+  set('pe-bloqueados',   0);
 
-  // ── Destino RAEE ─────────────────────────────────────────────────────
-  var _raeeD = _stats.raeeDistrib || {};
-  var _allRaee = _allStats.raeeDistrib || _raeeD;
-  set('pe-destino-raee',    _allRaee['RAEE']                    || _raeeD['RAEE'] || 0);
-  set('pe-destino-venta',   _allRaee['Venta interna empleado']  || _allRaee['Venta interna'] || 0);
-  set('pe-destino-reasign', _allRaee['Reasignable']             || _allRaee['Reasignación interna'] || 0);
-  set('pe-destino-donacion',_allRaee['Donación']                || _allRaee['Donacion'] || 0);
-  var destTotal = Object.values(_allRaee).reduce(function(s,v){return s+v;},0);
-  set('pe-destino-total', destTotal > 0 ? destTotal+' con recomendación RAEE' : 'Sin recomendación asignada aún');
+  // ── Destino RAEE ─────────────────────────────────────────────────
+  var _raeeD = _allStats.raeeDistrib || {};
+  var destTotal = 0;
+  Object.keys(_raeeD).forEach(function(k){ destTotal += _raeeD[k]; });
+  set('pe-destino-total',   destTotal > 0 ? destTotal+' con recomendación RAEE' : 'Sin recomendación asignada');
+  set('pe-destino-raee',    _raeeD['RAEE']                    || 0);
+  set('pe-destino-venta',   _raeeD['Venta interna empleado']  || _raeeD['Venta interna'] || 0);
+  set('pe-destino-reasign', _raeeD['Reasignable']             || _raeeD['Reasignación interna'] || 0);
+  set('pe-destino-donacion',_raeeD['Donación']                || _raeeD['Donacion'] || 0);
 }
 window.renderPanelEjecutivo = renderPanelEjecutivo;
 

@@ -190,6 +190,8 @@ function buildDashboardStats(users) {
     cueloBotella: bottle,
     riesgos:      riesgos,
     aprobaciones: aprobaciones,
+    // STAB-v15 TASK 07: cruces de empresa (activo ≠ empresa usuario)
+    novedades: (window.CompanyMismatchService ? CompanyMismatchService.detectMismatch(all) : []),
   };
 }
 window.buildDashboardStats = buildDashboardStats;

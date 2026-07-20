@@ -769,18 +769,24 @@
 
 
 
-          <div class="panel-card" style="padding:12px 14px">
-            <div class="panel-card-title" style="margin-bottom:8px">Riesgos operativos</div>
-            <div id="pe-riesgos-op"></div>
-            <div id="pe-backup-list" style="display:none"></div>
-          </div>
+
+
+
+
+
           <div class="panel-card" style="padding:12px 14px">
             <div class="panel-card-title" style="margin-bottom:8px">Cuello de botella</div>
             <div id="pe-botella"></div>
           </div>
-          <div class="panel-card" style="padding:12px 14px">
-            <div class="panel-card-title" style="margin-bottom:8px">Calidad del dato</div>
-            <div id="pe-calidad"></div>
+
+
+
+
+          <div class="panel-card">
+            <div class="panel-card-title">Novedades</div>
+            <div id="pe-novedades-count" style="font-family:'Inter Tight',sans-serif;font-size:26px;font-weight:900;color:var(--accent);line-height:1;padding:6px 0">0</div>
+            <div id="pe-novedades-sub" style="font-size:10px;color:var(--text-3);margin-bottom:8px">equipos cruzados</div>
+            <div id="pe-novedades-list"></div>
           </div>
           <div class="panel-card">
             <div class="panel-card-title">Devoluciones</div>
@@ -1104,7 +1110,8 @@
 <!-- 10. Actualización: ConflictDetector, listeners online/offline -->
 <script src="js/refresh.js"></script>
 <!-- 11. Dashboard: KPIService, IntegrityService, DashboardFactory, renders -->
-<script src="js/dashboard.js"></script>
+<script src="js/mismatches.js"></script>
+  <script src="js/dashboard.js"></script>
 <!-- 12. UI: vistas, modales, filtros, reportes, aprobaciones -->
 <script src="js/ui.js"></script>
 <!-- 13. Bootstrap: BootstrapManager, boot(), RC2_doLogin -->
