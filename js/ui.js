@@ -55,6 +55,16 @@ function renderResumen() {
   // STAB-v12.1: usar porEmpresa.backup
   var _peAll = m.porEmpresa || {};
   if (_bcSubEl) _bcSubEl.textContent = ((_peAll['HBT']||{}).backup||0) + ' HBT · ' + ((_peAll['HGS']||{}).backup||0) + ' HGS (backup)';
+
+  // STAB-v16 TASK 1: subtítulo del Total con desglose asignados + backup
+  var _tSubEl = document.getElementById('k-total-sub');
+  var _activosCount = (_allCount || 0) - (_backupCount || 0);
+  if (_tSubEl) _tSubEl.textContent = _activosCount + ' asignados + ' + (_backupCount || 0) + ' backup';
+
+  // STAB-v16 TASK 1: renovaciones completadas (Renovación completada + Cerrado)
+  var _completadas = 0;
+  if (m.estados) _completadas = (m.estados['Renovación completada']||0) + (m.estados['Cerrado']||0);
+  _setText('k-completadas', _completadas);
   
   _setText('b-usuarios', _allCount);
   const provName = (DataService.providerName ? DataService.providerName() : 'Mock');
@@ -426,29 +436,39 @@ window.updateAprobacionesItem = updateAprobacionesItem;
 
 // ═══ CIUDADES ═══
 function renderCiudades() {
-  // Auditoría Final: usa TODOS los registros para que Σ = total equipos
+  // STAB-v16 TASK 2: ciudades con barras de progreso, entregados, pendientes, total, %
   var allRecords = DataService.getRenewals({});
   const cityMap = {};
   allRecords.forEach(u => {
     const c = u.ciudad ? u.ciudad : 'Sin ciudad';
-    if (!cityMap[c]) cityMap[c] = { total: 0, entregados: 0, backup: 0 };
+    if (!cityMap[c]) cityMap[c] = { total:0, entregados:0, pendientes:0, backup:0 };
     cityMap[c].total++;
     if (isBackup(u)) cityMap[c].backup++;
+    if (u.estado === 'Pendiente') cityMap[c].pendientes++;
     if (u.fecha_entrega || ['Entregado equipo nuevo','Pendiente devolución equipo anterior','En tránsito equipo anterior','Equipo anterior recibido','Renovación completada','Pendiente aprobación','Cerrado','Entregado','Completado'].indexOf(u.estado) >= 0) cityMap[c].entregados++;
   });
   const sorted = Object.entries(cityMap).sort((a,b) => b[1].total - a[1].total);
-  // STAB-v11 TASK 07: fuente única — buildDashboardStats para KPIs
-  var _bdsGlobal = window.DashboardStats ? DashboardStats.compute(allRecords) : {};
   $('cities-grid').innerHTML = sorted.map(entry => {
     const city = entry[0], s = entry[1];
     const pct = s.total > 0 ? Math.round(s.entregados / s.total * 100) : 0;
-    return '<div class="city-card" onclick="filterByCity(\'' + esc(city).replace(/\'/g, "\\\'") + '\')">' +
+    const barCls = pct >= 80 ? 'grn' : pct >= 40 ? 'amb' : '';
+    return '<div class="city-card" onclick="filterByCity(\'' + esc(city).replace(/\'/g,"\\\'") + '\')">' +
       '<div class="city-card-name">' + esc(city) + '</div>' +
       '<div class="city-card-total">' + s.total + '</div>' +
-      '<div class="city-card-sub">' + s.entregados + ' entregados · ' + pct + '%</div>' +
+      '<div class="city-card-sub" style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;font-size:10px;margin-top:4px">' +
+        '<span style="color:var(--green,#16A34A);font-weight:700">' + s.entregados + ' ent</span>' +
+        '<span style="color:var(--accent);font-weight:700">' + s.pendientes + ' pend</span>' +
+        (s.backup > 0 ? '<span style="color:var(--text-3)">' + s.backup + ' bk</span>' : '') +
+        '<span style="font-weight:900">' + pct + '%</span>' +
+      '</div>' +
+      '<div class="op-bar" style="margin-top:6px;height:5px"><div class="op-bar-fill ' + barCls + '" style="width:0%" data-pct="' + pct + '"></div></div>' +
       '</div>';
   }).join('');
-  // STAB-v11 TASK 05: city KPI table eliminado — solo vive en Reportes Ejecutivos
+  setTimeout(function(){
+    document.querySelectorAll('#cities-grid .op-bar-fill[data-pct]').forEach(function(b){
+      b.style.width = b.dataset.pct + '%';
+    });
+  }, 100);
 }
 
 // ═══ DEVOLUCIONES ═══
@@ -498,19 +518,24 @@ function renderReportesEjecutivos() {
   var ejEl = document.getElementById('view-ejecutivos-content');
   if (!ejEl) return;
   var all   = window.DataService ? DataService.getRenewals({}) : [];
-  var _bds  = window.DashboardStats ? DashboardStats.compute(all) : {};
+  // STAB-v16 TASK 12: _allStats sobre TODOS los registros (incluye backups) para totales oficiales
+  var _allStats = window.DashboardStats ? DashboardStats.get() : {};
+  // _bds sobre activos (sin backup) para pipeline, técnicos, riesgos
+  var _bds  = window.DashboardStats ? DashboardStats.compute(all.filter(function(r){ return !isBackup(r); })) : {};
   var activos = all.filter(function(u){ return !isBackup(u); });
 
-  // ── Panel 1: Cumplimiento por empresa ──
+  // ── Panel 1: Cumplimiento por empresa (TASK 12: datos oficiales) ──
+  // HBT: 85 asignados + 3 backup = 88 total
+  // HGS: 57 asignados + 1 backup = 58 total
   var p1 = ['HBT','HGS'].map(function(emp) {
-    // STAB-v12.1: porEmpresa canónico con operativos/backup/envio/actas
-    var d = (_bds.porEmpresa && _bds.porEmpresa[emp]) || { total:0, operativos:0, backup:0, pendientes:0, proceso:0, envio:0, entregados:0, actas:0, cerrados:0, pct:0 };
+    var d = (_allStats.porEmpresa && _allStats.porEmpresa[emp]) ||
+            { total:0, operativos:0, backup:0, pendientes:0, proceso:0, envio:0, entregados:0, actas:0, cerrados:0, pct:0 };
     return '<div class="exec-empresa-card">' +
       '<div class="exec-empresa-label">' + emp + '</div>' +
       '<div class="exec-empresa-grid">' +
-      '<div><div class="exec-stat-v">' + d.total + '</div><div class="exec-stat-l">Total</div></div>' +
-      '<div><div class="exec-stat-v">' + d.operativos + '</div><div class="exec-stat-l">Operativos</div></div>' +
+      '<div><div class="exec-stat-v">' + d.operativos + '</div><div class="exec-stat-l">Asignados</div></div>' +
       '<div><div class="exec-stat-v">' + d.backup + '</div><div class="exec-stat-l">Backup</div></div>' +
+      '<div><div class="exec-stat-v" style="color:var(--r);font-weight:900">' + d.total + '</div><div class="exec-stat-l"><strong>Total</strong></div></div>' +
       '<div><div class="exec-stat-v acc">' + d.pendientes + '</div><div class="exec-stat-l">Pendientes</div></div>' +
       '<div><div class="exec-stat-v amb">' + d.proceso + '</div><div class="exec-stat-l">Proceso</div></div>' +
       '<div><div class="exec-stat-v grn">' + d.entregados + '</div><div class="exec-stat-l">Entregados</div></div>' +
@@ -546,16 +571,7 @@ function renderReportesEjecutivos() {
       '</div>';
   }).join('') + '</div>' + (bottle.estado ? '<div class="pipe-bottle-note">⚠ Cuello de botella: ' + esc(bottle.estado) + ' (' + (bottle.count||0) + ' equipos)</div>' : '');
 
-  // ── Panel 4: Calidad de datos ──
-  var cal = _bds.calidad || {};
-  var p4 = '<table class="tbl"><thead><tr><th>Campo</th><th>Sin datos</th><th>% incompleto</th></tr></thead><tbody>' +
-    [['Sin técnico',cal.sinTecnico],['Sin ciudad',cal.sinCiudad],['Sin empresa',cal.sinEmpresa],
-     ['Sin serial',cal.sinSerial],['Sin acta',cal.sinActa]].map(function(r) {
-      var pct = cal.total > 0 ? Math.round(r[1]/cal.total*100) : 0;
-      var cls = pct > 20 ? 'color:var(--accent)' : pct > 5 ? 'color:var(--amber)' : 'color:var(--green)';
-      return '<tr><td>' + r[0] + '</td><td style="' + cls + ';font-weight:700">' + (r[1]||0) + '</td><td>' + pct + '%</td></tr>';
-    }).join('') + '</tbody></table>';
-
+  // STAB-v16 TASK 08: Panel Calidad de datos eliminado — sin valor operativo
   // ── Panel 5: Riesgos ──
   var ris = _bds.riesgos || {};
   var p5 = '<div class="exec-riesgos">' +
@@ -574,7 +590,6 @@ function renderReportesEjecutivos() {
     '<div class="exec-section"><div class="exec-section-title">Cumplimiento por empresa</div>' + p1 + '</div>' +
     '<div class="exec-section"><div class="exec-section-title">Ranking técnicos</div>' + p2 + '</div>' +
     '<div class="exec-section"><div class="exec-section-title">Pipeline REN26</div>' + p3 + '</div>' +
-    '<div class="exec-section"><div class="exec-section-title">Calidad de datos</div>' + p4 + '</div>' +
     '<div class="exec-section"><div class="exec-section-title">Riesgos ejecutivos</div>' + p5 + '</div>';
   // Animar barras
   setTimeout(function() {
@@ -616,15 +631,45 @@ function setReport(type, btn) {
   // BUG-02 fix: break en cada case para evitar fall-through
   // BUG-03 fix: state.repFilters inicializado con guard
   if (!state.repFilters) state.repFilters = {};
+  // STAB-v16 TASK 7: cada reporte filtra EXCLUSIVAMENTE sus estados canónicos
+  // Excepción: 'entregados' cuenta hito acumulativo (usuario recibió equipo aunque luego cambie)
+  var ENTREGADO_STATES = ['Entregado equipo nuevo','Pendiente devolución equipo anterior',
+                          'En tránsito equipo anterior','Equipo anterior recibido',
+                          'Pendiente aprobación','Renovación completada','Cerrado'];
+  var DEVOLUCION_STATES = ['Pendiente devolución equipo anterior','En tránsito equipo anterior','Equipo anterior recibido'];
   switch(type) {
-    case 'alistamiento': filtered = base.filter(function(u){ return u.estado && u.estado !== 'Pendiente'; }); title = 'REP-01 · En proceso'; break;
-    case 'entregados':   filtered = base.filter(function(u){ return u.fecha_entrega||u.fecha_envio_acta||u.fecha_firma_acta||u.acta_entrega_url; }); title = 'REP-02 · Entregados'; break;
-    case 'actas':        filtered = base.filter(function(u){ return !!u.fecha_firma_acta; }); title = 'REP-03 · Actas firmadas'; break;
-    case 'devoluciones': filtered = base.filter(function(u){ return !!u.fecha_solicitud_devolucion; }); title = 'REP-04 · En devolución'; break;
-    case 'finalizados':  filtered = base.filter(function(u){ return u.estado === 'Renovación completada' || u.estado === 'Completado'; }); title = 'REP-05 · Finalizados'; break;
-    case 'feedback':     filtered = base.filter(function(u){ return (u.feedback||0) > 0; }); title = 'REP-06 · Con feedback'; break;
-    case 'raee':         filtered = base.filter(function(u){ return !!u.recomendacion_raee; }); title = 'REP-07 · Clasificación RAEE'; break;
-    default:             filtered = base; title = 'Reporte general'; break;
+    case 'alistamiento':
+      filtered = base.filter(function(u){ return u.estado === 'Alistamiento'; });
+      title = 'REP-01 · En alistamiento'; break;
+    case 'envio':
+      filtered = base.filter(function(u){ return u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo'; });
+      title = 'REP-02 · En envío'; break;
+    case 'pendientes':
+      filtered = base.filter(function(u){ return u.estado === 'Pendiente'; });
+      title = 'REP-03 · Pendientes'; break;
+    case 'entregados':
+      // HITO acumulativo: usuario recibió equipo aunque luego cambie de estado
+      filtered = base.filter(function(u){ return !!u.fecha_entrega || ENTREGADO_STATES.indexOf(u.estado) >= 0; });
+      title = 'REP-04 · Entregados'; break;
+    case 'actas':
+      filtered = base.filter(function(u){ return !!u.fecha_firma_acta; });
+      title = 'REP-05 · Actas firmadas'; break;
+    case 'devoluciones':
+      filtered = base.filter(function(u){ return DEVOLUCION_STATES.indexOf(u.estado) >= 0; });
+      title = 'REP-06 · Devoluciones'; break;
+    case 'finalizados':
+      // Estrictamente terminados — NO estados intermedios
+      filtered = base.filter(function(u){ return u.estado === 'Renovación completada' || u.estado === 'Cerrado'; });
+      title = 'REP-07 · Finalizados'; break;
+    case 'feedback':
+      filtered = base.filter(function(u){ return (u.feedback||0) > 0; });
+      title = 'REP-08 · Con feedback'; break;
+    case 'raee':
+      filtered = base.filter(function(u){ return !!u.recomendacion_raee; });
+      title = 'REP-09 · Clasificación RAEE'; break;
+    default:
+      filtered = base;
+      title = 'Reporte general'; break;
   }
   // BUG-01 fix: declarar activeFilters antes de usarlo
   var activeFilters = [];
@@ -1382,25 +1427,7 @@ function renderPanelEjecutivo() {
     setTimeout(function(){tecEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},100);
   }
 
-  // ── Cumplimiento por empresa (TASK 04) ───────────────────────────
-  var cumEl = document.getElementById('pe-cumplimiento');
-  if (cumEl) {
-    // TASK 04: usar _allStats.porEmpresa (total real = asignados + backup)
-    cumEl.innerHTML = ['HBT','HGS'].map(function(emp) {
-      var d = (_allStats.porEmpresa && _allStats.porEmpresa[emp]) || {total:0,operativos:0,backup:0,entregados:0,pendientes:0,pct:0};
-      return '<div class="op-cum-row">' +
-        '<span class="op-cum-empresa">'+emp+'</span>' +
-        '<div style="flex:1">' +
-          '<div style="font-size:9px;color:var(--text-3);display:flex;gap:10px;margin-bottom:2px">' +
-            '<span>'+d.operativos+' asig · '+d.backup+' bk · <strong>'+d.total+' total</strong></span>' +
-          '</div>' +
-          '<div class="op-cum-nums"><span class="grn">'+d.entregados+' ent</span><span>'+d.pendientes+' pend</span></div>' +
-          '<div class="op-bar op-cum-bar-wrap"><div class="op-bar-fill grn" data-pct="'+d.pct+'" style="width:0%"></div></div>' +
-        '</div>' +
-        '<span class="op-cum-pct">'+d.pct+'%</span></div>';
-    }).join('');
-    setTimeout(function(){cumEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},120);
-  }
+  // STAB-v16 TASK 10: Cumplimiento eliminado de Seguimiento — vive solo en Ejecutivos
 
   // ── Distribución de estados ───────────────────────────────────────
   if (window.renderEstadosChart) renderEstadosChart(_stats);
@@ -1484,14 +1511,28 @@ function renderPanelEjecutivo() {
   set('pe-bloqueados',   0);
 
   // ── Destino RAEE ─────────────────────────────────────────────────
+  // STAB-v16 TASK 6: mapeo robusto — valores reales del Excel son
+  // "Reasignacion" (sin ó), "Donacion" (sin ó), "Venta interna empleado", "RAEE"
   var _raeeD = _allStats.raeeDistrib || {};
   var destTotal = 0;
   Object.keys(_raeeD).forEach(function(k){ destTotal += _raeeD[k]; });
+  // Sumar todas las variantes de cada categoría
+  var _raeeCount     = (_raeeD['RAEE'] || 0);
+  var _ventaCount    = (_raeeD['Venta interna empleado'] || 0) + (_raeeD['Venta interna'] || 0) + (_raeeD['Venta'] || 0);
+  var _reasignCount  = (_raeeD['Reasignacion'] || 0) + (_raeeD['Reasignación'] || 0) + (_raeeD['Reasignable'] || 0) + (_raeeD['Reasignación interna'] || 0) + (_raeeD['Reasignacion interna'] || 0);
+  var _donacionCount = (_raeeD['Donacion'] || 0) + (_raeeD['Donación'] || 0);
   set('pe-destino-total',   destTotal > 0 ? destTotal+' con recomendación RAEE' : 'Sin recomendación asignada');
-  set('pe-destino-raee',    _raeeD['RAEE']                    || 0);
-  set('pe-destino-venta',   _raeeD['Venta interna empleado']  || _raeeD['Venta interna'] || 0);
-  set('pe-destino-reasign', _raeeD['Reasignable']             || _raeeD['Reasignación interna'] || 0);
-  set('pe-destino-donacion',_raeeD['Donación']                || _raeeD['Donacion'] || 0);
+  set('pe-destino-raee',    _raeeCount);
+  set('pe-destino-venta',   _ventaCount);
+  set('pe-destino-reasign', _reasignCount);
+  set('pe-destino-donacion',_donacionCount);
+  // Validación de consistencia: suma de categorías = total
+  var _categorizado = _raeeCount + _ventaCount + _reasignCount + _donacionCount;
+  if (_categorizado !== destTotal && destTotal > 0) {
+    // Log de diagnóstico si hay huérfanos (categorías no reconocidas)
+    var _huerfanos = destTotal - _categorizado;
+    console.warn('[RAEE] '+_huerfanos+' registros con recomendación no categorizada. Distribución real:', _raeeD);
+  }
 }
 window.renderPanelEjecutivo = renderPanelEjecutivo;
 
@@ -1653,6 +1694,15 @@ function saveRecord() {
     var _currentU = window.DataService ? DataService.getRenewal(id) : null;
     if (_currentU) changes.version = (Number(_currentU.version) || 0) + 1;
 
+    // ═══ GH3.41: Snapshot pre-PATCH para auditoría diferida ══════════
+    // Capturamos el registro ANTES de que updateRenewal lo modifique en memoria.
+    // La escritura a AUDITORIA ocurre SOLO si Graph confirma el PATCH exitoso.
+    var _auditSnapshot = null;
+    if (window.AuditService && _currentU) {
+      _auditSnapshot = {};
+      Object.keys(changes).forEach(function(k) { _auditSnapshot[k] = _currentU[k]; });
+    }
+
     if (window.DataService) DataService.updateRenewal(id, changes, window.state && state.user);
     // STAB-v11 TASK 01: auto-enqueue cuando estado cambia a 'Pendiente aprobación'
     if (changes.estado === 'Pendiente aprobación' && window.ApprovalService && ApprovalService.requestValidation) {
@@ -1680,6 +1730,35 @@ function saveRecord() {
           if (window.state) state._syncInProgress = false;
           if (window.toast) toast('✓ Guardado · Sincronizado', 'success');
           if (window._showSyncStatus) _showSyncStatus('ok');
+
+          // ═══ GH3.41: Auditoría diferida — SOLO si Graph confirmó ═════
+          // Escribimos a AUDITORIA cada campo con cambio real (session_id común).
+          // Si esto falla, no rompe el guardado — la auditoría es capa de observación.
+          try {
+            if (window.AuditService && _auditSnapshot) {
+              AuditService.startSession({
+                origen:      'Formulario',
+                modulo:      'Renovaciones',
+                observacion: 'Actualización desde formulario de edición'
+              });
+              Object.keys(changes).forEach(function(field) {
+                // Excluir campos técnicos que no aportan trazabilidad
+                if (field === 'version' || field === '_version') return;
+                AuditService.log({
+                  registro:       id,
+                  campo:          field,
+                  valor_anterior: _auditSnapshot[field],
+                  valor_nuevo:    changes[field]
+                });
+              });
+              AuditService.finishSession().catch(function(e) {
+                console.warn('[audit] finishSession falló (no bloquea):', e && e.message);
+              });
+            }
+          } catch (auditErr) {
+            console.warn('[audit] error no bloqueante:', auditErr && auditErr.message);
+          }
+
           // Propagar a otros usuarios: 1 tick tras 1.5s de propagación Graph
           if (window.SynchronizationManager) {
             if (SynchronizationManager.recordActivity) SynchronizationManager.recordActivity(); // RC-07 TASK 6
@@ -1867,26 +1946,32 @@ function renderBackup() {
     '</div>' +
     '<div class="tbl-wrap"><div class="tbl-scroll"><table class="tbl">' +
     '<thead><tr>' +
-    '<th>ID</th><th>Empresa</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serial (ant.)</th><th>Placa</th><th>Ciudad</th><th>Estado</th><th></th>' +
+    '<th>ID</th><th>Empresa</th><th>Marca</th><th>Modelo</th><th>Serial (nvo)</th><th>Serial (ant)</th><th>AF</th><th>Ciudad</th><th>Estado</th><th>Observaciones</th>' +
     '</tr></thead><tbody>' +
     (data.length === 0
-      ? '<tr><td colspan="10"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Sin equipos backup disponibles</div><div class="empty-sub">No se encontraron resultados con los filtros actuales</div></div></td></tr>'
+      ? '<tr><td colspan="10"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Sin equipos backup</div><div class="empty-sub">No hay equipos backup con los filtros actuales</div></div></td></tr>'
       : data.map(function(u) {
           var safeId = String(u.id).replace(/'/g,'');
-          var estCls = ConfigService && ConfigService.badgeClass ? ConfigService.badgeClass(u.estado||'pendiente') : 'badge-pendiente';
+          var estCls = ConfigService && ConfigService.badgeClass ? ConfigService.badgeClass(u.estado||'pendiente') : 'badge-neutral';
+          // STAB-v16 TASK 03: backups en Excel solo tienen eq_nvo_* llenos
+          var marca  = u.eq_nvo_marca  || u.eq_ant_marca  || '—';
+          var modelo = u.eq_nvo_modelo || u.eq_ant_modelo || '—';
+          var serNvo = u.eq_nvo_serial || '—';
+          var serAnt = u.eq_ant_serial || '—';
+          var af     = u.eq_nvo_af     || u.eq_ant_af     || '—';
+          var obs    = u.observaciones_devolucion || u.notas_alistamiento || '—';
           return '<tr onclick="openEditModal('+safeId+')">' +
             '<td class="td-id">'+esc(u.id||'—')+'</td>' +
             '<td><span class="badge badge-'+(u.empresa||'').toLowerCase()+'">'+esc(u.empresa||'—')+'</span></td>' +
-            '<td>'+esc(u.eq_ant_tipo||'—')+'</td>' +
-            '<td class="td-strong">'+esc(u.eq_ant_marca||'—')+'</td>' +
-            '<td>'+esc(u.eq_ant_modelo||'—')+'</td>' +
-            '<td class="td-mono">'+esc(u.eq_ant_serial||'—')+'</td>' +
-            '<td class="td-mono">'+esc(u.eq_ant_placa||'—')+'</td>' +
+            '<td class="td-strong">'+esc(marca)+'</td>' +
+            '<td>'+esc(modelo)+'</td>' +
+            '<td class="td-mono">'+esc(serNvo)+'</td>' +
+            '<td class="td-mono td-soft">'+esc(serAnt)+'</td>' +
+            '<td class="td-mono">'+esc(af)+'</td>' +
             '<td class="td-soft">'+esc(u.ciudad||'—')+'</td>' +
             '<td><span class="badge '+estCls+'">'+esc(u.estado||'Pendiente')+'</span></td>' +
-            '<td class="td-actions" onclick="event.stopPropagation()">' +
-            '<button class="row-action" onclick="openEditModal('+safeId+')" title="Editar">✏</button>' +
-            '</td></tr>';
+            '<td class="td-soft" style="font-size:11px">'+esc(obs)+'</td>' +
+            '</tr>';
         }).join('')) +
     '</tbody></table></div></div>' +
     '</div>';

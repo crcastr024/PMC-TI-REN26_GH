@@ -281,6 +281,18 @@ async function RC2_doLogin() {
     // Ejecutar Bootstrap
     await BootstrapManager.run(account, token);
 
+    // GH3.41: Registrar LOGIN en AUDITORIA (no bloqueante)
+    try {
+      if (window.AuditService && AuditService.logSystemEvent) {
+        AuditService.logSystemEvent('LOGIN', {
+          origen: 'Sistema',
+          modulo: 'Autenticacion',
+          registro: '0',
+          observacion: 'Inicio de sesión: ' + ((account && (account.username || account.name)) || 'usuario')
+        });
+      }
+    } catch(e) { /* audit no bloquea login */ }
+
   } catch(err) {
     if (errEl) {
       errEl.textContent = 'Error al iniciar sesión: ' + (err.message || 'intente de nuevo');

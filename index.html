@@ -244,41 +244,58 @@
           </div>
         </div>
         <div class="cards-grid">
+          <!-- STAB-v16 TASK 1: orden cronológico del flujo operacional -->
           <div class="metric-card" onclick="goView('usuarios')">
-            <div class="metric-card-head"><span class="metric-card-label">Total</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div></div>
+            <div class="metric-card-head"><span class="metric-card-label">Total equipos</span><div class="metric-card-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M12 3v4"/></svg></div></div>
             <div class="metric-card-val" id="k-total">—</div>
-            <div class="metric-card-sub" id="k-total-sub">Equipos con usuario</div>
+            <div class="metric-card-sub" id="k-total-sub">142 asignados + 4 backup</div>
           </div>
-          <div class="metric-card grn" onclick="setStateFilter('Entregado')">
-            <div class="metric-card-head"><span class="metric-card-label">Entregados</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div></div>
-            <div class="metric-card-val" id="k-entregados">—</div>
-            <div class="metric-card-sub"><strong id="k-pct">0%</strong> completado</div>
+          <div class="metric-card blu" onclick="setStateFilter('Pendiente')">
+            <div class="metric-card-head"><span class="metric-card-label">Pendientes</span><div class="metric-card-icon">⏸</div></div>
+            <div class="metric-card-val" id="k-pendientes">—</div>
+            <div class="metric-card-sub">Sin iniciar</div>
           </div>
           <div class="metric-card amb" onclick="setStateFilter('Alistamiento')">
-            <div class="metric-card-head"><span class="metric-card-label">En alistamiento</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div></div>
+            <div class="metric-card-head"><span class="metric-card-label">En alistamiento</span><div class="metric-card-icon">🔧</div></div>
             <div class="metric-card-val" id="k-alistamiento">—</div>
             <div class="metric-card-sub">En preparación</div>
           </div>
-          <div class="metric-card blu" onclick="setStateFilter('Pendiente')">
-            <div class="metric-card-head"><span class="metric-card-label">Pendientes</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div></div>
-            <div class="metric-card-val" id="k-pendientes">—</div>
-            <div class="metric-card-sub">Por iniciar</div>
+          <div class="metric-card teal" onclick="setMultiStateFilter(['Programado','En tránsito equipo nuevo'])">
+            <div class="metric-card-head"><span class="metric-card-label">En envío</span><div class="metric-card-icon">🚚</div></div>
+            <div class="metric-card-val" id="k-en-envio">—</div>
+            <div class="metric-card-sub">Programado + En tránsito</div>
+          </div>
+          <div class="metric-card grn" onclick="setStateFilter('Entregado')">
+            <div class="metric-card-head"><span class="metric-card-label">Entregados</span><div class="metric-card-icon">✓</div></div>
+            <div class="metric-card-val" id="k-entregados">—</div>
+            <div class="metric-card-sub"><strong id="k-pct">0%</strong> del proceso</div>
+          </div>
+          <div class="metric-card org" onclick="goView('devoluciones')">
+            <div class="metric-card-head"><span class="metric-card-label">Pend. devolución</span><div class="metric-card-icon">↩</div></div>
+            <div class="metric-card-val" id="k-dev-pendientes">—</div>
+            <div class="metric-card-sub">En recolección sin recibir</div>
           </div>
           <div class="metric-card pur">
-            <div class="metric-card-head"><span class="metric-card-label">Actas firmadas</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div></div>
+            <div class="metric-card-head"><span class="metric-card-label">Actas firmadas</span><div class="metric-card-icon">📄</div></div>
             <div class="metric-card-val" id="k-actas">—</div>
             <div class="metric-card-sub">PandaDoc</div>
           </div>
-          <div class="metric-card amb" onclick="goView('backup')">
-            <div class="metric-card-head"><span class="metric-card-label">Backup</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div></div>
-            <div class="metric-card-val" id="k-backup">14</div>
-            <div class="metric-card-sub" id="k-backup-sub">10 HBT + 4 HGS</div>
+          <div class="metric-card grn">
+            <div class="metric-card-head"><span class="metric-card-label">Renovaciones completadas</span><div class="metric-card-icon">🎯</div></div>
+            <div class="metric-card-val" id="k-completadas">—</div>
+            <div class="metric-card-sub">Cerradas + completadas</div>
           </div>
-          <div class="metric-card teal" onclick="setMultiStateFilter(['Programado','En tránsito equipo nuevo'])">
-          <div class="metric-card-head"><span class="metric-card-label">En envío</span><div class="metric-card-icon">✈</div></div>
-          <div class="metric-card-val" id="k-en-envio">—</div>
-          <div class="metric-card-sub">Programado + En tránsito</div>
+          <div class="metric-card" style="border-top-color:var(--text-3,#666)" onclick="goView('backup')">
+            <div class="metric-card-head"><span class="metric-card-label">Backups</span><div class="metric-card-icon">📦</div></div>
+            <div class="metric-card-val" id="k-backup">—</div>
+            <div class="metric-card-sub" id="k-backup-sub">Disponibles en bodega</div>
           </div>
+          <div class="metric-card red" onclick="goView('aprobaciones')">
+            <div class="metric-card-head"><span class="metric-card-label">Por aprobar</span><div class="metric-card-icon">👁</div></div>
+            <div class="metric-card-val" id="k-por-aprobar">—</div>
+            <div class="metric-card-sub">Pendientes validación</div>
+          </div>
+        </div>
           <div class="metric-card red" onclick="goView('aprobaciones')">
           <div class="metric-card-head"><span class="metric-card-label">Por aprobar</span><div class="metric-card-icon">☑</div></div>
           <div class="metric-card-val" id="k-por-aprobar">—</div>
@@ -637,34 +654,6 @@
 
     <!-- ═════ F4 · VISTA: PANEL EJECUTIVO (Visitante) ═════ -->
     <div class="view" id="view-panel">
-    <div class="panel-filter-bar" id="panel-filter-bar">
-      <div class="panel-filter-title">Filtros</div>
-      <select class="panel-filter-sel" id="pf-empresa" onchange="applyPanelFilter('empresa',this.value)">
-        <option value="">Todas las empresas</option>
-      </select>
-      <select class="panel-filter-sel" id="pf-ciudad" onchange="applyPanelFilter('ciudad',this.value)">
-        <option value="">Todas las ciudades</option>
-      </select>
-      <select class="panel-filter-sel" id="pf-proyecto" onchange="applyPanelFilter('proyecto',this.value)">
-        <option value="">Todos los proyectos</option>
-      </select>
-      <select class="panel-filter-sel" id="pf-tecnico" onchange="applyPanelFilter('tecnico',this.value)">
-        <option value="">Todos los técnicos</option>
-      </select>
-      <select class="panel-filter-sel" id="pf-estado" onchange="applyPanelFilter('estado',this.value)">
-        <option value="">Todos los estados</option>
-      </select>
-      <select class="panel-filter-sel" id="pf-feedback" onchange="applyPanelFilter('feedback',this.value)">
-        <option value="">Cualquier feedback</option>
-        <option value="1">★ 1+ estrellas</option>
-        <option value="2">★★ 2+ estrellas</option>
-        <option value="3">★★★ 3+ estrellas</option>
-        <option value="4">★★★★ 4+ estrellas</option>
-        <option value="5">★★★★★ 5 estrellas</option>
-      </select>
-      <button class="panel-filter-clear" onclick="clearPanelFilters()">Limpiar filtros</button>
-      <span class="panel-filter-count" id="pf-count"></span>
-    </div>
       <div class="panel-hero">
         <div class="panel-hero-inner">
           <div class="panel-hero-eyebrow">Panel ejecutivo · PMC-TI-REN26</div>
@@ -726,6 +715,34 @@
           </div>
         </div>
       </div>
+    <div class="panel-filter-bar" id="panel-filter-bar">
+      <div class="panel-filter-title">Filtros</div>
+      <select class="panel-filter-sel" id="pf-empresa" onchange="applyPanelFilter('empresa',this.value)">
+        <option value="">Todas las empresas</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-ciudad" onchange="applyPanelFilter('ciudad',this.value)">
+        <option value="">Todas las ciudades</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-proyecto" onchange="applyPanelFilter('proyecto',this.value)">
+        <option value="">Todos los proyectos</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-tecnico" onchange="applyPanelFilter('tecnico',this.value)">
+        <option value="">Todos los técnicos</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-estado" onchange="applyPanelFilter('estado',this.value)">
+        <option value="">Todos los estados</option>
+      </select>
+      <select class="panel-filter-sel" id="pf-feedback" onchange="applyPanelFilter('feedback',this.value)">
+        <option value="">Cualquier feedback</option>
+        <option value="1">★ 1+ estrellas</option>
+        <option value="2">★★ 2+ estrellas</option>
+        <option value="3">★★★ 3+ estrellas</option>
+        <option value="4">★★★★ 4+ estrellas</option>
+        <option value="5">★★★★★ 5 estrellas</option>
+      </select>
+      <button class="panel-filter-clear" onclick="clearPanelFilters()">Limpiar filtros</button>
+      <span class="panel-filter-count" id="pf-count"></span>
+    </div>
         <div class="panel-grid-2">
 
           <div class="panel-card" style="padding:12px 14px">
@@ -754,12 +771,12 @@
         </div>
 
         <div class="panel-grid-3" style="margin-top:16px">
-          <div class="panel-card" style="padding:12px 14px">
-            <div class="panel-card-title" style="margin-bottom:8px">Cumplimiento</div>
-            <div id="pe-cumplimiento"></div>
-            <canvas id="pe-raee-canvas" style="display:none"></canvas>
-            <div id="pe-raee-labels" style="display:none"></div>
-          </div>
+
+
+
+
+
+
           <div class="panel-card">
             <div class="panel-card-title">Distribución de estados</div>
             <div id="pe-estados-list"></div>
@@ -1111,6 +1128,7 @@
 <script src="js/refresh.js"></script>
 <!-- 11. Dashboard: KPIService, IntegrityService, DashboardFactory, renders -->
 <script src="js/mismatches.js"></script>
+  <script src="js/auditService.js"></script>
   <script src="js/dashboard.js"></script>
 <!-- 12. UI: vistas, modales, filtros, reportes, aprobaciones -->
 <script src="js/ui.js"></script>
