@@ -281,6 +281,35 @@ async function RC2_doLogin() {
     // Ejecutar Bootstrap
     await BootstrapManager.run(account, token);
 
+    // GH3.41: Registrar LOGIN en AUDITORIA (no bloqueante)
+    try {
+      if (window.AuditService && AuditService.logSystemEvent) {
+        AuditService.logSystemEvent('LOGIN', {
+          origen: 'Sistema',
+          modulo: 'Autenticacion',
+          registro: '0',
+          observacion: 'Inicio de sesión: ' + ((account && (account.username || account.name)) || 'usuario')
+        });
+      }
+    } catch(e) { /* audit no bloquea login */ }
+
+    // GH3.41.1 TASK 05: Drenar cola offline al recuperar sesión
+    try {
+      if (window.AuditService && AuditService.drainOfflineQueue) {
+        // Espera 2s a que GraphResolver esté listo, luego drena
+        setTimeout(function() {
+          AuditService.drainOfflineQueue()
+            .then(function(res) {
+              // Silencioso: no exponer a consola en producción
+              if (res && res.drained > 0 && window.EventBus) {
+                EventBus.publish('audit.drained', { count: res.drained });
+              }
+            })
+            .catch(function(){ /* intentional: drain no bloquea login ni sesión */ });
+        }, 2000);
+      }
+    } catch(e) { /* intentional: drain no bloquea login */ }
+
   } catch(err) {
     if (errEl) {
       errEl.textContent = 'Error al iniciar sesión: ' + (err.message || 'intente de nuevo');

@@ -192,7 +192,220 @@ function buildDashboardStats(users) {
     aprobaciones: aprobaciones,
     // STAB-v15 TASK 07: cruces de empresa (activo ≠ empresa usuario)
     novedades: (window.CompanyMismatchService ? CompanyMismatchService.detectMismatch(all) : []),
+
+    // ═══ GH3.42 — Métricas ejecutivas ═══════════════════════════════════
+    proyecto:      _computeProyecto(activos, all),
+    gauge:         _computeGauge(activos, entregados),
+    productividad: _computeProductividad(activos, entregados),
+    burnDown:      _computeBurnDown(activos),
+    proyeccion:    _computeProyeccion(activos, entregados),
+    porCiudadDetalle: _computePorCiudad(activos),
+    destinoFinal:  _computeDestinoFinal(activos),
+    // KPIs acumulativos por hito (para ejecutivo)
+    kpisAcumulativos: {
+      entregados:  entregados,   // ya es acumulativo (fecha_entrega || ENTREGADO_ST)
+      actas:       actas,        // ya es acumulativo (fecha_firma_acta)
+      finalizados: finalizados,  // Renovación completada + Cerrado
+    },
   };
+}
+
+// ═════════════════════════════════════════════════════════════════════
+// GH3.42 — Helpers de cálculo ejecutivo
+// Constantes del proyecto REN26 (01/07/2026 → 15/08/2026)
+// ═════════════════════════════════════════════════════════════════════
+var REN26_INICIO = new Date('2026-07-01T00:00:00');
+var REN26_FIN    = new Date('2026-08-15T23:59:59');
+var REN26_META   = 146;
+
+function _computeProyecto(activos, all) {
+  var hoy         = new Date();
+  var diasTotal   = Math.ceil((REN26_FIN - REN26_INICIO) / 86400000);
+  var diasTrans   = Math.max(0, Math.min(diasTotal, Math.floor((hoy - REN26_INICIO) / 86400000)));
+  var diasRest    = Math.max(0, diasTotal - diasTrans);
+  var pctTiempo   = diasTotal > 0 ? Math.round(diasTrans / diasTotal * 100) : 0;
+  // Semáforo por desviación
+  var totalOp     = activos.length || 1;
+  var entOp       = activos.filter(function(u){ return u.fecha_entrega || _hitoEntregado(u.estado); }).length;
+  var pctReal     = Math.round(entOp / totalOp * 100);
+  var desv        = pctReal - pctTiempo;
+  var semaforo    = desv >= -5 ? 'verde' : desv >= -15 ? 'amarillo' : 'rojo';
+  return {
+    inicio:         REN26_INICIO,
+    fin:            REN26_FIN,
+    hoy:            hoy,
+    diasTotal:      diasTotal,
+    diasTranscurridos: diasTrans,
+    diasRestantes:  diasRest,
+    pctTiempo:      pctTiempo,
+    pctReal:        pctReal,
+    semaforo:       semaforo,
+    inicioTxt:      _fmtDateShort(REN26_INICIO),
+    finTxt:         _fmtDateShort(REN26_FIN),
+    hoyTxt:         _fmtDateShort(hoy),
+  };
+}
+
+function _hitoEntregado(estado) {
+  return ['Entregado equipo nuevo','Pendiente devolución equipo anterior',
+          'En tránsito equipo anterior','Equipo anterior recibido',
+          'Renovación completada','Pendiente aprobación','Cerrado',
+          'Entregado','Completado'].indexOf(estado) >= 0;
+}
+
+function _computeGauge(activos, entregados) {
+  var hoy = new Date();
+  var diasTotal = Math.ceil((REN26_FIN - REN26_INICIO) / 86400000);
+  var diasTrans = Math.max(0, Math.min(diasTotal, Math.floor((hoy - REN26_INICIO) / 86400000)));
+  var esperado = diasTotal > 0 ? Math.round(diasTrans / diasTotal * 100) : 0;
+  var totalOp  = activos.length || 1;
+  var real     = Math.round(entregados / totalOp * 100);
+  var desv     = real - esperado;
+  var estado   = desv >= -5 ? 'ok' : desv >= -15 ? 'warn' : 'critical';
+  return {
+    esperado:   esperado,
+    real:       real,
+    desviacion: desv,
+    estado:     estado
+  };
+}
+
+function _computeProductividad(activos, entregados) {
+  var hoy = new Date();
+  var diasTotal = Math.ceil((REN26_FIN - REN26_INICIO) / 86400000);
+  var diasTrans = Math.max(1, Math.min(diasTotal, Math.floor((hoy - REN26_INICIO) / 86400000)));
+  var diasRest  = Math.max(1, diasTotal - diasTrans);
+  var totalOp   = activos.length || 1;
+  var restantes = Math.max(0, totalOp - entregados);
+  var promedioGlobal  = +(entregados / diasTrans).toFixed(2);
+  // Promedio semanal: mismos entregados / semanas (aproximación conservadora)
+  var semanas         = Math.max(1, diasTrans / 7);
+  var promedioSemanal = +(entregados / semanas).toFixed(1);
+  var ritmoNecesario  = +(restantes / diasRest).toFixed(2);
+  // Entregados por día (histograma últimos 14 días)
+  var histograma = _histogramaEntregas(activos, 14);
+  return {
+    equiposRestantes:  restantes,
+    entregadosHoy:     histograma.length ? histograma[histograma.length - 1].count : 0,
+    promedioGlobal:    promedioGlobal,
+    promedioSemanal:   promedioSemanal,
+    ritmoNecesario:    ritmoNecesario,
+    histograma:        histograma,
+    velocidadOK:       promedioGlobal >= ritmoNecesario,
+  };
+}
+
+function _histogramaEntregas(activos, dias) {
+  var out = [];
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  for (var i = dias - 1; i >= 0; i--) {
+    var d = new Date(hoy); d.setDate(d.getDate() - i);
+    var dNext = new Date(d); dNext.setDate(dNext.getDate() + 1);
+    var c = activos.filter(function(u) {
+      if (!u.fecha_entrega) return false;
+      var fe = new Date(u.fecha_entrega);
+      return fe >= d && fe < dNext;
+    }).length;
+    out.push({ fecha: _fmtDateShort(d), count: c });
+  }
+  return out;
+}
+
+function _computeBurnDown(activos) {
+  // Serie temporal semanal: 01 Jul → 15 Ago
+  var meta       = REN26_META;
+  var diasTotal  = Math.ceil((REN26_FIN - REN26_INICIO) / 86400000);
+  var hoy        = new Date(); hoy.setHours(23,59,59,999);
+  var puntos     = [];
+  var step       = 3; // cada 3 días
+  for (var d = 0; d <= diasTotal; d += step) {
+    var fecha    = new Date(REN26_INICIO); fecha.setDate(fecha.getDate() + d);
+    var esperadoEntregados = Math.round(meta * (d / diasTotal));
+    var esperadoRest       = meta - esperadoEntregados;
+    var realRest = null;
+    if (fecha <= hoy) {
+      var entregadosHastaFecha = activos.filter(function(u) {
+        if (!u.fecha_entrega && !_hitoEntregado(u.estado)) return false;
+        if (!u.fecha_entrega) return true; // si hito pero sin fecha, contar hasta hoy
+        return new Date(u.fecha_entrega) <= fecha;
+      }).length;
+      realRest = meta - entregadosHastaFecha;
+    }
+    puntos.push({
+      fecha:        _fmtDateShort(fecha),
+      esperado:     esperadoRest,
+      real:         realRest,
+      esFuturo:     fecha > hoy
+    });
+  }
+  return puntos;
+}
+
+function _computeProyeccion(activos, entregados) {
+  var hoy = new Date();
+  var diasTrans = Math.max(1, Math.floor((hoy - REN26_INICIO) / 86400000));
+  var totalOp   = activos.length || 1;
+  var restantes = Math.max(0, totalOp - entregados);
+  var velocidad = entregados / diasTrans;
+  if (velocidad <= 0.05) return {
+    fechaEstimada: null,
+    fechaEstimadaTxt: 'Sin datos',
+    diasAdelanto:  null,
+    tipo:          'unknown'
+  };
+  var diasNecesarios = Math.ceil(restantes / velocidad);
+  var fechaEstimada  = new Date(hoy); fechaEstimada.setDate(fechaEstimada.getDate() + diasNecesarios);
+  var diffMs = fechaEstimada - REN26_FIN;
+  var diasVsMeta = Math.round(diffMs / 86400000);
+  return {
+    fechaEstimada:     fechaEstimada,
+    fechaEstimadaTxt:  _fmtDateShort(fechaEstimada),
+    diasAdelanto:      -diasVsMeta,       // positivo = adelanto, negativo = retraso
+    tipo:              diasVsMeta > 3 ? 'retraso' : diasVsMeta < -3 ? 'adelanto' : 'a-tiempo',
+    velocidadDiaria:   +velocidad.toFixed(2)
+  };
+}
+
+function _computePorCiudad(activos) {
+  var out = {};
+  var _hitEntregado = _hitoEntregado;
+  activos.forEach(function(u) {
+    var c = ((window.CityNormalizer ? CityNormalizer.normalize(u.ciudad) : (u.ciudad||'Sin ciudad')) || 'Sin ciudad').trim();
+    if (!c) c = 'Sin ciudad';
+    if (!out[c]) out[c] = { ciudad: c, total: 0, pendientes: 0, proceso: 0, entregados: 0, pct: 0 };
+    out[c].total++;
+    if (u.estado === 'Pendiente') out[c].pendientes++;
+    else if (u.fecha_entrega || _hitEntregado(u.estado)) out[c].entregados++;
+    else out[c].proceso++;
+  });
+  Object.keys(out).forEach(function(c) {
+    out[c].pct = out[c].total ? Math.round(out[c].entregados / out[c].total * 100) : 0;
+  });
+  return out;
+}
+
+function _computeDestinoFinal(activos) {
+  var conRecom = activos.filter(function(u){ return !!u.recomendacion_raee; });
+  var total    = conRecom.length;
+  var norm = function(v) {
+    if (!v) return '';
+    var s = String(v).toLowerCase();
+    if (s.indexOf('raee') >= 0) return 'RAEE';
+    if (s.indexOf('venta') >= 0) return 'Venta';
+    if (s.indexOf('reasign') >= 0) return 'Reasignacion';
+    if (s.indexOf('donac') >= 0) return 'Donacion';
+    return 'Otro';
+  };
+  var out = { RAEE: 0, Venta: 0, Reasignacion: 0, Donacion: 0, Otro: 0, total: total };
+  conRecom.forEach(function(u) { out[norm(u.recomendacion_raee)]++; });
+  // Suma consistente: RAEE + Venta + Reasignacion + Donacion + Otro = total
+  return out;
+}
+
+function _fmtDateShort(d) {
+  if (!d) return '';
+  var meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return String(d.getDate()).padStart(2,'0') + ' ' + meses[d.getMonth()] + ' ' + d.getFullYear();
 }
 window.buildDashboardStats = buildDashboardStats;
 
