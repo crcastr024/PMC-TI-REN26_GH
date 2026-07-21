@@ -99,6 +99,17 @@ function renderResumen() {
   if (window.updateStatsBar) updateStatsBar();
 
   renderMap();
+
+  // GH3.42.3 TASK 01: aplicar regla hide-if-zero a tarjetas de alerta compacta
+  document.querySelectorAll('#view-resumen [data-hide-if-zero]').forEach(function(card) {
+    var targetId = card.getAttribute('data-hide-if-zero');
+    var target = document.getElementById(targetId);
+    if (!target) return;
+    var raw = (target.textContent || '').trim();
+    var v = parseInt(raw, 10);
+    if (isNaN(v) || v === 0) card.classList.add('is-hidden');
+    else card.classList.remove('is-hidden');
+  });
   } catch(e) {
     console.error('[renderResumen]', e.message);
   }
@@ -150,24 +161,44 @@ function renderTecnicoChart() {
 function renderMap() {
   const svg = $('map-svg');
   if (!svg) return;
+  // GH3.42.3 TASK 06: agregado tracking de avance por ciudad para color dinámico
   const cityMap = {};
+  const cityEntregados = {};
   DataService.getRenewals({}).forEach(u => {
     const c = u.ciudad ? u.ciudad : 'Sin ciudad';
     cityMap[c] = (cityMap[c] || 0) + 1;
+    const esHito = u.fecha_entrega ||
+      ['Entregado equipo nuevo','Pendiente devolución equipo anterior',
+       'En tránsito equipo anterior','Equipo anterior recibido',
+       'Renovación completada','Pendiente aprobación','Cerrado',
+       'Entregado','Completado'].indexOf(u.estado) >= 0;
+    if (esHito) cityEntregados[c] = (cityEntregados[c] || 0) + 1;
   });
   const cities = Object.entries(cityMap).sort((a,b) => b[1] - a[1]);
   if (cities.length === 0) { svg.innerHTML = ''; return; }
+
+  // Helper: determinar tono según % avance
+  function _cityColor(pct) {
+    if (pct >= 70) return { fill:'#1F5940', halo:'rgba(31,89,64,.20)', stop1:'#2E7D5A', stop2:'#1F5940' };  // verde
+    if (pct >= 30) return { fill:'#A56617', halo:'rgba(165,102,23,.22)', stop1:'#D97706', stop2:'#A56617' }; // ámbar
+    return                { fill:'#A51C2B', halo:'rgba(165,28,43,.20)', stop1:'#DC2626', stop2:'#A51C2B' };  // rojo
+  }
+
   const cx = 600, cy = 270;
   const main = cities[0];
   const rest = cities.slice(1, 22);
   let content = '';
+
+  // Líneas dashed de conexión (fondo)
   rest.forEach((c, i) => {
     const angle = (i / rest.length) * Math.PI * 2 - Math.PI / 2;
     const dist = 180 + (i % 3) * 60;
     const x = cx + Math.cos(angle) * dist;
     const y = cy + Math.sin(angle) * dist;
-    content += '<line x1="' + cx + '" y1="' + cy + '" x2="' + x + '" y2="' + y + '" stroke="rgba(211,0,52,0.15)" stroke-width="1" stroke-dasharray="2,4"/>';
+    content += '<line x1="' + cx + '" y1="' + cy + '" x2="' + x + '" y2="' + y + '" stroke="rgba(150,150,150,.18)" stroke-width="1" stroke-dasharray="2,4"/>';
   });
+
+  // Nodos periféricos con color por avance
   rest.forEach((c, i) => {
     const angle = (i / rest.length) * Math.PI * 2 - Math.PI / 2;
     const dist = 180 + (i % 3) * 60;
@@ -175,20 +206,33 @@ function renderMap() {
     const y = cy + Math.sin(angle) * dist;
     const radius = Math.max(10, Math.min(28, 10 + c[1] * 1.3));
     const cityEsc = esc(c[0]).replace(/'/g, "\\'");
-    content += '<g style="cursor:pointer" onclick="filterByCity(\'' + cityEsc + '\')">' +
-      '<circle cx="' + x + '" cy="' + y + '" r="' + (radius+8) + '" fill="rgba(211,0,52,0.15)"/>' +
-      '<circle cx="' + x + '" cy="' + y + '" r="' + radius + '" fill="rgba(211,0,52,0.88)" stroke="rgba(255,255,255,0.85)" stroke-width="2"/>' +
-      '<text x="' + x + '" y="' + (y + radius + 18) + '" fill="white" text-anchor="middle" font-size="12" font-weight="700">' + esc(c[0]) + '</text>' +
-      '<text x="' + x + '" y="' + (y + radius + 33) + '" fill="rgba(255,255,255,0.6)" text-anchor="middle" font-size="10">' + c[1] + ' eq.</text>' +
+    const ent = cityEntregados[c[0]] || 0;
+    const pct = Math.round(ent / c[1] * 100);
+    const col = _cityColor(pct);
+    content += '<g class="city-node" style="cursor:pointer" onclick="filterByCity(\'' + cityEsc + '\')">' +
+      '<title>' + esc(c[0]) + ' · ' + c[1] + ' equipos · ' + pct + '% avance</title>' +
+      '<circle cx="' + x + '" cy="' + y + '" r="' + (radius+8) + '" fill="' + col.halo + '"/>' +
+      '<circle cx="' + x + '" cy="' + y + '" r="' + radius + '" fill="' + col.fill + '" stroke="rgba(255,255,255,.9)" stroke-width="2"/>' +
+      '<text x="' + x + '" y="' + (y + 4) + '" fill="white" text-anchor="middle" font-size="10" font-weight="700" style="font-family:ui-monospace,monospace">' + pct + '%</text>' +
+      '<text x="' + x + '" y="' + (y + radius + 16) + '" fill="var(--ink-2,#1F2733)" text-anchor="middle" font-size="12" font-weight="600">' + esc(c[0]) + '</text>' +
+      '<text x="' + x + '" y="' + (y + radius + 30) + '" fill="var(--muted,#6B6660)" text-anchor="middle" font-size="10">' + c[1] + ' eq.</text>' +
       '</g>';
   });
+
+  // Nodo principal con color por avance
   const mr = Math.max(56, Math.min(90, 56 + main[1] * 0.4));
   const mainEsc = esc(main[0]).replace(/'/g, "\\'");
-  content += '<defs><radialGradient id="grad-main"><stop offset="0%" stop-color="#FF1A55"/><stop offset="100%" stop-color="#A5002A"/></radialGradient></defs>' +
-    '<circle cx="' + cx + '" cy="' + cy + '" r="' + (mr+18) + '" fill="none" stroke="rgba(211,0,52,0.35)" stroke-width="1.5"><animate attributeName="r" values="' + (mr+18) + ';' + (mr+34) + ';' + (mr+18) + '" dur="3s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0;0.5" dur="3s" repeatCount="indefinite"/></circle>' +
-    '<circle cx="' + cx + '" cy="' + cy + '" r="' + mr + '" fill="url(#grad-main)" stroke="white" stroke-width="3" style="cursor:pointer" onclick="filterByCity(\'' + mainEsc + '\')"/>' +
-    '<text x="' + cx + '" y="' + (cy - 6) + '" fill="white" text-anchor="middle" font-size="18" font-weight="800">' + esc(main[0]) + '</text>' +
-    '<text x="' + cx + '" y="' + (cy + 16) + '" fill="rgba(255,255,255,0.9)" text-anchor="middle" font-size="12" font-weight="600">' + main[1] + ' equipos</text>';
+  const mainEnt = cityEntregados[main[0]] || 0;
+  const mainPct = Math.round(mainEnt / main[1] * 100);
+  const mainCol = _cityColor(mainPct);
+  content += '<defs><radialGradient id="grad-main"><stop offset="0%" stop-color="' + mainCol.stop1 + '"/><stop offset="100%" stop-color="' + mainCol.stop2 + '"/></radialGradient></defs>' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + (mr+18) + '" fill="none" stroke="' + mainCol.halo + '" stroke-width="1.5"><animate attributeName="r" values="' + (mr+18) + ';' + (mr+34) + ';' + (mr+18) + '" dur="3s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0;0.5" dur="3s" repeatCount="indefinite"/></circle>' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + mr + '" fill="url(#grad-main)" stroke="white" stroke-width="3" style="cursor:pointer" onclick="filterByCity(\'' + mainEsc + '\')">' +
+    '<title>' + esc(main[0]) + ' · ' + main[1] + ' equipos · ' + mainPct + '% avance</title>' +
+    '</circle>' +
+    '<text x="' + cx + '" y="' + (cy - 10) + '" fill="white" text-anchor="middle" font-size="18" font-weight="800" style="pointer-events:none">' + esc(main[0]) + '</text>' +
+    '<text x="' + cx + '" y="' + (cy + 8) + '" fill="rgba(255,255,255,.85)" text-anchor="middle" font-size="12" font-weight="600" style="pointer-events:none;font-family:ui-monospace,monospace">' + mainPct + '%</text>' +
+    '<text x="' + cx + '" y="' + (cy + 24) + '" fill="rgba(255,255,255,.75)" text-anchor="middle" font-size="10" style="pointer-events:none">' + main[1] + ' equipos</text>';
   svg.innerHTML = content;
 }
 
