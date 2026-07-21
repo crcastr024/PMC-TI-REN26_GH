@@ -1179,7 +1179,15 @@ body.sb-collapsed #app-footer {
 .op-tec-stats .grn{color:var(--green)}
 .op-tec-stats .acc{color:var(--accent)}
 
-/* STAB-v15 TASK 03: .op-risk-* eliminado */
+/* ── Task 05: Riesgos Operativos ── */
+.op-risk-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border-light,#f0f0f0)}
+.op-risk-item:last-child{border-bottom:none}
+.op-risk-icon{font-size:13px;flex-shrink:0;width:18px;text-align:center}
+.op-risk-label{flex:1;font-size:11px;color:var(--text-2)}
+.op-risk-val{font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:900;min-width:28px;text-align:right}
+.op-risk-val.zero{color:var(--green)}
+.op-risk-val.warn{color:var(--amber)}
+.op-risk-val.crit{color:var(--accent)}
 
 /* ── Task 07: Cuello de botella ── */
 .op-bottle-main{margin-bottom:10px}
@@ -1191,7 +1199,14 @@ body.sb-collapsed #app-footer {
 .op-bottle-other-row{display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);padding:2px 0;border-bottom:1px solid var(--border-light,#f0f0f0)}
 .op-bottle-other-row:last-child{border-bottom:none}
 
-/* STAB-v15 TASK 03: .op-quality-* eliminado */
+/* ── Task 08: Calidad del dato ── */
+.op-quality-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border-light,#f0f0f0)}
+.op-quality-row:last-child{border-bottom:none}
+.op-quality-label{flex:1;font-size:11px;color:var(--text-2)}
+.op-quality-val{font-family:'Inter Tight',sans-serif;font-size:14px;font-weight:900;min-width:24px;text-align:right}
+.op-quality-val.ok{color:var(--green)}
+.op-quality-val.warn{color:var(--amber)}
+.op-quality-val.crit{color:var(--accent)}
 
 /* ── Task 04: Cumplimiento por empresa ── */
 .op-cum-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-light,#f0f0f0)}
