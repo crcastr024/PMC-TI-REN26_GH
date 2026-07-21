@@ -1427,10 +1427,10 @@ function renderPanelEjecutivo() {
   var vEl = document.getElementById('pe-prod-veredicto');
   if (vEl) {
     if (PR.velocidadOK) {
-      vEl.innerHTML = '<span class="vd-ok">✓ Ritmo suficiente para cumplir la meta</span>';
+      vEl.innerHTML = '<span class="vd-ok">Ritmo suficiente — proyecto en curso hacia meta 15 Ago</span>';
     } else {
       var gap = ((PR.ritmoNecesario || 0) - (PR.promedioGlobal || 0)).toFixed(2);
-      vEl.innerHTML = '<span class="vd-warn">⚠ Ritmo insuficiente · faltan ' + gap + ' eq/día</span>';
+      vEl.innerHTML = '<span class="vd-warn">Ritmo insuficiente — faltan ' + gap + ' equipos/día para cumplir 15 Ago</span>';
     }
   }
 
@@ -1954,7 +1954,7 @@ function saveRecord() {
     var _cachedVer  = window.SynchronizationManager ? SynchronizationManager.getCachedVersion(id) : undefined;
     if (_formVer >= 0 && _cachedVer !== undefined && Number(_cachedVer) > Number(_formVer)) {
       // RC-07 TASK 4: CONFLICTO — otro usuario modificó el registro
-      if (window.toast) toast('⚠ Conflicto: este registro fue actualizado por otro usuario mientras lo estabas editando. La información será recargada antes de continuar.', 'warning');
+      if (window.toast) toast('Conflicto: este registro fue actualizado por otro usuario mientras lo estabas editando. La información será recargada antes de continuar.', 'warning');
       if (window.closeModal) closeModal(true);
       var _conflictId = id;
       if (window.DataService && DataService.reloadFromProvider) {
@@ -2014,7 +2014,7 @@ function saveRecord() {
           // RC-06 TASK 5: no reloadFromProvider completo — requestTick con debounce
           // closeModal y renderResumen ya fueron llamados antes del PATCH (RC-07)
           if (window.state) state._syncInProgress = false;
-          if (window.toast) toast('✓ Guardado · Sincronizado', 'success');
+          if (window.toast) toast('Guardado · Sincronizado', 'success');
           if (window._showSyncStatus) _showSyncStatus('ok');
 
           // ═══ GH3.41 + GH3.41.1 TASK 04: Auditoría con garantía de cierre ═
@@ -2070,12 +2070,44 @@ function saveRecord() {
         })
         .catch(function(err) {
           if (window.state) state._syncInProgress = false;
-          if (err && err.graphCode === 'CONFLICT') {
+          if (window._showSyncStatus) _showSyncStatus('error');
+
+          var msg = err && err.message ? String(err.message) : 'Error desconocido';
+          var code = err && err.graphCode ? err.graphCode : 'UNKNOWN';
+
+          // GH3.42.1: mensajes específicos por tipo de error
+          if (code === 'CONFLICT') {
+            // Otro usuario modificó el registro — recargar y avisar
             if (window.DataService && DataService.reloadFromProvider) DataService.reloadFromProvider();
-            if (window.toast) toast('Conflicto detectado. Recargando datos...', 'warning');
+            if (window.toast) toast('Conflicto: otro usuario modificó este registro. Recargando datos...', 'warning');
+          } else if (code === 'GATEWAY_TIMEOUT' || code === 'BAD_GATEWAY' || code === 'SERVICE_UNAVAILABLE' || code === 'SERVER_ERROR' || code === 'REQUEST_TIMEOUT') {
+            // Errores transitorios de Graph — el retry ya se agotó
+            if (window.toast) toast('Microsoft Graph no respondió (HTTP ' + (err.httpStatus || '5xx') + '). Los cambios NO se guardaron. Vuelve a intentar en unos segundos.', 'critical');
+          } else if (code === 'THROTTLED') {
+            if (window.toast) toast('Rate limit de Microsoft Graph. Espera 30 segundos y reintenta.', 'warning');
+          } else if (code === 'AUTH_REQUIRED') {
+            if (window.toast) toast('Sesión expirada. Recarga la página para iniciar sesión nuevamente.', 'critical');
+          } else if (code === 'FORBIDDEN') {
+            if (window.toast) toast('Sin permisos para modificar este registro (RBAC).', 'critical');
+          } else if (code === 'NETWORK_ERROR' || code === 'DNS_FAILURE' || code === 'TIMEOUT') {
+            if (window.toast) toast('Sin conexión al servidor. Verifica tu red y reintenta.', 'critical');
           } else {
-            console.error('[SYNC ERROR]', err && err.message);
+            if (window.toast) toast('Error al guardar: ' + msg.replace(/^\[GraphClient\]\s*/, ''), 'critical');
           }
+
+          console.error('[SYNC ERROR]', code, '·', msg);
+
+          // Registrar el ERROR en AuditService (no bloqueante)
+          try {
+            if (window.AuditService && AuditService.logSystemEvent) {
+              AuditService.logSystemEvent('ERROR', {
+                origen:      'Graph',
+                modulo:      'Renovaciones',
+                registro:    String(id),
+                observacion: 'PATCH RENOVACIONES falló: ' + code + ' HTTP ' + (err.httpStatus || '?')
+              });
+            }
+          } catch(auditErr) { /* intentional: audit no bloquea */ }
         });
     }
   } catch(e) {
