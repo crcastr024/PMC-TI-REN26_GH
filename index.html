@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/exec-redesign.css">
 <link rel="stylesheet" href="css/resumen-refinement.css">
+<link rel="stylesheet" href="css/global-refinement.css">
 <link rel="stylesheet" href="css/responsive.css">
 <!-- GH1.4: Favicon -->
 <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
@@ -532,10 +533,11 @@
             <div class="empty-msg">Los filtros globales aplican a los conteos y al detalle</div>
           </div>
         </div>
+        <!-- GH3.42.4: view-ejecutivos-content movido AQUÍ (antes estaba fuera de view-reportes, causaba bleed entre vistas) -->
+        <div id="view-ejecutivos-content"></div>
       </div>
     </div>
 
-    <div class="section" style="margin-top:0" id="view-ejecutivos-content"></div>
     <!-- ═════ VISTA: ACTIVIDAD (Activity Log) ═════ -->
     <div class="view" id="view-backup"></div>
     <div class="view" id="view-actividad">
