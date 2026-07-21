@@ -127,12 +127,14 @@ const MSAL_CONFIG = {
       authority: 'https://login.microsoftonline.com/' +
                  (_PC_AUTH.tenantId || '38f48feb-4b87-481f-bd79-c2d633594e2f'),
 
-      // GH3.16: redirectUri explícito — valor exacto registrado en Azure AD como SPA.
-      // Eliminado cálculo dinámico con window.location.pathname (causa de AADSTS9002326).
-      redirectUri: 'https://crcastr024.github.io/PMC-TI-REN26_GH/',
+      // RC1-HOTFIX-01: redirectUri dinámico — funciona en Netlify, GitHub Pages y localhost
+      redirectUri: (typeof window !== 'undefined' && window.location && window.location.origin)
+        ? window.location.origin + (window.location.pathname.replace(/\/[^/]*$/, '/') || '/')
+        : 'http://localhost',
 
-      // GH3.16: postLogoutRedirectUri explícito — misma URL que redirectUri.
-      postLogoutRedirectUri: 'https://crcastr024.github.io/PMC-TI-REN26_GH/',
+      postLogoutRedirectUri: (typeof window !== 'undefined' && window.location && window.location.origin)
+        ? window.location.origin + (window.location.pathname.replace(/\/[^/]*$/, '/') || '/')
+        : 'http://localhost',
 
       // GH2.2: navigateToLoginRequestUrl = false
       // Para flujo popup, MSAL no debe navegar de vuelta tras el login.

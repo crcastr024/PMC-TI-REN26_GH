@@ -89,13 +89,18 @@ const SynchronizationManager = (() => {
   let _pendingTick   = null;    // RC-07 TASK 7: debounce requestTick
   let _versionCache  = {};      // id → VERSION (columna Excel)
   let _lastActivity  = 0;       // RC-07 TASK 6: timestamp última actividad
+  // RC-1 Fix: detección de modo offline
+  let _failStreak    = 0;       // fallos consecutivos de red
+  const FAIL_OFFLINE_THRESHOLD = 3;     // después de 3 fallos → offline mode
+  const INTERVAL_OFFLINE       = 300000; // 5 min — espera entre reintentos offline
   // RC-07 TASK 6 — Intervalos adaptativos
   var INTERVAL_INACTIVE = 60000;  // 60s — usuario inactivo
   var INTERVAL_ACTIVE   = 15000;  // 15s — actividad reciente (< 2 min)
   var INTERVAL_HIDDEN   = 120000; // 120s — pestaña oculta
   function _getInterval() {
+    if (_failStreak >= FAIL_OFFLINE_THRESHOLD) return INTERVAL_OFFLINE; // modo offline
     if (typeof document !== 'undefined' && document.hidden) return INTERVAL_HIDDEN;
-    if (Date.now() - _lastActivity < 120000) return INTERVAL_ACTIVE; // últimos 2 min
+    if (Date.now() - _lastActivity < 120000) return INTERVAL_ACTIVE;
     return INTERVAL_INACTIVE;
   }
 
@@ -193,11 +198,29 @@ const SynchronizationManager = (() => {
       }
 
       EventBus.publish('provider.refresh',      { changedIds, timestamp: Date.now() });
+      _failStreak = 0; // RC-1 Fix: reset streak tras éxito
       EventBus.publish('provider.sync.finished', { changedIds, timestamp: Date.now() });
 
     } catch(err) {
-      console.error('[SyncManager] tick error:', err.message);
-      EventBus.publish('provider.sync.failed', { error: err.message });
+      // RC-1 Fix: detectar errores de conectividad para backoff offline
+      var isNetErr = err.graphCode === 'NETWORK_ERROR' || err.graphCode === 'DNS_FAILURE' ||
+                     err.message.indexOf('ERR_NAME_NOT_RESOLVED') >= 0 ||
+                     err.message.indexOf('Failed to fetch') >= 0 ||
+                     err.message.indexOf('NETWORK_ERROR') >= 0;
+      if (isNetErr) {
+        _failStreak++;
+        if (_failStreak === 1 || _failStreak % 5 === 0) {
+          // Solo loguear en el primero y cada 5 para no inundar la consola
+          console.warn('[SyncManager] Sin conectividad con Graph (' + _failStreak + ' intentos). Próximo reintento en ' + (_failStreak >= FAIL_OFFLINE_THRESHOLD ? '5min' : _getInterval()/1000 + 's') + '.');
+        }
+        if (_failStreak >= FAIL_OFFLINE_THRESHOLD) {
+          EventBus.publish('provider.sync.offline', { streak: _failStreak });
+        }
+      } else {
+        _failStreak = 0; // resetear si el error no es de red
+        console.error('[SyncManager] tick error:', err.message);
+        EventBus.publish('provider.sync.failed', { error: err.message });
+      }
     } finally {
       _running = false;
       _tickActive = false; // RC-06 TASK 6: liberar lock
@@ -206,7 +229,7 @@ const SynchronizationManager = (() => {
 
   // RC-07 TASK 6: scheduling adaptativo con setTimeout recursivo
   function _scheduleNext() {
-    if (_timer) clearTimeout(_timer);
+    if (_timer) { clearTimeout(_timer); clearInterval(_timer); } // GH3.5: clearInterval compat
     _timer = setTimeout(async function() { await tick(); _scheduleNext(); }, _getInterval());
   }
 

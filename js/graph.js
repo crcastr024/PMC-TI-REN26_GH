@@ -106,8 +106,15 @@ const GraphClient = (() => {
       if (timer) clearTimeout(timer);
       if (err.graphCode) throw err;
       // Network error / abort
+      // RC-1 Fix: clasificar DNS failure vs otros errores de red
+      var isDnsFail = err.message && (
+        err.message.indexOf('ERR_NAME_NOT_RESOLVED') >= 0 ||
+        err.message.indexOf('ERR_INTERNET_DISCONNECTED') >= 0 ||
+        err.message.indexOf('network error') >= 0
+      );
       const netErr = new Error(`[GraphClient] NETWORK_ERROR: ${err.message}`);
-      netErr.graphCode = err.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR';
+      netErr.graphCode = err.name === 'AbortError' ? 'TIMEOUT' : (isDnsFail ? 'DNS_FAILURE' : 'NETWORK_ERROR');
+      netErr.retryable = !isDnsFail; // DNS failure → no reintentar (inútil)
       netErr.retryable = true;
       netErr.context   = path;
       throw netErr;

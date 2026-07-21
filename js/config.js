@@ -35,4 +35,5 @@ window.PRODUCTION_CONFIG = {
   _release:   'GH2.5',
   _buildDate: '2026-07-07',
   _version:   'v8.8.4-GH2.5',
+  version:    'GH3.42',      // Sprint activo — usado por AuditService para columna VERSION
 };

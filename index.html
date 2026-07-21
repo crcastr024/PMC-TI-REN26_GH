@@ -244,40 +244,58 @@
           </div>
         </div>
         <div class="cards-grid">
+          <!-- STAB-v16 TASK 1: orden cronológico del flujo operacional -->
           <div class="metric-card" onclick="goView('usuarios')">
-            <div class="metric-card-head"><span class="metric-card-label">Total</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div></div>
+            <div class="metric-card-head"><span class="metric-card-label">Total equipos</span><div class="metric-card-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M12 3v4"/></svg></div></div>
             <div class="metric-card-val" id="k-total">—</div>
-            <div class="metric-card-sub" id="k-total-sub">Equipos con usuario</div>
+            <div class="metric-card-sub" id="k-total-sub">142 asignados + 4 backup</div>
           </div>
-          <div class="metric-card grn" onclick="setStateFilter('Entregado')">
-            <div class="metric-card-head"><span class="metric-card-label">Entregados</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div></div>
-            <div class="metric-card-val" id="k-entregados">—</div>
-            <div class="metric-card-sub"><strong id="k-pct">0%</strong> completado</div>
+          <div class="metric-card blu" onclick="setStateFilter('Pendiente')">
+            <div class="metric-card-head"><span class="metric-card-label">Pendientes</span><div class="metric-card-icon">⏸</div></div>
+            <div class="metric-card-val" id="k-pendientes">—</div>
+            <div class="metric-card-sub">Sin iniciar</div>
           </div>
           <div class="metric-card amb" onclick="setStateFilter('Alistamiento')">
-            <div class="metric-card-head"><span class="metric-card-label">En alistamiento</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div></div>
+            <div class="metric-card-head"><span class="metric-card-label">En alistamiento</span><div class="metric-card-icon">🔧</div></div>
             <div class="metric-card-val" id="k-alistamiento">—</div>
             <div class="metric-card-sub">En preparación</div>
           </div>
-          <div class="metric-card blu" onclick="setStateFilter('Pendiente')">
-            <div class="metric-card-head"><span class="metric-card-label">Pendientes</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div></div>
-            <div class="metric-card-val" id="k-pendientes">—</div>
-            <div class="metric-card-sub">Por iniciar</div>
+          <div class="metric-card teal" onclick="setMultiStateFilter(['Programado','En tránsito equipo nuevo'])">
+            <div class="metric-card-head"><span class="metric-card-label">En envío</span><div class="metric-card-icon">🚚</div></div>
+            <div class="metric-card-val" id="k-en-envio">—</div>
+            <div class="metric-card-sub">Programado + En tránsito</div>
+          </div>
+          <div class="metric-card grn" onclick="setStateFilter('Entregado')">
+            <div class="metric-card-head"><span class="metric-card-label">Entregados</span><div class="metric-card-icon">✓</div></div>
+            <div class="metric-card-val" id="k-entregados">—</div>
+            <div class="metric-card-sub"><strong id="k-pct">0%</strong> del proceso</div>
+          </div>
+          <div class="metric-card org" onclick="goView('devoluciones')">
+            <div class="metric-card-head"><span class="metric-card-label">Pend. devolución</span><div class="metric-card-icon">↩</div></div>
+            <div class="metric-card-val" id="k-dev-pendientes">—</div>
+            <div class="metric-card-sub">En recolección sin recibir</div>
           </div>
           <div class="metric-card pur">
-            <div class="metric-card-head"><span class="metric-card-label">Actas firmadas</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div></div>
+            <div class="metric-card-head"><span class="metric-card-label">Actas firmadas</span><div class="metric-card-icon">📄</div></div>
             <div class="metric-card-val" id="k-actas">—</div>
             <div class="metric-card-sub">PandaDoc</div>
           </div>
-          <div class="metric-card amb" onclick="goView('backup')">
-            <div class="metric-card-head"><span class="metric-card-label">Backup</span><div class="metric-card-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div></div>
-            <div class="metric-card-val" id="k-backup">14</div>
-            <div class="metric-card-sub" id="k-backup-sub">10 HBT + 4 HGS</div>
-          <div class="metric-card teal" onclick="setMultiStateFilter(['Programado','En tránsito equipo nuevo'])">
-          <div class="metric-card-head"><span class="metric-card-label">En envío</span><div class="metric-card-icon">✈</div></div>
-          <div class="metric-card-val" id="k-en-envio">—</div>
-          <div class="metric-card-sub">Programado + En tránsito</div>
+          <div class="metric-card grn">
+            <div class="metric-card-head"><span class="metric-card-label">Renovaciones completadas</span><div class="metric-card-icon">🎯</div></div>
+            <div class="metric-card-val" id="k-completadas">—</div>
+            <div class="metric-card-sub">Cerradas + completadas</div>
           </div>
+          <div class="metric-card" style="border-top-color:var(--text-3,#666)" onclick="goView('backup')">
+            <div class="metric-card-head"><span class="metric-card-label">Backups</span><div class="metric-card-icon">📦</div></div>
+            <div class="metric-card-val" id="k-backup">—</div>
+            <div class="metric-card-sub" id="k-backup-sub">Disponibles en bodega</div>
+          </div>
+          <div class="metric-card red" onclick="goView('aprobaciones')">
+            <div class="metric-card-head"><span class="metric-card-label">Por aprobar</span><div class="metric-card-icon">👁</div></div>
+            <div class="metric-card-val" id="k-por-aprobar">—</div>
+            <div class="metric-card-sub">Pendientes validación</div>
+          </div>
+        </div>
           <div class="metric-card red" onclick="goView('aprobaciones')">
           <div class="metric-card-head"><span class="metric-card-label">Por aprobar</span><div class="metric-card-icon">☑</div></div>
           <div class="metric-card-val" id="k-por-aprobar">—</div>
@@ -287,7 +305,6 @@
           <div class="metric-card-head"><span class="metric-card-label">Dev. pendientes</span><div class="metric-card-icon">↩</div></div>
           <div class="metric-card-val" id="k-dev-pendientes">—</div>
           <div class="metric-card-sub">En recolección sin recibir</div>
-          </div>
           </div>
         </div>
       </div>
@@ -637,179 +654,152 @@
 
     <!-- ═════ F4 · VISTA: PANEL EJECUTIVO (Visitante) ═════ -->
     <div class="view" id="view-panel">
-    <div class="panel-filter-bar" id="panel-filter-bar">
-      <div class="panel-filter-title">Filtros</div>
-      <select class="panel-filter-sel" id="pf-empresa" onchange="applyPanelFilter('empresa',this.value)">
-        <option value="">Todas las empresas</option>
-      </select>
-      <select class="panel-filter-sel" id="pf-ciudad" onchange="applyPanelFilter('ciudad',this.value)">
-        <option value="">Todas las ciudades</option>
-      </select>
-      <select class="panel-filter-sel" id="pf-proyecto" onchange="applyPanelFilter('proyecto',this.value)">
-        <option value="">Todos los proyectos</option>
-      </select>
-      <select class="panel-filter-sel" id="pf-tecnico" onchange="applyPanelFilter('tecnico',this.value)">
-        <option value="">Todos los técnicos</option>
-      </select>
-      <select class="panel-filter-sel" id="pf-estado" onchange="applyPanelFilter('estado',this.value)">
-        <option value="">Todos los estados</option>
-      </select>
-      <select class="panel-filter-sel" id="pf-feedback" onchange="applyPanelFilter('feedback',this.value)">
-        <option value="">Cualquier feedback</option>
-        <option value="1">★ 1+ estrellas</option>
-        <option value="2">★★ 2+ estrellas</option>
-        <option value="3">★★★ 3+ estrellas</option>
-        <option value="4">★★★★ 4+ estrellas</option>
-        <option value="5">★★★★★ 5 estrellas</option>
-      </select>
-      <button class="panel-filter-clear" onclick="clearPanelFilters()">Limpiar filtros</button>
-      <span class="panel-filter-count" id="pf-count"></span>
-    </div>
+      <!-- ═══ HERO EJECUTIVO ═══════════════════════════════════════ -->
       <div class="panel-hero">
         <div class="panel-hero-inner">
-          <div class="panel-hero-eyebrow">Panel ejecutivo · PMC-TI-REN26</div>
-          <h1 class="panel-hero-title">Renovación Tecnológica <strong>2026</strong></h1>
-          <p class="panel-hero-sub" id="pe-sub">Heinsohn Business Technology · HBT + HGS</p>
+          <div class="exec-hero-top">
+            <div>
+              <div class="panel-hero-eyebrow">Panel ejecutivo · PMC-TI-REN26</div>
+              <h1 class="panel-hero-title">Renovación Tecnológica <strong>2026</strong></h1>
+              <p class="panel-hero-sub" id="pe-sub">Heinsohn Business Technology · HBT + HGS</p>
+            </div>
+            <div class="exec-hero-semaforo" id="pe-semaforo" title="Estado del proyecto">
+              <div class="sem-dot"></div>
+              <div class="sem-txt">—</div>
+            </div>
+          </div>
+          <div class="exec-hero-strip">
+            <div class="exec-hero-metric"><div class="ehm-l">Inicio</div><div class="ehm-v" id="pe-fecha-inicio">01 Jul 2026</div></div>
+            <div class="exec-hero-metric"><div class="ehm-l">Fecha objetivo</div><div class="ehm-v" id="pe-fecha-fin">15 Ago 2026</div></div>
+            <div class="exec-hero-metric"><div class="ehm-l">Días transcurridos</div><div class="ehm-v grn" id="pe-dias-trans">—</div></div>
+            <div class="exec-hero-metric"><div class="ehm-l">Días restantes</div><div class="ehm-v amb" id="pe-dias-rest">—</div></div>
+            <div class="exec-hero-metric"><div class="ehm-l">Fecha estimada finalización</div><div class="ehm-v" id="pe-fecha-estimada">—</div><div class="ehm-sub" id="pe-fecha-estimada-sub">—</div></div>
+          </div>
           <div class="panel-kpi-strip">
-            <div class="panel-kpi">
-              <div class="panel-kpi-label">Total equipos</div>
-              <div class="panel-kpi-val" id="pe-total">—</div>
-              <div class="panel-kpi-sub">HBT + HGS</div>
-            </div>
-            <div class="panel-kpi">
-              <div class="panel-kpi-label">Completados</div>
-              <div class="panel-kpi-val grn" id="pe-completados">—</div>
-              <div class="panel-kpi-sub" id="pe-pct-sub">Avance del proyecto</div>
-            </div>
-            <div class="panel-kpi">
-              <div class="panel-kpi-label">En proceso</div>
-              <div class="panel-kpi-val amb" id="pe-proceso">—</div>
-              <div class="panel-kpi-sub">En ejecución activa</div>
-            </div>
-            <div class="panel-kpi">
-              <div class="panel-kpi-label">Pendientes</div>
-              <div class="panel-kpi-val accent" id="pe-pendientes">—</div>
-              <div class="panel-kpi-sub">Sin iniciar</div>
-            </div>
-            <div class="panel-kpi">
-              <div class="panel-kpi-label">Actas firmadas</div>
-              <div class="panel-kpi-val" id="pe-actas">—</div>
-              <div class="panel-kpi-sub">De renovaciones completadas</div>
-            </div>
-            <div class="panel-kpi">
-            <div class="panel-kpi-label">Entregados</div>
-            <div class="panel-kpi-val grn" id="pe-entregados">—</div>
-            <div class="panel-kpi-sub">Hito acumulativo</div>
-            </div>
-            <div class="panel-kpi">
-            <div class="panel-kpi-label">En envío</div>
-            <div class="panel-kpi-val" id="pe-en-envio">—</div>
-            <div class="panel-kpi-sub">Programado + Tránsito</div>
-            </div>
-            <div class="panel-kpi">
-            <div class="panel-kpi-label">Backup</div>
-            <div class="panel-kpi-val" id="pe-backup">—</div>
-            <div class="panel-kpi-sub">Repositorio</div>
-            </div>
-            <div class="panel-kpi">
-            <div class="panel-kpi-label">Cerrados</div>
-            <div class="panel-kpi-val grn" id="pe-cerrados">—</div>
-            <div class="panel-kpi-sub">Renovación completada</div>
-            </div>
+            <div class="panel-kpi"><div class="panel-kpi-label">Total equipos</div><div class="panel-kpi-val" id="pe-total">—</div><div class="panel-kpi-sub">HBT + HGS</div></div>
+            <div class="panel-kpi"><div class="panel-kpi-label">Entregados (hito)</div><div class="panel-kpi-val grn" id="pe-entregados">—</div><div class="panel-kpi-sub">Acumulativo</div></div>
+            <div class="panel-kpi"><div class="panel-kpi-label">Actas firmadas</div><div class="panel-kpi-val grn" id="pe-actas">—</div><div class="panel-kpi-sub">Acumulativo</div></div>
+            <div class="panel-kpi"><div class="panel-kpi-label">Finalizados</div><div class="panel-kpi-val grn" id="pe-cerrados">—</div><div class="panel-kpi-sub">Ren. completada + Cerrado</div></div>
+            <div class="panel-kpi"><div class="panel-kpi-label">En proceso</div><div class="panel-kpi-val amb" id="pe-proceso">—</div><div class="panel-kpi-sub">Exclusivo</div></div>
+            <div class="panel-kpi"><div class="panel-kpi-label">Pendientes</div><div class="panel-kpi-val accent" id="pe-pendientes">—</div><div class="panel-kpi-sub">Sin iniciar</div></div>
+            <div class="panel-kpi"><div class="panel-kpi-label">En envío</div><div class="panel-kpi-val" id="pe-en-envio">—</div><div class="panel-kpi-sub">Prog. + Tránsito</div></div>
+            <div class="panel-kpi"><div class="panel-kpi-label">Backups</div><div class="panel-kpi-val" id="pe-backup">—</div><div class="panel-kpi-sub">HBT 3 · HGS 1</div></div>
+            <div class="panel-kpi" style="display:none"><div class="panel-kpi-label">Completados</div><div class="panel-kpi-val" id="pe-completados">—</div><div class="panel-kpi-sub" id="pe-pct-sub">—</div></div>
           </div>
           <div class="panel-progress-bar">
             <span class="panel-progress-label">Avance global</span>
-            <div class="panel-progress-track">
-              <div class="panel-progress-fill" id="pe-prog-fill" style="width:0%"></div>
-            </div>
+            <div class="panel-progress-track"><div class="panel-progress-fill" id="pe-prog-fill" style="width:0%"></div></div>
             <span class="panel-progress-pct" id="pe-prog-pct">0%</span>
           </div>
         </div>
       </div>
-
-      <div class="section">
-        <div class="panel-grid-2">
-          <div class="panel-card">
-            <div class="panel-card-title">Por empresa</div>
-            <div class="panel-stat-row">
-              <span class="panel-stat-label">HBT</span>
-              <div style="display:flex;align-items:center;gap:10px">
-                <span class="panel-stat-val" id="pe-hbt-n">—</span>
-                <span class="panel-stat-pct grn" id="pe-hbt-pct">—</span>
-              </div>
-            </div>
-            <div class="panel-stat-row">
-              <span class="panel-stat-label">HGS</span>
-              <div style="display:flex;align-items:center;gap:10px">
-                <span class="panel-stat-val" id="pe-hgs-n">—</span>
-                <span class="panel-stat-pct grn" id="pe-hgs-pct">—</span>
-              </div>
-            </div>
-          </div>
-          <div class="panel-card">
-            <div class="panel-card-title">Por técnico</div>
-            <div id="pe-por-tecnico"></div>
+      <div class="panel-filter-bar" id="panel-filter-bar">
+        <div class="panel-filter-title">Filtros</div>
+        <select class="panel-filter-sel" id="pf-empresa" onchange="applyPanelFilter('empresa',this.value)"><option value="">Todas las empresas</option></select>
+        <select class="panel-filter-sel" id="pf-ciudad" onchange="applyPanelFilter('ciudad',this.value)"><option value="">Todas las ciudades</option></select>
+        <select class="panel-filter-sel" id="pf-proyecto" onchange="applyPanelFilter('proyecto',this.value)"><option value="">Todos los proyectos</option></select>
+        <select class="panel-filter-sel" id="pf-tecnico" onchange="applyPanelFilter('tecnico',this.value)"><option value="">Todos los técnicos</option></select>
+        <select class="panel-filter-sel" id="pf-estado" onchange="applyPanelFilter('estado',this.value)"><option value="">Todos los estados</option></select>
+        <select class="panel-filter-sel" id="pf-feedback" onchange="applyPanelFilter('feedback',this.value)"><option value="">Cualquier feedback</option><option value="1">★ 1+</option><option value="2">★★ 2+</option><option value="3">★★★ 3+</option><option value="4">★★★★ 4+</option><option value="5">★★★★★ 5</option></select>
+        <button class="panel-filter-clear" onclick="clearPanelFilters()">Limpiar filtros</button>
+        <span class="panel-filter-count" id="pf-count"></span>
+      </div>
+      <!-- FILA 1: Gauge · Productividad · Burn Down -->
+      <div class="panel-grid-3" style="margin-top:14px">
+        <div class="panel-card exec-gauge-card">
+          <div class="panel-card-title">Avance esperado vs real</div>
+          <div id="pe-gauge" class="exec-gauge-wrap"></div>
+          <div class="exec-gauge-legend">
+            <div><span class="lg-dot" style="background:#94A3B8"></span>Esperado <strong id="pe-gauge-esperado">—</strong></div>
+            <div><span class="lg-dot" style="background:var(--green,#16A34A)"></span>Real <strong id="pe-gauge-real">—</strong></div>
+            <div><span class="lg-dot" style="background:var(--accent,#A51C2B)"></span>Desv. <strong id="pe-gauge-desv">—</strong></div>
           </div>
         </div>
-
-        <div class="panel-grid-3" style="margin-top:16px">
-          <div class="panel-card">
-            <div class="panel-card-title">Clasificación RAEE</div>
-            <div class="raee-ring-wrap">
-              <canvas id="pe-raee-canvas" width="100" height="100" style="flex-shrink:0"></canvas>
-              <div class="raee-ring-labels" id="pe-raee-labels"></div>
-            </div>
+        <div class="panel-card">
+          <div class="panel-card-title">Productividad</div>
+          <div class="exec-prod-grid">
+            <div class="exec-prod-item"><div class="epi-l">Restantes</div><div class="epi-v accent" id="pe-prod-restantes">—</div></div>
+            <div class="exec-prod-item"><div class="epi-l">Promedio semanal</div><div class="epi-v" id="pe-prod-semanal">—</div><div class="epi-sub">equipos / semana</div></div>
+            <div class="exec-prod-item"><div class="epi-l">Promedio global</div><div class="epi-v" id="pe-prod-global">—</div><div class="epi-sub">equipos / día</div></div>
+            <div class="exec-prod-item"><div class="epi-l">Ritmo necesario</div><div class="epi-v amb" id="pe-prod-ritmo">—</div><div class="epi-sub">para cumplir 15 Ago</div></div>
           </div>
-          <div class="panel-card">
-            <div class="panel-card-title">Distribución de estados</div>
-            <div id="pe-estados-list"></div>
-          </div>
-          <div class="panel-card">
-            <div class="panel-card-title">Backup por empresa</div>
-            <div id="pe-backup-list"></div>
-          </div>
-          <div class="panel-card">
-            <div class="panel-card-title">Devoluciones</div>
-            <div id="pe-devoluciones-list"></div>
-          </div>
-          <div class="panel-card">
-            <div class="panel-card-title">Aprobaciones pendientes</div>
-            <div style="text-align:center;padding:16px 0">
-              <div class="panel-kpi-val accent" id="pe-aprobaciones">—</div>
-              <div class="panel-kpi-sub" style="margin-top:6px">Esperando validación</div>
-            </div>
-            <div class="panel-stat-row">
-              <span class="panel-stat-label">Corrección requerida</span>
-              <span class="panel-stat-val" id="pe-correccion">—</span>
-            </div>
-            <div class="panel-stat-row">
-              <span class="panel-stat-label">Bloqueados</span>
-              <span class="panel-stat-val" id="pe-bloqueados">—</span>
-            </div>
-          </div>
-          <!-- GH3.28: Tarjeta Destino Final -->
-          <div class="panel-card" style="border-left:4px solid #2E7D32">
-            <div class="panel-card-title">Destino final</div>
-            <div id="pe-destino-total" style="font-size:11px;color:#888;text-align:center;padding:4px 0">0 con evaluacion</div>
-            <div class="panel-stat-row">
-              <span class="panel-stat-label" style="color:#2E7D32">Venta interna</span>
-              <span class="panel-stat-val" id="pe-destino-venta">0</span>
-            </div>
-            <div class="panel-stat-row">
-              <span class="panel-stat-label" style="color:#1565C0">Reasignacion</span>
-              <span class="panel-stat-val" id="pe-destino-reasign">0</span>
-            </div>
-            <div class="panel-stat-row">
-              <span class="panel-stat-label" style="color:#E65100">Donacion</span>
-              <span class="panel-stat-val" id="pe-destino-donacion">0</span>
-            </div>
-            <div class="panel-stat-row">
-              <span class="panel-stat-label" style="color:#C00000">RAEE</span>
-              <span class="panel-stat-val" id="pe-destino-raee" style="color:#C00000">0</span>
-            </div>
-          </div>
+          <div id="pe-prod-veredicto" class="exec-prod-veredicto"></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-card-title">Burn Down · 01 Jul → 15 Ago</div>
+          <div style="position:relative;height:210px"><canvas id="pe-burndown-chart"></canvas></div>
         </div>
       </div>
+      <!-- FILA 2: Pipeline Funnel · Cumplimiento por empresa -->
+      <div class="panel-grid-2" style="margin-top:14px">
+        <div class="panel-card">
+          <div class="panel-card-title">Pipeline REN26 · Funnel</div>
+          <div id="pe-funnel" class="exec-funnel"></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-card-title">Cumplimiento por empresa</div>
+          <div id="pe-empresa-new" class="exec-emp-grid"></div>
+          <span id="pe-hbt-n" style="display:none">—</span><span id="pe-hbt-pct" style="display:none">—</span>
+          <span id="pe-hgs-n" style="display:none">—</span><span id="pe-hgs-pct" style="display:none">—</span>
+        </div>
+      </div>
+      <!-- FILA 3: Leaderboard técnicos · Ciudades -->
+      <div class="panel-grid-2" style="margin-top:14px">
+        <div class="panel-card">
+          <div class="panel-card-title">Leaderboard técnicos</div>
+          <div id="pe-tecnico-new" class="exec-leaderboard"></div>
+          <div id="pe-por-tecnico" style="display:none"></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-card-title">Ciudades</div>
+          <div id="pe-ciudades-cards" class="exec-city-grid"></div>
+        </div>
+      </div>
+      <!-- FILA 4: Distribución estados · Devoluciones · Destino final -->
+      <div class="panel-grid-3" style="margin-top:14px">
+        <div class="panel-card">
+          <div class="panel-card-title">Distribución de estados</div>
+          <div id="pe-estados-list"></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-card-title">Devoluciones</div>
+          <div style="position:relative;height:190px"><canvas id="pe-devoluciones-donut"></canvas></div>
+          <div id="pe-devoluciones-list" style="margin-top:8px"></div>
+        </div>
+        <div class="panel-card" style="border-left:4px solid var(--green,#2E7D32)">
+          <div class="panel-card-title">Destino final</div>
+          <div style="position:relative;height:180px"><canvas id="pe-destino-donut"></canvas></div>
+          <div id="pe-destino-total" style="font-size:11px;color:#888;text-align:center;padding:6px 0">0 con recomendación</div>
+          <div class="panel-stat-row"><span class="panel-stat-label" style="color:#2E7D32">Venta</span><span class="panel-stat-val" id="pe-destino-venta">0</span></div>
+          <div class="panel-stat-row"><span class="panel-stat-label" style="color:#1565C0">Reasignación</span><span class="panel-stat-val" id="pe-destino-reasign">0</span></div>
+          <div class="panel-stat-row"><span class="panel-stat-label" style="color:#E65100">Donación</span><span class="panel-stat-val" id="pe-destino-donacion">0</span></div>
+          <div class="panel-stat-row"><span class="panel-stat-label" style="color:#C00000">RAEE</span><span class="panel-stat-val" id="pe-destino-raee" style="color:#C00000">0</span></div>
+        </div>
+      </div>
+      <!-- FILA 5: Cuello de botella · Riesgos -->
+      <div class="panel-grid-2" style="margin-top:14px">
+        <div class="panel-card"><div class="panel-card-title">Cuello de botella</div><div id="pe-botella"></div></div>
+        <div class="panel-card"><div class="panel-card-title">Riesgos activos</div><div id="pe-riesgos-list" class="exec-risks"></div></div>
+      </div>
+      <!-- FILA 6: Novedades · Aprobaciones -->
+      <div class="panel-grid-2" style="margin-top:14px">
+        <div class="panel-card">
+          <div class="panel-card-title">Novedades · Equipos cruzados</div>
+          <div id="pe-novedades-count" style="font-family:'Inter Tight',sans-serif;font-size:26px;font-weight:900;color:var(--accent);line-height:1;padding:6px 0">0</div>
+          <div id="pe-novedades-sub" style="font-size:10px;color:var(--text-3);margin-bottom:8px">equipos cruzados detectados</div>
+          <div id="pe-novedades-list"></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-card-title">Aprobaciones</div>
+          <div style="text-align:center;padding:12px 0">
+            <div class="panel-kpi-val accent" id="pe-aprobaciones">—</div>
+            <div class="panel-kpi-sub" style="margin-top:6px">Esperando validación gerencia</div>
+          </div>
+          <div class="panel-stat-row"><span class="panel-stat-label">Corrección requerida</span><span class="panel-stat-val" id="pe-correccion">—</span></div>
+          <div class="panel-stat-row"><span class="panel-stat-label">Bloqueados</span><span class="panel-stat-val" id="pe-bloqueados">—</span></div>
+        </div>
+      </div>
+    </div>
     </div>
 
     <!-- ═════ F4 · VISTA: HOME TÉCNICO ═════ -->
@@ -984,6 +974,37 @@
 <!-- ════════════════════════ MODAL (form completo) ════════════════════════ -->
 
 <!-- RC2.7 · Login Screen — mostrada cuando authMode=msal y no autenticado -->
+
+<!-- ═══ Modal principal de edición ═══ -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+<div class="modal-head">
+<div class="modal-title-block">
+<div class="modal-eyebrow" id="modal-eyebrow">Editar registro</div>
+<div class="modal-title" id="modal-title">—</div>
+</div>
+<button class="modal-close" onclick="closeModal()" title="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+</div>
+<div class="modal-body" id="modal-body"></div>
+<div class="modal-foot">
+<button class="btn" onclick="closeModal()">Cancelar</button>
+<button class="btn" id="modal-block-btn" style="display:none" onclick="openBlockModal()">Bloquear</button>
+<button class="btn btn-primary" onclick="ejecutarGuardado()">Guardar cambios</button>
+</div>
+</div>
+</div>
+
+<!-- ═══ Modal confirmación de guardado ═══ -->
+<div class="modal-bg" id="confirm-save-bg">
+<div class="modal" style="max-width:420px">
+<div class="modal-head"><div class="modal-title-block"><div class="modal-eyebrow">Confirmación</div><div class="modal-title">¿Guardar cambios?</div></div></div>
+<div class="modal-body" style="padding:16px 24px"><p style="margin:0;color:var(--text-2)">Los cambios se enviarán al Excel Maestro en SharePoint.</p></div>
+<div class="modal-foot">
+<button class="btn" onclick="closeConfirmSave()">Cancelar</button>
+<button class="btn btn-primary" onclick="confirmarGuardado()">Confirmar</button>
+</div>
+</div>
+</div>
 <div id="rc2-login-screen" style="display:none;position:fixed;inset:0;z-index:10001;background:linear-gradient(135deg,#0A0A0F 60%,#1a0a1a);flex-direction:column;align-items:center;justify-content:center;gap:0;">
   <div style="text-align:center;max-width:460px;padding:0 24px;">
     <!-- Logo -->
@@ -1059,7 +1080,9 @@
 <!-- 10. Actualización: ConflictDetector, listeners online/offline -->
 <script src="js/refresh.js"></script>
 <!-- 11. Dashboard: KPIService, IntegrityService, DashboardFactory, renders -->
-<script src="js/dashboard.js"></script>
+<script src="js/mismatches.js"></script>
+  <script src="js/auditService.js"></script>
+  <script src="js/dashboard.js"></script>
 <!-- 12. UI: vistas, modales, filtros, reportes, aprobaciones -->
 <script src="js/ui.js"></script>
 <!-- 13. Bootstrap: BootstrapManager, boot(), RC2_doLogin -->

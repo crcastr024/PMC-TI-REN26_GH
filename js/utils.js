@@ -974,3 +974,13 @@ const EventBus = (function() {
   return { publish: publish, subscribe: subscribe, _log: _log };
 })();
 window.EventBus = EventBus;
+
+// GH3.42 — siNoToBool: normaliza valores SI/NO del Excel a boolean.
+// Movida desde dashboard.js para estar disponible antes de dataService.js.
+function siNoToBool(v) {
+  if (v === true || v === false) return v;
+  if (v === null || v === undefined) return false;
+  var s = String(v).trim().toUpperCase();
+  return s === 'SI' || s === 'SÍ' || s === 'TRUE' || s === '1' || s === 'YES';
+}
+window.siNoToBool = siNoToBool;

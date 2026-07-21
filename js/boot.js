@@ -281,6 +281,35 @@ async function RC2_doLogin() {
     // Ejecutar Bootstrap
     await BootstrapManager.run(account, token);
 
+    // GH3.41: Registrar LOGIN en AUDITORIA (no bloqueante)
+    try {
+      if (window.AuditService && AuditService.logSystemEvent) {
+        AuditService.logSystemEvent('LOGIN', {
+          origen: 'Sistema',
+          modulo: 'Autenticacion',
+          registro: '0',
+          observacion: 'Inicio de sesión: ' + ((account && (account.username || account.name)) || 'usuario')
+        });
+      }
+    } catch(e) { /* audit no bloquea login */ }
+
+    // GH3.41.1 TASK 05: Drenar cola offline al recuperar sesión
+    try {
+      if (window.AuditService && AuditService.drainOfflineQueue) {
+        // Espera 2s a que GraphResolver esté listo, luego drena
+        setTimeout(function() {
+          AuditService.drainOfflineQueue()
+            .then(function(res) {
+              // Silencioso: no exponer a consola en producción
+              if (res && res.drained > 0 && window.EventBus) {
+                EventBus.publish('audit.drained', { count: res.drained });
+              }
+            })
+            .catch(function(){ /* intentional: drain no bloquea login ni sesión */ });
+        }, 2000);
+      }
+    } catch(e) { /* intentional: drain no bloquea login */ }
+
   } catch(err) {
     if (errEl) {
       errEl.textContent = 'Error al iniciar sesión: ' + (err.message || 'intente de nuevo');
@@ -323,7 +352,25 @@ async function boot() {
 
 
       // Iniciar sincronización automática (RC1 GL-5 preservado)
-      SynchronizationManager.start(); // RC-07: intervalos adaptativos (15/60/120s)
+      SynchronizationManager.start();
+  // RC-1 Fix: escuchar modo offline del SynchronizationManager
+  if (window.EventBus) {
+    EventBus.subscribe('provider.sync.offline', function(payload) {
+      var banner = document.getElementById('sync-offline-banner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'sync-offline-banner';
+        banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#B45309;color:#fff;text-align:center;padding:8px 16px;font-size:12px;font-weight:600;z-index:9999;';
+        banner.innerHTML = '⚠ Sin conexión con SharePoint — Los datos pueden estar desactualizados. Reintentando en 5 min.';
+        document.body.appendChild(banner);
+      }
+    });
+    EventBus.subscribe('provider.sync.finished', function() {
+      var banner = document.getElementById('sync-offline-banner');
+      if (banner) banner.remove();
+    });
+  }
+ // RC-07: intervalos adaptativos (15/60/120s)
 
 
     } catch(err) {
