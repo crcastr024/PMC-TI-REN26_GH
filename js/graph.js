@@ -11,7 +11,7 @@ const GraphClient = (() => {
   // ── Configuración interna ─────────────────────────────────────
   let _config = {
     timeoutMs:       30000,   // 30s timeout por request
-    retryMax:        3,       // máximo reintentos
+    retryMax:        5,       // GH3.42.1: 5 reintentos (backoff 500ms/1s/2s/4s/8s = ~15s total) — tolera 504 recurrentes de Graph
     retryBaseDelayMs: 500,    // delay base para backoff exponencial
     scopes:          ['User.Read'], // mínimo F7.2; F7.3 añadirá Sites.ReadWrite.All
   };
@@ -19,13 +19,16 @@ const GraphClient = (() => {
 
   // ── Error mapping: HTTP → error interno ──────────────────────
   const HTTP_ERROR_MAP = {
-    401: { code: 'AUTH_REQUIRED',      retryable: false, message: 'Token expirado o inválido' },
-    403: { code: 'FORBIDDEN',          retryable: false, message: 'Sin permisos para esta operación' },
-    404: { code: 'NOT_FOUND',          retryable: false, message: 'Recurso no encontrado en Graph' },
-    409: { code: 'CONFLICT',           retryable: false, message: 'Conflicto en la operación' },
-    429: { code: 'THROTTLED',          retryable: true,  message: 'Rate limit — reintentando' },
-    500: { code: 'SERVER_ERROR',       retryable: true,  message: 'Error interno de Microsoft Graph' },
-    503: { code: 'SERVICE_UNAVAILABLE',retryable: true,  message: 'Microsoft Graph no disponible' },
+    401: { code: 'AUTH_REQUIRED',       retryable: false, message: 'Token expirado o inválido' },
+    403: { code: 'FORBIDDEN',           retryable: false, message: 'Sin permisos para esta operación' },
+    404: { code: 'NOT_FOUND',           retryable: false, message: 'Recurso no encontrado en Graph' },
+    408: { code: 'REQUEST_TIMEOUT',     retryable: true,  message: 'Tiempo de espera agotado en la solicitud' },
+    409: { code: 'CONFLICT',            retryable: false, message: 'Conflicto en la operación' },
+    429: { code: 'THROTTLED',           retryable: true,  message: 'Rate limit — reintentando' },
+    500: { code: 'SERVER_ERROR',        retryable: true,  message: 'Error interno de Microsoft Graph' },
+    502: { code: 'BAD_GATEWAY',         retryable: true,  message: 'Bad Gateway — Microsoft Graph inestable, reintentando' },
+    503: { code: 'SERVICE_UNAVAILABLE', retryable: true,  message: 'Microsoft Graph no disponible' },
+    504: { code: 'GATEWAY_TIMEOUT',     retryable: true,  message: 'Gateway timeout — Microsoft Graph tardó en responder, reintentando' },
   };
 
   function makeGraphError(status, body, context) {

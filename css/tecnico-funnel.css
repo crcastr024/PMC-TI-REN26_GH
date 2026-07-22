@@ -1,0 +1,380 @@
+/* ═══════════════════════════════════════════════════════════════════
+   PMC-TI-REN26 · GH3.42.5 · Tecnico Flashcards Carousel + Funnel Dynamic
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ═══ Carrusel Flashcards Técnicos ═══ */
+.exec-tec-carousel-wrap {
+  position: relative;
+  padding: 4px 0;
+  border: 0;
+  outline: none;
+}
+.rc-viewport {
+  overflow: hidden;
+  border: 1px solid var(--rule, #D8D5CE);
+  border-radius: 2px;
+  background: var(--paper, #FAFAF8);
+  position: relative;
+}
+.rc-track {
+  display: flex;
+  transition: transform .55s cubic-bezier(.16,1,.3,1);
+  will-change: transform;
+}
+.rc-card {
+  flex: 0 0 100%;
+  min-width: 100%;
+  padding: 24px 26px 22px;
+  position: relative;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(165,28,43,.05) 0%, transparent 60%),
+    var(--paper, #FAFAF8);
+}
+
+/* Rank chip flotante */
+.rc-rank {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+}
+.rc-rank-num {
+  font-family: var(--font-display, Charter, Georgia, serif);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--brand, #A51C2B);
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+.rc-rank-lbl {
+  font-family: var(--font-data, ui-monospace, monospace);
+  font-size: 9px;
+  color: var(--muted, #6B6660);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* Header con avatar + nombre */
+.rc-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-right: 60px;
+}
+.rc-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FAFAF8;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,.10);
+  transition: transform .4s cubic-bezier(.16,1,.3,1);
+}
+.rc-card:hover .rc-avatar {
+  transform: scale(1.06) rotate(-2deg);
+}
+.rc-head-info { flex: 1; min-width: 0; }
+.rc-name {
+  font-family: var(--font-display, Charter, Georgia, serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink, #0A0E14);
+  line-height: 1.15;
+  letter-spacing: -.015em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rc-role {
+  font-family: var(--font-data);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+/* Body: radial + stats grid */
+.rc-body {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 22px;
+  align-items: center;
+}
+
+/* Radial progress */
+.rc-radial {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+}
+.rc-ring {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.rc-radial-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.rc-radial-pct {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+.rc-radial-lbl {
+  font-family: var(--font-data);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* Stats grid 3x2 */
+.rc-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+.rc-stat {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  background: rgba(255,255,255,.5);
+  border: 1px solid var(--rule-2, #EBE8E1);
+  border-radius: 2px;
+  transition: border-color .18s, background .18s;
+}
+.rc-stat:hover {
+  background: #fff;
+  border-color: var(--rule);
+}
+.rc-stat-v {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+  letter-spacing: -.01em;
+  font-variant-numeric: tabular-nums;
+}
+.rc-stat-v.accent { color: var(--status-crit, #A51C2B); }
+.rc-stat-v.amb    { color: var(--status-warn, #A56617); }
+.rc-stat-v.grn    { color: var(--status-ok,   #1F5940); }
+.rc-stat-l {
+  font-family: var(--font-data);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* Navegación */
+.rc-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 0 4px;
+}
+.rc-arrow {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  color: var(--ink-3, #4A5361);
+  cursor: pointer;
+  transition: all .15s;
+  padding: 0;
+}
+.rc-arrow:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-tint, rgba(165,28,43,.06));
+}
+.rc-arrow:active { transform: scale(.95); }
+.rc-arrow svg { display: block; }
+.rc-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+}
+.rc-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rule);
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: all .25s cubic-bezier(.16,1,.3,1);
+}
+.rc-dot:hover { background: var(--muted); }
+.rc-dot.active {
+  background: var(--brand);
+  width: 20px;
+  border-radius: 3px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .rc-track,
+  .rc-avatar,
+  .rc-dot,
+  .rc-ring-fill { transition: none !important; }
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .rc-card { padding: 20px 18px; }
+  .rc-body { grid-template-columns: 1fr; gap: 16px; }
+  .rc-radial { margin: 0 auto; }
+  .rc-stats-grid { grid-template-columns: 1fr 1fr; }
+  .rc-name { font-size: 18px; }
+  .rc-rank-num { font-size: 26px; }
+}
+
+/* ═══ Funnel SVG dinámico (GH3.42.5) ═══ */
+/* Sobrescribe estilos anteriores de .fnl-* del exec-redesign.css */
+#pe-funnel { padding: 6px 2px 4px; }
+
+.fnl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 4px 16px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--ink, #0A0E14);
+  gap: 20px;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+.fnl-total-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.fnl-total-num {
+  font-family: var(--font-display, Charter, Georgia, serif);
+  font-size: 46px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+  letter-spacing: -.025em;
+  font-variant-numeric: tabular-nums;
+}
+.fnl-total-lbl {
+  font-family: var(--font-data);
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+.fnl-split {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 18px;
+  border-left: 1px solid var(--rule);
+}
+.fnl-split-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.fnl-split-v {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink-2);
+  line-height: 1;
+  letter-spacing: -.015em;
+}
+.fnl-split-l {
+  font-family: var(--font-data);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-top: 3px;
+  font-weight: 500;
+}
+.fnl-split-sep {
+  color: var(--rule);
+  font-size: 20px;
+  padding: 0 2px;
+}
+
+/* SVG wrapper */
+.fnl-svg-wrap {
+  padding: 8px 0 4px;
+  position: relative;
+}
+.fnl-svg-step {
+  cursor: default;
+  transition: opacity .2s;
+}
+.fnl-svg-step:hover .fnl-svg-fill {
+  filter: brightness(1.08) saturate(1.15);
+}
+.fnl-svg-step:not(:hover) {
+  opacity: 1;
+}
+/* Cuando hover algún step, atenuar los demás */
+.fnl-svg-wrap:hover .fnl-svg-step { opacity: .55; }
+.fnl-svg-wrap:hover .fnl-svg-step:hover { opacity: 1; }
+
+.fnl-svg-arrow {
+  pointer-events: none;
+}
+
+/* Keyframes para flechas de conversion rate */
+@keyframes fnlArrowIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive Funnel */
+@media (max-width: 720px) {
+  .fnl-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .fnl-split { padding-left: 0; border-left: 0; border-top: 1px solid var(--rule); padding-top: 10px; width: 100%; }
+  .fnl-total-num { font-size: 36px; }
+}

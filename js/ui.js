@@ -99,6 +99,17 @@ function renderResumen() {
   if (window.updateStatsBar) updateStatsBar();
 
   renderMap();
+
+  // GH3.42.3 TASK 01: aplicar regla hide-if-zero a tarjetas de alerta compacta
+  document.querySelectorAll('#view-resumen [data-hide-if-zero]').forEach(function(card) {
+    var targetId = card.getAttribute('data-hide-if-zero');
+    var target = document.getElementById(targetId);
+    if (!target) return;
+    var raw = (target.textContent || '').trim();
+    var v = parseInt(raw, 10);
+    if (isNaN(v) || v === 0) card.classList.add('is-hidden');
+    else card.classList.remove('is-hidden');
+  });
   } catch(e) {
     console.error('[renderResumen]', e.message);
   }
@@ -150,24 +161,44 @@ function renderTecnicoChart() {
 function renderMap() {
   const svg = $('map-svg');
   if (!svg) return;
+  // GH3.42.3 TASK 06: agregado tracking de avance por ciudad para color dinámico
   const cityMap = {};
+  const cityEntregados = {};
   DataService.getRenewals({}).forEach(u => {
     const c = u.ciudad ? u.ciudad : 'Sin ciudad';
     cityMap[c] = (cityMap[c] || 0) + 1;
+    const esHito = u.fecha_entrega ||
+      ['Entregado equipo nuevo','Pendiente devolución equipo anterior',
+       'En tránsito equipo anterior','Equipo anterior recibido',
+       'Renovación completada','Pendiente aprobación','Cerrado',
+       'Entregado','Completado'].indexOf(u.estado) >= 0;
+    if (esHito) cityEntregados[c] = (cityEntregados[c] || 0) + 1;
   });
   const cities = Object.entries(cityMap).sort((a,b) => b[1] - a[1]);
   if (cities.length === 0) { svg.innerHTML = ''; return; }
+
+  // Helper: determinar tono según % avance
+  function _cityColor(pct) {
+    if (pct >= 70) return { fill:'#1F5940', halo:'rgba(31,89,64,.20)', stop1:'#2E7D5A', stop2:'#1F5940' };  // verde
+    if (pct >= 30) return { fill:'#A56617', halo:'rgba(165,102,23,.22)', stop1:'#D97706', stop2:'#A56617' }; // ámbar
+    return                { fill:'#A51C2B', halo:'rgba(165,28,43,.20)', stop1:'#DC2626', stop2:'#A51C2B' };  // rojo
+  }
+
   const cx = 600, cy = 270;
   const main = cities[0];
   const rest = cities.slice(1, 22);
   let content = '';
+
+  // Líneas dashed de conexión (fondo)
   rest.forEach((c, i) => {
     const angle = (i / rest.length) * Math.PI * 2 - Math.PI / 2;
     const dist = 180 + (i % 3) * 60;
     const x = cx + Math.cos(angle) * dist;
     const y = cy + Math.sin(angle) * dist;
-    content += '<line x1="' + cx + '" y1="' + cy + '" x2="' + x + '" y2="' + y + '" stroke="rgba(211,0,52,0.15)" stroke-width="1" stroke-dasharray="2,4"/>';
+    content += '<line x1="' + cx + '" y1="' + cy + '" x2="' + x + '" y2="' + y + '" stroke="rgba(150,150,150,.18)" stroke-width="1" stroke-dasharray="2,4"/>';
   });
+
+  // Nodos periféricos con color por avance
   rest.forEach((c, i) => {
     const angle = (i / rest.length) * Math.PI * 2 - Math.PI / 2;
     const dist = 180 + (i % 3) * 60;
@@ -175,20 +206,33 @@ function renderMap() {
     const y = cy + Math.sin(angle) * dist;
     const radius = Math.max(10, Math.min(28, 10 + c[1] * 1.3));
     const cityEsc = esc(c[0]).replace(/'/g, "\\'");
-    content += '<g style="cursor:pointer" onclick="filterByCity(\'' + cityEsc + '\')">' +
-      '<circle cx="' + x + '" cy="' + y + '" r="' + (radius+8) + '" fill="rgba(211,0,52,0.15)"/>' +
-      '<circle cx="' + x + '" cy="' + y + '" r="' + radius + '" fill="rgba(211,0,52,0.88)" stroke="rgba(255,255,255,0.85)" stroke-width="2"/>' +
-      '<text x="' + x + '" y="' + (y + radius + 18) + '" fill="white" text-anchor="middle" font-size="12" font-weight="700">' + esc(c[0]) + '</text>' +
-      '<text x="' + x + '" y="' + (y + radius + 33) + '" fill="rgba(255,255,255,0.6)" text-anchor="middle" font-size="10">' + c[1] + ' eq.</text>' +
+    const ent = cityEntregados[c[0]] || 0;
+    const pct = Math.round(ent / c[1] * 100);
+    const col = _cityColor(pct);
+    content += '<g class="city-node" style="cursor:pointer" onclick="filterByCity(\'' + cityEsc + '\')">' +
+      '<title>' + esc(c[0]) + ' · ' + c[1] + ' equipos · ' + pct + '% avance</title>' +
+      '<circle cx="' + x + '" cy="' + y + '" r="' + (radius+8) + '" fill="' + col.halo + '"/>' +
+      '<circle cx="' + x + '" cy="' + y + '" r="' + radius + '" fill="' + col.fill + '" stroke="rgba(255,255,255,.9)" stroke-width="2"/>' +
+      '<text x="' + x + '" y="' + (y + 4) + '" fill="white" text-anchor="middle" font-size="10" font-weight="700" style="font-family:ui-monospace,monospace">' + pct + '%</text>' +
+      '<text x="' + x + '" y="' + (y + radius + 16) + '" fill="var(--ink-2,#1F2733)" text-anchor="middle" font-size="12" font-weight="600">' + esc(c[0]) + '</text>' +
+      '<text x="' + x + '" y="' + (y + radius + 30) + '" fill="var(--muted,#6B6660)" text-anchor="middle" font-size="10">' + c[1] + ' eq.</text>' +
       '</g>';
   });
+
+  // Nodo principal con color por avance
   const mr = Math.max(56, Math.min(90, 56 + main[1] * 0.4));
   const mainEsc = esc(main[0]).replace(/'/g, "\\'");
-  content += '<defs><radialGradient id="grad-main"><stop offset="0%" stop-color="#FF1A55"/><stop offset="100%" stop-color="#A5002A"/></radialGradient></defs>' +
-    '<circle cx="' + cx + '" cy="' + cy + '" r="' + (mr+18) + '" fill="none" stroke="rgba(211,0,52,0.35)" stroke-width="1.5"><animate attributeName="r" values="' + (mr+18) + ';' + (mr+34) + ';' + (mr+18) + '" dur="3s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0;0.5" dur="3s" repeatCount="indefinite"/></circle>' +
-    '<circle cx="' + cx + '" cy="' + cy + '" r="' + mr + '" fill="url(#grad-main)" stroke="white" stroke-width="3" style="cursor:pointer" onclick="filterByCity(\'' + mainEsc + '\')"/>' +
-    '<text x="' + cx + '" y="' + (cy - 6) + '" fill="white" text-anchor="middle" font-size="18" font-weight="800">' + esc(main[0]) + '</text>' +
-    '<text x="' + cx + '" y="' + (cy + 16) + '" fill="rgba(255,255,255,0.9)" text-anchor="middle" font-size="12" font-weight="600">' + main[1] + ' equipos</text>';
+  const mainEnt = cityEntregados[main[0]] || 0;
+  const mainPct = Math.round(mainEnt / main[1] * 100);
+  const mainCol = _cityColor(mainPct);
+  content += '<defs><radialGradient id="grad-main"><stop offset="0%" stop-color="' + mainCol.stop1 + '"/><stop offset="100%" stop-color="' + mainCol.stop2 + '"/></radialGradient></defs>' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + (mr+18) + '" fill="none" stroke="' + mainCol.halo + '" stroke-width="1.5"><animate attributeName="r" values="' + (mr+18) + ';' + (mr+34) + ';' + (mr+18) + '" dur="3s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0;0.5" dur="3s" repeatCount="indefinite"/></circle>' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + mr + '" fill="url(#grad-main)" stroke="white" stroke-width="3" style="cursor:pointer" onclick="filterByCity(\'' + mainEsc + '\')">' +
+    '<title>' + esc(main[0]) + ' · ' + main[1] + ' equipos · ' + mainPct + '% avance</title>' +
+    '</circle>' +
+    '<text x="' + cx + '" y="' + (cy - 10) + '" fill="white" text-anchor="middle" font-size="18" font-weight="800" style="pointer-events:none">' + esc(main[0]) + '</text>' +
+    '<text x="' + cx + '" y="' + (cy + 8) + '" fill="rgba(255,255,255,.85)" text-anchor="middle" font-size="12" font-weight="600" style="pointer-events:none;font-family:ui-monospace,monospace">' + mainPct + '%</text>' +
+    '<text x="' + cx + '" y="' + (cy + 24) + '" fill="rgba(255,255,255,.75)" text-anchor="middle" font-size="10" style="pointer-events:none">' + main[1] + ' equipos</text>';
   svg.innerHTML = content;
 }
 
@@ -658,8 +702,10 @@ function setReport(type, btn) {
       filtered = base.filter(function(u){ return DEVOLUCION_STATES.indexOf(u.estado) >= 0; });
       title = 'REP-06 · Devoluciones'; break;
     case 'finalizados':
-      // Estrictamente terminados — NO estados intermedios
-      filtered = base.filter(function(u){ return u.estado === 'Renovación completada' || u.estado === 'Cerrado'; });
+      // GH3.42.5 FIX: alineado con buildDashboardStats — 4 estados terminales
+      filtered = base.filter(function(u){
+        return u.estado === 'Renovación completada' || u.estado === 'Cerrado' || u.estado === 'Finalizado' || u.estado === 'Completado';
+      });
       title = 'REP-07 · Finalizados'; break;
     case 'feedback':
       filtered = base.filter(function(u){ return (u.feedback||0) > 0; });
@@ -1427,10 +1473,10 @@ function renderPanelEjecutivo() {
   var vEl = document.getElementById('pe-prod-veredicto');
   if (vEl) {
     if (PR.velocidadOK) {
-      vEl.innerHTML = '<span class="vd-ok">✓ Ritmo suficiente para cumplir la meta</span>';
+      vEl.innerHTML = '<span class="vd-ok">Ritmo suficiente — proyecto en curso hacia meta 15 Ago</span>';
     } else {
       var gap = ((PR.ritmoNecesario || 0) - (PR.promedioGlobal || 0)).toFixed(2);
-      vEl.innerHTML = '<span class="vd-warn">⚠ Ritmo insuficiente · faltan ' + gap + ' eq/día</span>';
+      vEl.innerHTML = '<span class="vd-warn">Ritmo insuficiente — faltan ' + gap + ' equipos/día para cumplir 15 Ago</span>';
     }
   }
 
@@ -1438,7 +1484,9 @@ function renderPanelEjecutivo() {
   _renderBurnDownChart(_stats.burnDown || []);
 
   // ─── Funnel Pipeline ──────────────────────────────────────────────
-  _renderFunnelPipeline(_stats.pipeline || [], total);
+  // GH3.42.5 FIX: mostrar total del proyecto (146) con desglose activos/backup
+  var totalProyecto = (_allStats.total || 0) + (_allStats.totalBackups || 0);
+  _renderFunnelPipeline(_stats.pipeline || [], total, totalProyecto, _allStats.totalBackups || 0);
 
   // ─── Cumplimiento por empresa (cards) ─────────────────────────────
   var empEl = document.getElementById('pe-empresa-new');
@@ -1462,33 +1510,18 @@ function renderPanelEjecutivo() {
     setTimeout(function(){empEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},80);
   }
 
-  // ─── Leaderboard técnicos ─────────────────────────────────────────
+  // ─── Leaderboard técnicos — Carrusel flashcards (GH3.42.5) ───────
   var tecEl = document.getElementById('pe-tecnico-new');
   if (tecEl) {
     var ptMap = _stats.porTecnico || {};
     var tecList = Object.keys(ptMap).map(function(t){ return Object.assign({tec:t},ptMap[t]); })
       .filter(function(d){ return d.asignados>0; })
       .sort(function(a,b){ return b.entregados - a.entregados; });
-    tecEl.innerHTML = tecList.length ? tecList.map(function(d, i) {
-      var bp = d.pct;
-      var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1);
-      return '<div class="lb-row">' +
-        '<div class="lb-rank">'+medal+'</div>' +
-        '<div class="lb-body">' +
-          '<div class="lb-head"><span class="lb-name">'+esc(d.tec)+'</span><span class="lb-pct">'+bp+'%</span></div>' +
-          '<div class="lb-stats">' +
-            '<span>'+d.asignados+' asig</span>' +
-            '<span class="acc">'+d.pendientes+' pend</span>' +
-            '<span>'+d.proceso+' proc</span>' +
-            '<span class="grn">'+d.entregados+' ent</span>' +
-            '<span>'+(d.actas||0)+' actas</span>' +
-            '<span class="grn">'+d.finalizados+' fin</span>' +
-          '</div>' +
-          '<div class="op-bar"><div class="op-bar-fill" data-pct="'+bp+'" style="width:0%"></div></div>' +
-        '</div>' +
-      '</div>';
-    }).join('') : '<div style="color:var(--text-3);font-size:11px;padding:8px 0">Sin datos</div>';
-    setTimeout(function(){tecEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},100);
+    if (tecList.length === 0) {
+      tecEl.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:16px 0;font-family:var(--font-data);letter-spacing:.05em">Sin datos de técnicos disponibles</div>';
+    } else {
+      _renderTecnicoCarousel(tecEl, tecList);
+    }
   }
 
   // ─── Ciudades (tarjetas) ──────────────────────────────────────────
@@ -1648,9 +1681,11 @@ function _renderBurnDownChart(puntos) {
   });
 }
 
-function _renderFunnelPipeline(pipe, total) {
+function _renderFunnelPipeline(pipe, totalActivos, totalProyecto, totalBackup) {
   var el = document.getElementById('pe-funnel');
   if (!el) return;
+  totalProyecto = totalProyecto || totalActivos;
+  totalBackup   = totalBackup   || 0;
   var LABELS_MAP = {
     'Pendiente':'Pendientes',
     'Alistamiento':'Alistamiento',
@@ -1664,22 +1699,144 @@ function _renderFunnelPipeline(pipe, total) {
     'Renovación completada':'Finalizados',
     'Cerrado':'Cerrado'
   };
-  var maxCount = pipe.reduce(function(a,b){ return Math.max(a, b.count); }, 1);
-  el.innerHTML =
-    '<div class="fnl-top"><span class="fnl-total">'+total+'</span><span class="fnl-total-lbl">Total activos</span></div>' +
-    pipe.filter(function(p){ return p.count > 0 || p.estado === 'Pendiente'; }).map(function(s, i) {
-      var pct = Math.round(s.count / maxCount * 100);
-      var pctReal = total ? Math.round(s.count / total * 100) : 0;
-      var width = 100 - Math.min(70, i * 4); // trapezoide decreciente visual
-      return '<div class="fnl-step" style="--w:'+width+'%">' +
-        '<div class="fnl-bar" style="width:0%" data-pct="'+pct+'"></div>' +
-        '<div class="fnl-content">' +
-          '<span class="fnl-label">'+esc(LABELS_MAP[s.estado] || s.estado)+'</span>' +
-          '<span class="fnl-count">'+s.count+' <em>('+pctReal+'%)</em></span>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-  setTimeout(function(){ el.querySelectorAll('.fnl-bar[data-pct]').forEach(function(b){ b.style.width = b.dataset.pct + '%'; }); }, 120);
+  // Solo estados con datos
+  var steps = pipe.filter(function(p){ return p.count > 0 || p.estado === 'Pendiente'; });
+  if (!steps.length) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Sin datos de pipeline disponibles</div>';
+    return;
+  }
+  var maxCount = steps.reduce(function(a,b){ return Math.max(a, b.count); }, 1);
+
+  // ── Header: total con desglose ──
+  var headerHtml =
+    '<div class="fnl-header">' +
+      '<div class="fnl-total-block">' +
+        '<div class="fnl-total-num" id="fnl-count-total">0</div>' +
+        '<div class="fnl-total-lbl">Total proyecto</div>' +
+      '</div>' +
+      '<div class="fnl-split">' +
+        '<div class="fnl-split-item"><span class="fnl-split-v" id="fnl-count-act">0</span><span class="fnl-split-l">operativos</span></div>' +
+        '<div class="fnl-split-sep">·</div>' +
+        '<div class="fnl-split-item"><span class="fnl-split-v" id="fnl-count-bk">0</span><span class="fnl-split-l">backup</span></div>' +
+      '</div>' +
+    '</div>';
+
+  // ── Trapezoides SVG animados ──
+  // Cada paso es una banda horizontal que va decreciendo (efecto funnel)
+  var STEP_H = 42;   // altura por banda
+  var STEP_GAP = 4;  // separación entre bandas
+  var W = 400;       // ancho total
+  var svgH = steps.length * (STEP_H + STEP_GAP) + 12;
+  var svgHtml = '<svg viewBox="0 0 ' + W + ' ' + svgH + '" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;overflow:visible">' +
+    '<defs>' +
+      '<linearGradient id="fnl-grad-brand" x1="0%" y1="0%" x2="100%" y2="0%">' +
+        '<stop offset="0%" stop-color="#A51C2B" stop-opacity=".08"/>' +
+        '<stop offset="100%" stop-color="#A51C2B" stop-opacity=".28"/>' +
+      '</linearGradient>' +
+      '<linearGradient id="fnl-grad-fill" x1="0%" y1="0%" x2="100%" y2="0%">' +
+        '<stop offset="0%" stop-color="#6A0F19"/>' +
+        '<stop offset="50%" stop-color="#A51C2B"/>' +
+        '<stop offset="100%" stop-color="#DC2626"/>' +
+      '</linearGradient>' +
+    '</defs>';
+
+  steps.forEach(function(s, i) {
+    var y = i * (STEP_H + STEP_GAP) + 6;
+    var pctReal = totalActivos ? Math.round(s.count / totalActivos * 100) : 0;
+    // Ancho del trapezoide (decrece con cada paso)
+    var widthPct = 100 - (i * (55 / Math.max(steps.length - 1, 1)));  // decrece 55% a lo largo del funnel
+    var barWidth = W * (widthPct / 100);
+    var barX = (W - barWidth) / 2;
+    // Ancho del fill (por count relativo al max)
+    var fillPct = s.count / maxCount;
+    var fillWidth = barWidth * fillPct;
+    // Conversion rate desde el paso anterior
+    var convRate = '';
+    if (i > 0 && steps[i-1].count > 0) {
+      var rate = Math.round(s.count / steps[i-1].count * 100);
+      convRate = rate + '%';
+    }
+
+    svgHtml +=
+      '<g class="fnl-svg-step" data-idx="' + i + '" data-count="' + s.count + '" data-pct-total="' + pctReal + '">' +
+        // Fondo del trapezoide (siempre visible)
+        '<rect x="' + barX + '" y="' + y + '" width="' + barWidth + '" height="' + STEP_H + '" fill="url(#fnl-grad-brand)" rx="2"/>' +
+        // Fill animado (crece de 0 a fillWidth)
+        '<rect class="fnl-svg-fill" x="' + barX + '" y="' + y + '" width="0" height="' + STEP_H + '" fill="url(#fnl-grad-fill)" rx="2" data-target-width="' + fillWidth + '" style="transition:width 1.1s cubic-bezier(.16,1,.3,1);transition-delay:' + (i * 80) + 'ms"/>' +
+        // Borde derecho del trapezoide
+        '<line x1="' + (barX + barWidth) + '" y1="' + y + '" x2="' + (barX + barWidth) + '" y2="' + (y + STEP_H) + '" stroke="#A51C2B" stroke-width="1" opacity=".3"/>' +
+        // Texto: etiqueta izquierda
+        '<text x="' + (barX + 12) + '" y="' + (y + STEP_H/2 + 4) + '" fill="#FAFAF8" font-size="12" font-weight="600" style="font-family:-apple-system,Segoe UI,sans-serif;pointer-events:none">' +
+          esc(LABELS_MAP[s.estado] || s.estado) +
+        '</text>' +
+        // Texto: número derecha
+        '<text x="' + (barX + barWidth - 12) + '" y="' + (y + STEP_H/2 - 2) + '" fill="#FAFAF8" font-size="15" font-weight="700" text-anchor="end" style="font-family:Charter,Georgia,serif;pointer-events:none" class="fnl-svg-count" data-target="' + s.count + '">' +
+          '0' +
+        '</text>' +
+        // Texto: porcentaje debajo del número
+        '<text x="' + (barX + barWidth - 12) + '" y="' + (y + STEP_H/2 + 11) + '" fill="rgba(250,250,248,.75)" font-size="9" font-weight="600" text-anchor="end" style="font-family:ui-monospace,monospace;pointer-events:none">' +
+          pctReal + '% total' +
+        '</text>';
+
+    // Conversion rate flecha (entre bandas)
+    if (i > 0 && convRate) {
+      svgHtml +=
+        '<g class="fnl-svg-arrow" style="opacity:0;animation:fnlArrowIn .4s ease-out ' + (i * 80 + 400) + 'ms forwards">' +
+          '<line x1="' + (W/2) + '" y1="' + (y - STEP_GAP) + '" x2="' + (W/2) + '" y2="' + (y - 1) + '" stroke="#A51C2B" stroke-width="1" opacity=".5"/>' +
+          '<text x="' + (W/2 + 5) + '" y="' + (y - 1) + '" fill="#6B6660" font-size="8" font-weight="600" style="font-family:ui-monospace,monospace">' + convRate + '</text>' +
+        '</g>';
+    }
+
+    svgHtml += '</g>';
+  });
+  svgHtml += '</svg>';
+
+  el.innerHTML = headerHtml + '<div class="fnl-svg-wrap">' + svgHtml + '</div>';
+
+  // ── Animaciones: count-up del header + fill de trapezoides + count-up interno ──
+  _funnelCountUp('fnl-count-total', totalProyecto, 900);
+  setTimeout(function(){ _funnelCountUp('fnl-count-act', totalActivos, 750); }, 120);
+  setTimeout(function(){ _funnelCountUp('fnl-count-bk',  totalBackup,   700); }, 240);
+
+  // Fill de trapezoides
+  setTimeout(function() {
+    el.querySelectorAll('.fnl-svg-fill').forEach(function(rect) {
+      rect.setAttribute('width', rect.dataset.targetWidth);
+    });
+  }, 100);
+
+  // Count-up dentro de cada band SVG
+  el.querySelectorAll('.fnl-svg-count').forEach(function(txt, idx) {
+    var target = parseInt(txt.dataset.target, 10) || 0;
+    setTimeout(function() {
+      _funnelCountUpText(txt, target, 800);
+    }, idx * 80 + 300);
+  });
+}
+
+// Helper: count-up para elementos HTML por id
+function _funnelCountUp(id, target, dur) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var start = performance.now();
+  function tick(now) {
+    var t = Math.min((now - start) / dur, 1);
+    var eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+    el.textContent = Math.round(target * eased);
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+// Helper: count-up para nodos <text> SVG
+function _funnelCountUpText(node, target, dur) {
+  var start = performance.now();
+  function tick(now) {
+    var t = Math.min((now - start) / dur, 1);
+    var eased = 1 - Math.pow(1 - t, 3);
+    node.textContent = Math.round(target * eased);
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 
 function _renderDevolucionesDonut(pend, rec) {
@@ -1754,9 +1911,151 @@ function _renderDestinoDonut(DF) {
   });
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// GH3.42.5 — Carrusel flashcards de técnicos
+// ═══════════════════════════════════════════════════════════════════════
+function _renderTecnicoCarousel(container, tecList) {
+  var state = { idx: 0, timer: null, autoplayMs: 6000 };
+  container.classList.add('exec-tec-carousel-wrap');
+
+  function _radialSVG(pct, size, stroke, colorFill, colorTrack) {
+    var r = (size - stroke) / 2;
+    var c = 2 * Math.PI * r;
+    var offset = c * (1 - Math.max(0, Math.min(100, pct)) / 100);
+    return '<svg viewBox="0 0 ' + size + ' ' + size + '" class="rc-ring">' +
+      '<circle cx="' + (size/2) + '" cy="' + (size/2) + '" r="' + r + '" fill="none" stroke="' + colorTrack + '" stroke-width="' + stroke + '"/>' +
+      '<circle class="rc-ring-fill" cx="' + (size/2) + '" cy="' + (size/2) + '" r="' + r + '" fill="none" stroke="' + colorFill + '" stroke-width="' + stroke + '" stroke-dasharray="' + c.toFixed(2) + '" stroke-dashoffset="' + c.toFixed(2) + '" stroke-linecap="round" transform="rotate(-90 ' + (size/2) + ' ' + (size/2) + ')" data-target-offset="' + offset.toFixed(2) + '" style="transition:stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1)"/>' +
+    '</svg>';
+  }
+
+  function _cardHTML(d, i, total) {
+    var rank = String(i + 1).padStart(2, '0');
+    var pctColor = d.pct >= 70 ? '#1F5940' : d.pct >= 30 ? '#A56617' : '#A51C2B';
+    var initials = (d.tec || '?').split(/\s+/).map(function(w){ return w.charAt(0); }).join('').slice(0,2).toUpperCase();
+    return '<div class="rc-card" data-idx="' + i + '">' +
+        // Rank chip
+        '<div class="rc-rank"><span class="rc-rank-num">' + rank + '</span><span class="rc-rank-lbl">de ' + total + '</span></div>' +
+        // Header con avatar iniciales + nombre
+        '<div class="rc-head">' +
+          '<div class="rc-avatar" style="background:linear-gradient(135deg,' + pctColor + ',' + pctColor + '99)">' + initials + '</div>' +
+          '<div class="rc-head-info">' +
+            '<div class="rc-name">' + esc(d.tec) + '</div>' +
+            '<div class="rc-role">Técnico responsable</div>' +
+          '</div>' +
+        '</div>' +
+        // Radial + KPI grande
+        '<div class="rc-body">' +
+          '<div class="rc-radial">' +
+            _radialSVG(d.pct, 140, 10, pctColor, 'rgba(216,213,206,.5)') +
+            '<div class="rc-radial-inner">' +
+              '<div class="rc-radial-pct" data-target="' + d.pct + '">0%</div>' +
+              '<div class="rc-radial-lbl">de avance</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="rc-stats-grid">' +
+            '<div class="rc-stat"><span class="rc-stat-v">' + d.asignados + '</span><span class="rc-stat-l">Asignados</span></div>' +
+            '<div class="rc-stat"><span class="rc-stat-v accent">' + d.pendientes + '</span><span class="rc-stat-l">Pendientes</span></div>' +
+            '<div class="rc-stat"><span class="rc-stat-v amb">' + d.proceso + '</span><span class="rc-stat-l">En proceso</span></div>' +
+            '<div class="rc-stat"><span class="rc-stat-v grn">' + d.entregados + '</span><span class="rc-stat-l">Entregados</span></div>' +
+            '<div class="rc-stat"><span class="rc-stat-v">' + (d.actas || 0) + '</span><span class="rc-stat-l">Actas</span></div>' +
+            '<div class="rc-stat"><span class="rc-stat-v grn">' + d.finalizados + '</span><span class="rc-stat-l">Finalizados</span></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  var carouselHTML =
+    '<div class="rc-viewport">' +
+      '<div class="rc-track" id="rc-track">' +
+        tecList.map(function(d,i){ return _cardHTML(d, i, tecList.length); }).join('') +
+      '</div>' +
+    '</div>' +
+    '<div class="rc-nav">' +
+      '<button class="rc-arrow rc-prev" aria-label="Anterior">' +
+        '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>' +
+      '</button>' +
+      '<div class="rc-dots">' +
+        tecList.map(function(_,i){ return '<button class="rc-dot' + (i===0?' active':'') + '" data-i="' + i + '" aria-label="Técnico ' + (i+1) + '"></button>'; }).join('') +
+      '</div>' +
+      '<button class="rc-arrow rc-next" aria-label="Siguiente">' +
+        '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>' +
+      '</button>' +
+    '</div>';
+
+  container.innerHTML = carouselHTML;
+
+  var track = container.querySelector('#rc-track');
+  var dots  = container.querySelectorAll('.rc-dot');
+  var cards = container.querySelectorAll('.rc-card');
+
+  function _goTo(idx) {
+    state.idx = ((idx % tecList.length) + tecList.length) % tecList.length;
+    track.style.transform = 'translateX(-' + (state.idx * 100) + '%)';
+    dots.forEach(function(d, i){ d.classList.toggle('active', i === state.idx); });
+    // Animar el radial y count-up del pct al aparecer
+    _animateCard(cards[state.idx]);
+  }
+  function _animateCard(card) {
+    if (!card) return;
+    var ring = card.querySelector('.rc-ring-fill');
+    if (ring) {
+      // Resetear e iniciar animación de nuevo
+      var target = ring.dataset.targetOffset;
+      ring.style.strokeDashoffset = ring.getAttribute('stroke-dasharray');
+      requestAnimationFrame(function(){
+        setTimeout(function(){ ring.style.strokeDashoffset = target; }, 40);
+      });
+    }
+    var pctEl = card.querySelector('.rc-radial-pct');
+    if (pctEl) {
+      var target = parseInt(pctEl.dataset.target, 10) || 0;
+      var start = performance.now();
+      var dur = 1100;
+      (function tick(now){
+        var t = Math.min((now - start) / dur, 1);
+        var eased = 1 - Math.pow(1 - t, 3);
+        pctEl.textContent = Math.round(target * eased) + '%';
+        if (t < 1) requestAnimationFrame(tick);
+      })(start);
+    }
+  }
+  function _startAutoplay() {
+    if (state.timer) clearInterval(state.timer);
+    if (tecList.length <= 1) return;
+    state.timer = setInterval(function(){ _goTo(state.idx + 1); }, state.autoplayMs);
+  }
+  function _stopAutoplay() { if (state.timer) { clearInterval(state.timer); state.timer = null; } }
+
+  // Event bindings
+  container.querySelector('.rc-prev').onclick = function(){ _stopAutoplay(); _goTo(state.idx - 1); };
+  container.querySelector('.rc-next').onclick = function(){ _stopAutoplay(); _goTo(state.idx + 1); };
+  dots.forEach(function(d){
+    d.onclick = function(){ _stopAutoplay(); _goTo(parseInt(d.dataset.i, 10) || 0); };
+  });
+  // Pausar autoplay al hover
+  container.addEventListener('mouseenter', _stopAutoplay);
+  container.addEventListener('mouseleave', _startAutoplay);
+  // Swipe touch (mobile)
+  var touchStartX = 0;
+  container.addEventListener('touchstart', function(e){ touchStartX = e.touches[0].clientX; _stopAutoplay(); }, { passive:true });
+  container.addEventListener('touchend', function(e){
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 40) { _goTo(state.idx + (dx < 0 ? 1 : -1)); }
+  });
+  // Keyboard nav (focus dentro del carrusel)
+  container.tabIndex = 0;
+  container.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowLeft')  { _stopAutoplay(); _goTo(state.idx - 1); }
+    if (e.key === 'ArrowRight') { _stopAutoplay(); _goTo(state.idx + 1); }
+  });
+
+  // Init: animar primera card
+  _goTo(0);
+  _startAutoplay();
+}
+
 function _renderCuelloBotella(_stats) {
   var botEl = document.getElementById('pe-botella');
-  if (!botEl) return;
   var pipe   = _stats.pipeline || [];
   var total  = _stats.total || 0;
   var sorted = pipe.filter(function(p){ return p.count>0; }).sort(function(a,b){ return b.count-a.count; });
@@ -1954,7 +2253,7 @@ function saveRecord() {
     var _cachedVer  = window.SynchronizationManager ? SynchronizationManager.getCachedVersion(id) : undefined;
     if (_formVer >= 0 && _cachedVer !== undefined && Number(_cachedVer) > Number(_formVer)) {
       // RC-07 TASK 4: CONFLICTO — otro usuario modificó el registro
-      if (window.toast) toast('⚠ Conflicto: este registro fue actualizado por otro usuario mientras lo estabas editando. La información será recargada antes de continuar.', 'warning');
+      if (window.toast) toast('Conflicto: este registro fue actualizado por otro usuario mientras lo estabas editando. La información será recargada antes de continuar.', 'warning');
       if (window.closeModal) closeModal(true);
       var _conflictId = id;
       if (window.DataService && DataService.reloadFromProvider) {
@@ -2014,7 +2313,7 @@ function saveRecord() {
           // RC-06 TASK 5: no reloadFromProvider completo — requestTick con debounce
           // closeModal y renderResumen ya fueron llamados antes del PATCH (RC-07)
           if (window.state) state._syncInProgress = false;
-          if (window.toast) toast('✓ Guardado · Sincronizado', 'success');
+          if (window.toast) toast('Guardado · Sincronizado', 'success');
           if (window._showSyncStatus) _showSyncStatus('ok');
 
           // ═══ GH3.41 + GH3.41.1 TASK 04: Auditoría con garantía de cierre ═
@@ -2070,12 +2369,44 @@ function saveRecord() {
         })
         .catch(function(err) {
           if (window.state) state._syncInProgress = false;
-          if (err && err.graphCode === 'CONFLICT') {
+          if (window._showSyncStatus) _showSyncStatus('error');
+
+          var msg = err && err.message ? String(err.message) : 'Error desconocido';
+          var code = err && err.graphCode ? err.graphCode : 'UNKNOWN';
+
+          // GH3.42.1: mensajes específicos por tipo de error
+          if (code === 'CONFLICT') {
+            // Otro usuario modificó el registro — recargar y avisar
             if (window.DataService && DataService.reloadFromProvider) DataService.reloadFromProvider();
-            if (window.toast) toast('Conflicto detectado. Recargando datos...', 'warning');
+            if (window.toast) toast('Conflicto: otro usuario modificó este registro. Recargando datos...', 'warning');
+          } else if (code === 'GATEWAY_TIMEOUT' || code === 'BAD_GATEWAY' || code === 'SERVICE_UNAVAILABLE' || code === 'SERVER_ERROR' || code === 'REQUEST_TIMEOUT') {
+            // Errores transitorios de Graph — el retry ya se agotó
+            if (window.toast) toast('Microsoft Graph no respondió (HTTP ' + (err.httpStatus || '5xx') + '). Los cambios NO se guardaron. Vuelve a intentar en unos segundos.', 'critical');
+          } else if (code === 'THROTTLED') {
+            if (window.toast) toast('Rate limit de Microsoft Graph. Espera 30 segundos y reintenta.', 'warning');
+          } else if (code === 'AUTH_REQUIRED') {
+            if (window.toast) toast('Sesión expirada. Recarga la página para iniciar sesión nuevamente.', 'critical');
+          } else if (code === 'FORBIDDEN') {
+            if (window.toast) toast('Sin permisos para modificar este registro (RBAC).', 'critical');
+          } else if (code === 'NETWORK_ERROR' || code === 'DNS_FAILURE' || code === 'TIMEOUT') {
+            if (window.toast) toast('Sin conexión al servidor. Verifica tu red y reintenta.', 'critical');
           } else {
-            console.error('[SYNC ERROR]', err && err.message);
+            if (window.toast) toast('Error al guardar: ' + msg.replace(/^\[GraphClient\]\s*/, ''), 'critical');
           }
+
+          console.error('[SYNC ERROR]', code, '·', msg);
+
+          // Registrar el ERROR en AuditService (no bloqueante)
+          try {
+            if (window.AuditService && AuditService.logSystemEvent) {
+              AuditService.logSystemEvent('ERROR', {
+                origen:      'Graph',
+                modulo:      'Renovaciones',
+                registro:    String(id),
+                observacion: 'PATCH RENOVACIONES falló: ' + code + ' HTTP ' + (err.httpStatus || '?')
+              });
+            }
+          } catch(auditErr) { /* intentional: audit no bloquea */ }
         });
     }
   } catch(e) {

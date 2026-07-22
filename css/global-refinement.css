@@ -1,0 +1,363 @@
+/* ═══════════════════════════════════════════════════════════════════
+   PMC-TI-REN26 · GH3.42.4 · Global Refinement (todas las vistas)
+   Aplica tokens de exec-redesign.css a: usuarios, tecnicos, ciudades,
+   devoluciones, reportes, actividad, ajustes, aprobaciones
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Hero compacto — consistente en todas las vistas ── */
+.view .hero.compact {
+  background: var(--ink, #0A0E14);
+  border-radius: 0;
+  padding: 32px 32px 24px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.view .hero.compact::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0;
+  height: 3px; background: var(--brand, #A51C2B);
+}
+.view .hero.compact .hero-inner { max-width: 1440px; margin: 0 auto; }
+.view .hero.compact .hero-eyebrow {
+  font-family: var(--font-data, ui-monospace, monospace);
+  font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+  color: rgba(255,255,255,.5); font-weight: 500; margin-bottom: 10px;
+}
+.view .hero.compact .hero-title {
+  font-family: var(--font-display, Charter, Georgia, serif);
+  font-weight: 700; font-size: 32px; line-height: 1.05;
+  color: #FAFAF8; letter-spacing: -.015em; margin-bottom: 6px;
+}
+.view .hero.compact .hero-title strong {
+  color: var(--brand, #A51C2B); font-style: italic;
+}
+.view .hero.compact .hero-sub {
+  font-size: 13px; color: rgba(255,255,255,.6); font-family: var(--font-body);
+}
+
+/* ── Section titles — tipografía consistente ── */
+.view .section-eyebrow {
+  font-family: var(--font-data);
+  font-size: 10px; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--muted, #6B6660); font-weight: 600;
+}
+.view .section-title {
+  font-family: var(--font-display);
+  font-weight: 700; font-size: 22px; letter-spacing: -.01em;
+  color: var(--ink-2, #1F2733);
+}
+.view .section-sub {
+  font-family: var(--font-body);
+  font-size: 12px; color: var(--muted); margin-top: 4px;
+}
+
+/* ── Toolbar / Filter pills ── */
+.view .toolbar {
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--paper, #FAFAF8);
+  border: 1px solid var(--rule, #D8D5CE);
+  border-radius: 2px;
+  margin-bottom: 14px;
+  display: flex; flex-wrap: wrap; align-items: center;
+}
+.view .filter-pill,
+.view select.filter-pill {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  padding: 6px 10px;
+  font-family: var(--font-body);
+  font-size: 12px; color: var(--ink-2);
+  border-radius: 0;
+  transition: border-color .15s;
+  cursor: pointer;
+}
+.view .filter-pill:hover,
+.view .filter-pill:focus { border-color: var(--brand); outline: 0; }
+.view .filter-count {
+  font-family: var(--font-data);
+  font-size: 10px; letter-spacing: .05em;
+  color: var(--muted); font-weight: 500; margin-left: auto;
+}
+
+/* ── Panels genéricos ── */
+.view .panel {
+  background: var(--paper, #FAFAF8);
+  border: 1px solid var(--rule, #D8D5CE);
+  border-radius: 2px;
+  padding: 20px 22px;
+  box-shadow: none;
+  margin-bottom: 14px;
+  transition: border-color .18s;
+}
+.view .panel:hover { border-color: var(--ink-3, #4A5361); }
+.view .panel-head {
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--rule-2, #EBE8E1);
+}
+.view .panel-title {
+  font-family: var(--font-data);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: .15em; text-transform: uppercase;
+  color: var(--muted);
+}
+.view .panel-sub {
+  font-family: var(--font-body);
+  font-size: 11px; color: var(--muted); margin-top: 4px;
+}
+
+/* ── Report cards (view-reportes) ── */
+#view-reportes .reports-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+#view-reportes .report-card {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 16px 18px;
+  cursor: pointer;
+  transition: border-color .18s, background .18s;
+  box-shadow: none;
+}
+#view-reportes .report-card:hover {
+  border-color: var(--ink-3);
+  background: var(--paper-2, #F1F0EC);
+}
+#view-reportes .report-card.active {
+  border-color: var(--brand);
+  background: var(--brand-tint, rgba(165,28,43,.06));
+}
+#view-reportes .report-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+#view-reportes .report-code {
+  font-family: var(--font-data);
+  font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600;
+}
+#view-reportes .report-icon {
+  color: var(--muted);
+  width: 18px; height: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+#view-reportes .report-icon svg {
+  width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5;
+}
+#view-reportes .report-title {
+  font-family: var(--font-body);
+  font-size: 13px; font-weight: 600; color: var(--ink-2);
+  margin-bottom: 6px;
+}
+#view-reportes .report-value {
+  font-family: var(--font-display);
+  font-size: 30px; font-weight: 700; line-height: 1;
+  color: var(--ink); letter-spacing: -.015em; margin-bottom: 4px;
+}
+#view-reportes .report-desc {
+  font-family: var(--font-body);
+  font-size: 11px; color: var(--muted);
+}
+
+/* ── Empty states ── */
+.view .empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+}
+.view .empty-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px;
+  background: var(--rule-2);
+  border-radius: 4px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.view .empty-icon svg {
+  width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5;
+}
+.view .empty-title {
+  font-family: var(--font-body);
+  font-size: 15px; font-weight: 600; color: var(--ink-2);
+  margin-bottom: 4px;
+}
+.view .empty-msg {
+  font-family: var(--font-body);
+  font-size: 12px; color: var(--muted);
+}
+
+/* ── Tablas ── */
+.view table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: 12px;
+}
+.view table thead th {
+  background: var(--paper-2, #F1F0EC);
+  color: var(--muted);
+  font-family: var(--font-data);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--rule);
+}
+.view table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rule-2);
+  color: var(--ink-2);
+}
+.view table tbody tr:hover {
+  background: var(--paper-2);
+}
+.view table tbody tr:last-child td { border-bottom: 0; }
+/* Números en tablas con font-data */
+.view table td[data-num], .view table .num, .view table .col-count {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+/* ── Botones ── */
+.view button.btn,
+.view .btn-primary {
+  font-family: var(--font-body);
+  font-size: 12px; font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 2px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all .15s;
+  letter-spacing: 0;
+}
+.view button.btn:hover,
+.view .btn-primary:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.view .btn-primary,
+.view button.btn.primary {
+  background: var(--brand);
+  color: #FAFAF8;
+  border-color: var(--brand);
+}
+.view .btn-primary:hover,
+.view button.btn.primary:hover {
+  background: var(--brand-dk, #6A0F19);
+  border-color: var(--brand-dk);
+  color: #FAFAF8;
+}
+
+/* ── Search inputs ── */
+.view input[type="search"],
+.view input[type="text"].search {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-2);
+  transition: border-color .15s;
+}
+.view input[type="search"]:focus,
+.view input[type="text"].search:focus {
+  border-color: var(--brand);
+  outline: 0;
+}
+
+/* ── Modal (edición usuario, aprobaciones) ── */
+.modal {
+  border-radius: 2px !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,.15) !important;
+  background: var(--paper);
+}
+.modal-head, .modal-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.modal label,
+.modal .form-label {
+  font-family: var(--font-data);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── View-actividad · timeline ── */
+#view-actividad .activity-item,
+#view-actividad .log-row {
+  border-left: 1px solid var(--rule);
+  padding-left: 14px;
+  margin-bottom: 12px;
+  position: relative;
+}
+#view-actividad .activity-item::before,
+#view-actividad .log-row::before {
+  content: "";
+  position: absolute;
+  left: -3px; top: 6px;
+  width: 5px; height: 5px;
+  background: var(--brand);
+  border-radius: 50%;
+}
+#view-actividad .activity-time,
+#view-actividad .log-time {
+  font-family: var(--font-data);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .05em;
+}
+
+/* ── Badges/pills consistentes en todas las vistas ── */
+.view .badge,
+.view .pill,
+.view .state-pill {
+  font-family: var(--font-data);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: .06em;
+  padding: 3px 8px;
+  border-radius: 2px;
+  text-transform: none;
+  border: 1px solid transparent;
+}
+.view .state-pill.ok, .view .badge.ok, .view .pill.ok {
+  background: var(--status-ok-tint, rgba(31,89,64,.08));
+  color: var(--status-ok, #1F5940);
+  border-color: rgba(31,89,64,.2);
+}
+.view .state-pill.warn, .view .badge.warn, .view .pill.warn {
+  background: var(--status-warn-tint, rgba(165,102,23,.09));
+  color: var(--status-warn, #A56617);
+  border-color: rgba(165,102,23,.2);
+}
+.view .state-pill.crit, .view .badge.crit, .view .pill.crit {
+  background: var(--status-crit-tint, rgba(165,28,43,.08));
+  color: var(--status-crit, #A51C2B);
+  border-color: rgba(165,28,43,.2);
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .view * { animation: none !important; transition: none !important; }
+}
+
+/* ── Responsive global ── */
+@media (max-width: 1024px) {
+  .view .hero.compact { padding: 24px 20px 20px; }
+  .view .hero.compact .hero-title { font-size: 26px; }
+  #view-reportes .reports-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .view .hero.compact { padding: 20px 16px 16px; }
+  .view .hero.compact .hero-title { font-size: 22px; }
+  #view-reportes .reports-grid { grid-template-columns: 1fr; }
+  .view .toolbar { padding: 10px; }
+}
