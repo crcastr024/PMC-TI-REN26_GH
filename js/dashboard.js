@@ -34,8 +34,10 @@ function buildDashboardStats(users) {
     return u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0;
   }).length;
   var actas        = activos.filter(function(u){ return !!u.fecha_firma_acta; }).length;
+  // GH3.42.5 FIX BUG REP-05: criterio unificado con setReport('finalizados')
+  // Los 3 estados son terminales: Renovación completada, Cerrado, Finalizado
   var finalizados  = activos.filter(function(u){
-    return u.estado === 'Renovación completada' || u.estado === 'Completado';
+    return u.estado === 'Renovación completada' || u.estado === 'Cerrado' || u.estado === 'Finalizado' || u.estado === 'Completado';
   }).length;
   var devoluciones = activos.filter(function(u){ return !!u.fecha_solicitud_devolucion; }).length;
   // STAB-v10.1 P1: nuevos KPIs operativos
@@ -57,7 +59,9 @@ function buildDashboardStats(users) {
     var euOp  = activos.filter(function(u){ return u.empresa === emp; }); // activos (84)
     var euBk  = backups.filter(function(u){ return u.empresa === emp; }); // backup (3)
     var ent   = euOp.filter(function(u){ return u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0; });
-    var fin   = euOp.filter(function(u){ return u.estado === 'Renovación completada' || u.estado === 'Completado'; });
+    var fin   = euOp.filter(function(u){
+      return u.estado === 'Renovación completada' || u.estado === 'Cerrado' || u.estado === 'Finalizado' || u.estado === 'Completado';
+    });
     porEmpresa[emp] = {
       total:      euAll.length,  // invariante: operativos + backup
       operativos: euOp.length,   // solo activos (sin backup)
@@ -83,7 +87,7 @@ function buildDashboardStats(users) {
     if (PROC_ST.indexOf(u.estado) >= 0) d.proceso++;
     if (u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0) d.entregados++;
     if (!!u.fecha_firma_acta) d.actas++;
-    if (u.estado === 'Renovación completada' || u.estado === 'Completado') d.finalizados++;
+    if (u.estado === 'Renovación completada' || u.estado === 'Cerrado' || u.estado === 'Finalizado' || u.estado === 'Completado') d.finalizados++;
   });
   Object.keys(porTecnico).forEach(function(t) {
     var d = porTecnico[t];
@@ -135,7 +139,7 @@ function buildDashboardStats(users) {
   // Aprobaciones
   var aprobaciones = {
     pendientes:  activos.filter(function(u){ return u.estado === 'Pendiente aprobación'; }).length,
-    completadas: activos.filter(function(u){ return u.estado === 'Renovación completada' || u.estado === 'Cerrado'; }).length,
+    completadas: activos.filter(function(u){ return u.estado === 'Renovación completada' || u.estado === 'Cerrado' || u.estado === 'Finalizado' || u.estado === 'Completado'; }).length,
     rechazadas:  0, // depende de ApprovalService
   };
 

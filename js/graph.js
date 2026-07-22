@@ -31,7 +31,7 @@ const GraphClient = (() => {
     504: { code: 'GATEWAY_TIMEOUT',     retryable: true,  message: 'Gateway timeout — Microsoft Graph tardó en responder, reintentando' },
   };
 
-  function makeGraphError(status, body, context) {
+  function makeGraphError(status, body, context, retryAfterHeader) {
     const mapped = HTTP_ERROR_MAP[status] || { code: 'UNKNOWN', retryable: false, message: 'Error desconocido' };
     const err = new Error(`[GraphClient] ${mapped.code} (HTTP ${status}): ${mapped.message}`);
     err.graphCode    = mapped.code;
@@ -39,19 +39,66 @@ const GraphClient = (() => {
     err.retryable    = mapped.retryable;
     err.context      = context;
     err.graphBody    = body;
+    // GH3.42.6: Retry-After header (RFC 7231) — respetamos lo que Graph nos dice
+    if (retryAfterHeader) {
+      // Puede venir como número (segundos) o fecha HTTP
+      const secs = parseInt(retryAfterHeader, 10);
+      if (!isNaN(secs) && secs > 0) {
+        err.retryAfterMs = Math.min(secs * 1000, 120000); // cap 2 min
+      } else {
+        // Formato HTTP-date
+        const t = Date.parse(retryAfterHeader);
+        if (!isNaN(t)) err.retryAfterMs = Math.min(Math.max(t - Date.now(), 0), 120000);
+      }
+    }
     return err;
   }
 
-  // ── Retry con backoff exponencial ────────────────────────────
+  // ── GH3.42.6: Retry con Retry-After priority + backoff diferenciado ────
   async function withRetry(fn, attempt = 0) {
     try {
       return await fn();
     } catch(err) {
       if (!err.retryable || attempt >= _config.retryMax - 1) throw err;
-      const delay = _config.retryBaseDelayMs * Math.pow(2, attempt); // 500ms, 1s, 2s
+
+      // Prioridad 1: si Graph envió Retry-After, respetarlo
+      let delay;
+      if (err.retryAfterMs && err.retryAfterMs > 0) {
+        delay = err.retryAfterMs;
+      } else {
+        // Prioridad 2: backoff diferenciado por código de error
+        // 429 (throttling) usa base más agresiva porque Graph puede tardar 30-60s en abrir
+        const isThrottle = err.graphCode === 'THROTTLED';
+        const baseMs = isThrottle ? 2000 : _config.retryBaseDelayMs;   // 2s vs 500ms
+        const maxMs  = isThrottle ? 60000 : 15000;                     // cap 60s vs 15s
+        // Exponential backoff con jitter ±25% (evita thundering herd)
+        const exp    = baseMs * Math.pow(2, attempt);
+        const jitter = exp * 0.25 * (Math.random() * 2 - 1);
+        delay        = Math.min(Math.round(exp + jitter), maxMs);
+      }
 
       await new Promise(resolve => setTimeout(resolve, delay));
       return withRetry(fn, attempt + 1);
+    }
+  }
+
+  // ── GH3.42.6: Semáforo simple para limitar concurrencia contra Graph ──
+  // Máximo 4 requests concurrentes → evita disparar throttle con múltiples PATCHes simultáneos
+  const _concurrencyLimit = 4;
+  let _inflight = 0;
+  const _waiting = [];
+  function _acquireSlot() {
+    return new Promise(resolve => {
+      if (_inflight < _concurrencyLimit) { _inflight++; resolve(); }
+      else _waiting.push(resolve);
+    });
+  }
+  function _releaseSlot() {
+    _inflight--;
+    if (_waiting.length > 0 && _inflight < _concurrencyLimit) {
+      _inflight++;
+      const next = _waiting.shift();
+      next();
     }
   }
 
@@ -79,6 +126,9 @@ const GraphClient = (() => {
       ? setTimeout(() => controller.abort(), _config.timeoutMs)
       : null;
 
+    // GH3.42.6: adquirir slot de concurrencia (máx 4 requests simultáneos a Graph)
+    await _acquireSlot();
+
     try {
       const headers = {
         'Content-Type':  'application/json',
@@ -99,13 +149,18 @@ const GraphClient = (() => {
       if (!response.ok) {
         let errorBody = null;
         try { errorBody = await response.json(); } catch(e) { /* intentional: error ignorado en operación no crítica */ }
-        throw makeGraphError(response.status, errorBody, path);
+        // GH3.42.6: extraer Retry-After header y pasarlo a makeGraphError
+        const retryAfterHeader = response.headers.get('Retry-After');
+        throw makeGraphError(response.status, errorBody, path, retryAfterHeader);
       }
 
-      if (response.status === 204) return null; // No content
-      return await response.json();
+      if (response.status === 204) { _releaseSlot(); return null; }
+      const result = await response.json();
+      _releaseSlot();
+      return result;
 
     } catch(err) {
+      _releaseSlot();  // GH3.42.6: liberar slot también en error
       if (timer) clearTimeout(timer);
       if (err.graphCode) throw err;
       // Network error / abort
