@@ -32,6 +32,34 @@
   --font-data:    ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Consolas, monospace;
 }
 
+/* GH3.42.14: Panel Ejecutivo respeta el toggle de tema.
+   La franja "hero" (KPIs, semáforo — rgba(255,255,255,..) y colores -bright
+   hardcoded más abajo en este archivo) es oscura SIEMPRE, a propósito
+   (documentado en el propio changelog GH3.42.2 como diseño "editorial"),
+   y no se toca aquí. Lo que sí cambia es la sección "papel" — Leaderboard,
+   tarjetas de ciudad, cuello de botella, riesgos — que hasta ahora quedaba
+   fija en estética clara sin importar el tema de la app. */
+[data-theme="dark"] {
+  --ink:        #EDEDF0;
+  --ink-2:      #D3D3D9;
+  --ink-3:      #9C9CA6;
+  --muted:      #86868F;
+  --paper:      #17171F;
+  --paper-2:    #1D1D27;
+  --rule:       #33333E;
+  --rule-2:     #292933;
+  --brand:      #E85D6B;
+  --brand-dk:   #F2848F;
+  --brand-tint: rgba(232,93,107,.12);
+  --status-ok:      #4ADE80;
+  --status-ok-tint: rgba(74,222,128,.12);
+  --status-warn:    #FBBF24;
+  --status-warn-tint: rgba(251,191,36,.12);
+  --status-crit:    #E85D6B;
+  --status-crit-tint: rgba(232,93,107,.12);
+  --status-idle:    #86868F;
+}
+
 #view-panel {
   background: var(--paper);
   color: var(--ink-2);
@@ -44,7 +72,11 @@
 
 /* ═══ Hero ═══ */
 #view-panel .panel-hero {
-  background: var(--ink);
+  /* GH3.42.14: fondo fijo, no var(--ink) — el hero es oscuro SIEMPRE
+     (mismo criterio que --hero-bg en styles.css); --ink ahora cambia
+     con el tema porque también se usa como color de texto en toda la
+     sección "papel" de más abajo. */
+  background: #0A0E14;
   border-radius: 0;
   padding: var(--sp-7) var(--sp-6) var(--sp-6);
   margin-bottom: var(--sp-5);

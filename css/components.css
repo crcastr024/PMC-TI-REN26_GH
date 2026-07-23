@@ -16,20 +16,27 @@
 
 /* ════════════════════════ SIDEBAR ════════════════════════ */
 .sidebar {
-  grid-area: sidebar;
+  /* GH3.42.14 FIX: el intento anterior (height:auto + sticky + grid-area,
+     GH3.42.12) no resolvió el hueco blanco al hacer scroll — confirmado
+     por captura real. Causa raíz correcta: el sidebar dependía de cómo
+     el grid calcula la altura de SU PROPIA celda (rows "sidebar" = topbar+main),
+     que nunca incluye la fila del footer. Cualquier desajuste entre esa
+     celda y el alto real de la página deja hueco. Fix robusto: sacar el
+     sidebar del grid por completo y anclarlo al viewport con position:fixed
+     — así SIEMPRE cubre 0→100vh, sin importar cuánto crezca el contenido
+     ni cómo el grid resuelva "1fr". El footer YA compensaba el ancho del
+     sidebar vía margin-left (ver "RC-06 FIXES: Footer respeta sidebar",
+     más abajo, sincronizado con body.sb-collapsed) — no requiere cambios. */
+  position: fixed;
+  top: 0; left: 0;
+  width: var(--sidebar-w);
+  height: 100vh;
   background: var(--bg-elev);
   border-right: 1px solid var(--border);
-  position: sticky; top: 0; left: 0;
-  height: auto; /* GH3.42.12 FIX: restaura corrección GH3.38 FC-08 — con height fijo a 100vh
-                   el sidebar termina antes que el grid-area (footer footer), dejando hueco
-                   blanco al hacer scroll. height:auto + align-self:stretch (default del grid)
-                   hace que el sidebar ocupe todo su grid-area real y se despegue del sticky
-                   exactamente donde empieza el footer. */
-  overflow-y: auto;
+  overflow-y: auto; overflow-x: hidden;
   align-self: stretch;
   display: flex; flex-direction: column;
   z-index: 10; /* reducido: 20 tapaba contenido en scroll */
-  overflow-y: auto; overflow-x: hidden; /* scroll vertical, clip horizontal */
   transition: width 0.22s ease; /* collapse animation */
 }
 .sb-head {
@@ -107,7 +114,7 @@
   display: flex; align-items: center; gap: 16px;
   position: sticky; top: 0; z-index: 15;
 }
-[data-theme="dark"] .topbar { background: rgba(5, 5, 8, 0.85); }
+[data-theme="dark"] .topbar { background: rgba(11, 11, 16, 0.85); }
 .tb-crumb { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
 .tb-crumb-icon { color: var(--text-3); }
 .tb-crumb-icon svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
@@ -1108,6 +1115,33 @@
   transition: opacity .15s;
 }
 .sidebar.collapsed .sb-item:hover::after { opacity: 1; }
+
+/* GH3.42.13: mismo mecanismo de tooltip, aplicado al avatar del footer —
+   el nombre completo se oculta (display:none en .sb-user-info) al
+   colapsar, sin esto no había forma de ver quién es el usuario logueado. */
+.sidebar.collapsed .sb-avatar {
+  position: relative;
+}
+.sidebar.collapsed .sb-avatar::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 8px);
+  bottom: 0;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border, #E2E2E2);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-1, #1F1F1F);
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+}
+.sidebar.collapsed .sb-avatar:hover::after { opacity: 1; }
 
 /* ── RC-06 FIXES: Footer respeta sidebar ── */
 #app-footer {

@@ -84,17 +84,20 @@
 }
 
 [data-theme="dark"] {
-  --bg: #050508;
-  --bg-elev: #0A0A10;
-  --bg-card: #12121A;
-  --bg-card-hover: #1A1A24;
-  --bg-subtle: #1A1A24;
-  --border: #25252F;
-  --border-strong: #353541;
-  --text-1: #FAFAFA;
-  --text-2: #C8C8D2;
-  --text-3: #80808C;
-  --text-4: #50505C;
+  /* GH3.42.13: paleta suavizada — "más amigable" (menos negro/blanco puros,
+     que causan alto contraste tipo halation). Solo neutros; --accent y
+     el resto de colores de marca/estado quedan igual que antes. */
+  --bg: #0B0B10;
+  --bg-elev: #13131A;
+  --bg-card: #191922;
+  --bg-card-hover: #21212E;
+  --bg-subtle: #1D1D27;
+  --border: #2C2C38;
+  --border-strong: #40404E;
+  --text-1: #EDEDF2;
+  --text-2: #C6C6D2;
+  --text-3: #86868F;
+  --text-4: #55555F;
   --shadow-xs: 0 1px 2px rgba(0,0,0,0.4);
   --shadow-sm: 0 2px 6px rgba(0,0,0,0.5);
   --shadow: 0 8px 24px rgba(0,0,0,0.6);

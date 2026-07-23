@@ -40,6 +40,10 @@ function _applyRBAC(role, userEmail) {
   var roleEl = document.getElementById('user-role');
   var roleLabels = { super_admin:'Super Admin',gestor_activos:'Gestor de Activos',tecnico:'Técnico',consulta:'Consulta',visitante:'Visitante' };
   if (roleEl) roleEl.textContent = (roleLabels[role] || role);
+  // GH3.42.13: data-tip en el avatar — el nombre completo queda oculto
+  // (display:none en .sb-user-info) cuando el sidebar está colapsado;
+  // esto lo hace visible en hover, igual que los ítems de navegación.
+  if (avatarEl) avatarEl.setAttribute('data-tip', displayName + ' · ' + (roleLabels[role] || role));
   // Actualizar state.user si no tiene nombre
   if (window.state && state.user && !state.user.nombre) state.user.nombre = displayName;
 

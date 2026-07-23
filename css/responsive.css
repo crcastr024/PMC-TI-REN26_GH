@@ -34,7 +34,7 @@
 }
 .tl-step-done .tl-step-icon { background: var(--green); color: white; border-color: var(--green); }
 .tl-step-current .tl-step-icon { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-l); }
-.tl-step-pending .tl-step-icon { background: white; }
+.tl-step-pending .tl-step-icon { background: var(--bg-card); }
 .tl-step-label {
   font-size: 9.5px; font-weight: 600;
   text-align: center; line-height: 1.2;

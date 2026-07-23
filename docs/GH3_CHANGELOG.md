@@ -72,3 +72,63 @@ BOOT_SEQUENCE.md, SecurityFreeze.md
   WorkbookLoader sobre `usedRange` (ver 05_GRAPH_PROVIDER.md).
 - Inconsistencia preexistente: badge-pendiente-aprobación es ámbar en
   components.css pero azul en responsive.css (gana azul, no se tocó).
+
+## GH3.42.13
+- FIX CRÍTICO: Chart.js 4.4.1 nunca estaba incluido en index.html —
+  ningún `<script>` lo cargaba. `window.Chart` era siempre `undefined`,
+  así que las 4 guardas `if (!window.Chart) return` en ui.js hacían que
+  Devoluciones, Destino Final, RAEE y Burndown fallaran en silencio
+  (canvas vacío, sin error visible). Empaquetado localmente
+  (js/chart.umd.min.js, mismo patrón que MSAL — sin CDN externo) e
+  insertado antes de ui.js.
+- Paleta de modo oscuro suavizada (menos negro/blanco puros — "amigable"):
+  --bg, --bg-elev, --bg-card, --bg-card-hover, --bg-subtle, --border,
+  --border-strong, --text-1..4 en `[data-theme="dark"]`. Topbar dark
+  (antes rgba(5,5,8) hardcoded, ignoraba el token) alineado a la nueva
+  paleta. Solo neutros — --accent y colores de marca/estado sin cambios.
+- FIX `.tl-step-pending .tl-step-icon`: `background: white` hardcoded
+  (responsive.css) → `var(--bg-card)`. En claro se disimulaba contra el
+  modal blanco; en oscuro quedaba un círculo blanco encendido.
+- Tooltip del avatar de usuario en sidebar colapsado: `data-tip` con
+  nombre + rol (boot.js) + regla CSS análoga a `.sb-item::after`
+  (components.css). Antes el nombre desaparecía por completo al
+  colapsar (`.sb-user-info{display:none}`) sin ninguna forma de verlo.
+
+### Hallazgo flagged, NO resuelto — requiere decisión
+- Todo el bloque de Panel Ejecutivo/Seguimiento (`#view-panel`: Leaderboard,
+  Devoluciones, Destino Final, Cuello de botella, Riesgos) usa un SEGUNDO
+  sistema de tokens (`--ink/--paper/--brand`, exec-redesign.css) con
+  decenas de hex fijo en línea, y ese sistema NUNCA se sobreescribe bajo
+  `[data-theme="dark"]`. Esta vista queda permanentemente en estética
+  "papel claro" sin importar el toggle de tema — parece intencional
+  (el propio changelog GH3.42.2 dice "versión oscura → clara editorial").
+  No se tocó: es un cambio mucho más grande y ambiguo que requiere
+  confirmar si de verdad debe adaptarse a dark o si el "look editorial"
+  es deliberado.
+
+## GH3.42.14
+- FIX REAL del hueco blanco en el sidebar al hacer scroll — el intento
+  anterior (GH3.42.12, height:auto + sticky + grid-area) NO lo resolvió,
+  confirmado por captura del usuario en producción. Causa raíz correcta:
+  el sidebar dependía de cómo el grid calculaba la altura de SU PROPIA
+  celda (filas "sidebar" = topbar+main), que nunca incluye la fila del
+  footer — cualquier desajuste entre esa celda y el alto real de página
+  deja hueco. Fix robusto: `.sidebar` sale del grid por completo, pasa a
+  `position:fixed; top:0; left:0; height:100vh` — ancla al viewport,
+  no depende de ningún cálculo de grid. El footer YA tenía compensación
+  vía `margin-left` sincronizada con `body.sb-collapsed` (mecanismo
+  preexistente, confirmado correcto) — no requirió cambios.
+- Adaptado a modo oscuro TODO el sistema de tokens de Panel Ejecutivo
+  (`--ink/--ink-2/--ink-3/--muted/--paper/--paper-2/--rule/--rule-2/
+  --brand/--status-ok/warn/crit/idle`, exec-redesign.css). Afecta
+  Leaderboard, tarjetas de ciudad, cuello de botella, riesgos, tarjetas
+  de empresa — todo lo que usa esos tokens se adapta automáticamente,
+  sin tocar cada componente individualmente. La franja "hero" (KPIs,
+  semáforo) se mantiene oscura siempre, a propósito — se aisló
+  `--ink` (que también servía de fondo del hero) para que el fondo del
+  hero quede fijo mientras el resto del token sí cambia con el tema.
+- Nota: components.css tiene duplicados de `.eec-*/.lb-*/.exec-city-*/
+  .bot-*/.risk-item` con hex fijo (no tokens) — están shadowed/muertos,
+  exec-redesign.css (carga después) gana con las versiones ya
+  tokenizadas. No se tocaron por no tener efecto visual — quedan como
+  deuda técnica menor (limpiar en otro sprint si se quiere).

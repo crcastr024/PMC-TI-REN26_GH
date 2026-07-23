@@ -1157,6 +1157,11 @@
 <script src="js/mismatches.js"></script>
   <script src="js/auditService.js"></script>
   <script src="js/dashboard.js"></script>
+<!-- GH3.42.13 FIX: Chart.js 4.4.1 nunca estaba incluido — los 4 gráficos
+     (Devoluciones, Destino Final, RAEE, Burndown) fallaban en silencio
+     porque `window.Chart` era undefined (ver guardas `if (!window.Chart) return`
+     en ui.js). Empaquetado local igual que MSAL, sin dependencia de CDN externo. -->
+<script src="js/chart.umd.min.js"></script>
 <!-- 12. UI: vistas, modales, filtros, reportes, aprobaciones -->
 <script src="js/ui.js"></script>
 <!-- 13. Bootstrap: BootstrapManager, boot(), RC2_doLogin -->
