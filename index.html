@@ -310,7 +310,19 @@
             <div class="metric-card-sub"><strong id="k-pct">0%</strong> del proceso</div>
           </div>
 
-          <!-- 6. Renovaciones completadas -->
+          <!-- 6. Pendiente acta — GH3.42.9 -->
+          <div class="metric-card pur" onclick="setStateFilter('Pendiente acta')" data-tip="Equipos entregados esperando firma de acta">
+            <div class="metric-card-head">
+              <span class="metric-card-label">Pendiente acta</span>
+              <div class="metric-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 15h6M9 11h4"/></svg>
+              </div>
+            </div>
+            <div class="metric-card-val" id="k-pendiente-acta">—</div>
+            <div class="metric-card-sub">Esperando firma</div>
+          </div>
+
+          <!-- 7. Renovaciones completadas -->
           <div class="metric-card grn" data-tip="Renovaciones cerradas: Renovación completada + Cerrado">
             <div class="metric-card-head">
               <span class="metric-card-label">Renovaciones completadas</span>
@@ -335,7 +347,7 @@
           </div>
 
           <!-- 8. Backups -->
-          <div class="metric-card" style="border-top-color:var(--text-3,#666)" onclick="goView('backup')" data-tip="Equipos backup disponibles en bodega para asignación">
+          <div class="metric-card" id="card-backups" style="border-top-color:var(--text-3,#666)" onclick="goView('backup')" data-tip="Equipos backup disponibles en bodega para asignación">
             <div class="metric-card-head">
               <span class="metric-card-label">Backups</span>
               <div class="metric-card-icon" aria-hidden="true">

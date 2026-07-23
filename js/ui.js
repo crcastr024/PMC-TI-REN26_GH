@@ -47,6 +47,7 @@ function renderResumen() {
   var _devPend = m.devolucionesPendientes || 0;
   var _porApr  = window.ApprovalService ? ApprovalService.getQueue().length : 0;
   _setText('k-en-envio',       _enEnvio);
+  _setText('k-pendiente-acta', m.pendienteActa || 0);   // GH3.42.9: nuevo KPI
   _setText('k-por-aprobar',    _porApr);
   _setText('k-dev-pendientes', _devPend);
   var _bcEl = document.getElementById('k-backup');
@@ -297,7 +298,23 @@ function getFiltered() {
 
 function renderUsuarios() {
   populateProjectFilter('filter-proyecto');
-  const data = getFiltered();
+  var _dataAll = getFiltered();
+
+  // GH3.42.8: Excluir backups por defecto — esta vista es de equipos ASIGNADOS
+  // (los backups tienen vista propia en 'view-backup')
+  var data = _dataAll.filter(function(u){ return !isBackup(u); });
+
+  // GH3.42.8: Si el rol es técnico, filtrar a solo sus equipos asignados
+  var _uRole = window.state && state.user && (state.user.role || state.user.rol);
+  if (_uRole === 'tecnico') {
+    var _uName = window.state && state.user && (state.user.nombre || state.user.name || '');
+    if (_uName) {
+      data = data.filter(function(u){
+        return (u.tecnico || '').toLowerCase() === _uName.toLowerCase();
+      });
+    }
+  }
+
   $('tbl-count').textContent = data.length + ' de ' + (window.calculateProjectMetrics ? calculateProjectMetrics().totalEquipos : DataService.count()) + ' registros';
   if (data.length === 0) {
     $('tbl-body').innerHTML = '<tr><td colspan="15"><div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><div class="empty-title">Sin resultados</div><div class="empty-msg">Ajusta los filtros o búsqueda</div></div></td></tr>';
@@ -341,10 +358,26 @@ function renderUsuarios() {
 function renderTecnicos() {
   const techs = window.CONFIG.technicians;
   const real = getReal();
+  // GH3.42.8: si el usuario es técnico, filtrar techs a solo su nombre (matching case-insensitive)
+  var _uRole = window.state && state.user && (state.user.role || state.user.rol);
+  var _myTec = null;
+  if (_uRole === 'tecnico') {
+    var _uName = window.state && state.user && (state.user.nombre || state.user.name || '');
+    if (_uName) {
+      _myTec = techs.find(function(t){ return t.toLowerCase() === _uName.toLowerCase(); });
+    }
+    // Si no encontramos coincidencia exacta por nombre, intentar por email
+    if (!_myTec && state.user.email) {
+      var _mail = state.user.email.split('@')[0].toLowerCase();
+      _myTec = techs.find(function(t){ return t.toLowerCase().indexOf(_mail) >= 0 || _mail.indexOf(t.toLowerCase()) >= 0; });
+    }
+  }
+  var _visibleTechs = _myTec ? [_myTec] : techs;
+
   // STAB-v10.1 P0+P2: reutilizar buildDashboardStats por técnico
   var _bdsAll = window.DashboardStats ? DashboardStats.compute(real) : {};
   var _ptAll  = _bdsAll.porTecnico || {};
-  $('tec-grid').innerHTML = techs.map(t => {
+  $('tec-grid').innerHTML = _visibleTechs.map(t => {
     var _tKey = Object.keys(_ptAll).find(function(k){ return k.toLowerCase() === t.toLowerCase(); }) || t;
     var _d = _ptAll[_tKey] || { asignados:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
     const total = _d.asignados;

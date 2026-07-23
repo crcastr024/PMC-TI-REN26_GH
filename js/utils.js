@@ -169,20 +169,21 @@ const STATES = {
   TRANSITO_ANTERIOR:         'En tránsito equipo anterior',
   RECIBIDO_ANTERIOR:         'Equipo anterior recibido',
   COMPLETADA:                'Renovación completada',
+  PENDIENTE_ACTA:            'Pendiente acta',           // GH3.42.8 NUEVO
   PENDIENTE_APROBACION:      'Pendiente aprobación',
   CORRECCION_REQUERIDA:      'Corrección requerida',
-  CERRADO:                   'Cerrado',
+  CERRADO:                   'Cerrado',                  // GH3.42.8: mantenido para compat legacy, fuera del flujo activo
   FEEDBACK:                  'Feedback',
   BLOQUEADO:                 'Bloqueado',
   BACKUP:                    'BACKUP',
 };
 
-// Lineal happy path
+// Lineal happy path — GH3.42.9: Pendiente acta va ANTES de Renovación completada
 const STATE_FLOW = [
   STATES.PENDIENTE, STATES.ALISTAMIENTO, STATES.PROGRAMADO,
   STATES.TRANSITO_NUEVO, STATES.ENTREGADO_NUEVO,
   STATES.PENDIENTE_RECOGER, STATES.TRANSITO_ANTERIOR, STATES.RECIBIDO_ANTERIOR,
-  STATES.COMPLETADA, STATES.PENDIENTE_APROBACION, STATES.CERRADO,
+  STATES.PENDIENTE_ACTA, STATES.COMPLETADA, STATES.PENDIENTE_APROBACION,
 ];
 
 // Transiciones válidas: cada estado → lista de estados destino permitidos
@@ -197,10 +198,12 @@ const TRANSITIONS = {
   [STATES.ENTREGADO_NUEVO]:      [STATES.PENDIENTE_RECOGER, STATES.BLOQUEADO],
   [STATES.PENDIENTE_RECOGER]:    [STATES.TRANSITO_ANTERIOR, STATES.BLOQUEADO],
   [STATES.TRANSITO_ANTERIOR]:    [STATES.RECIBIDO_ANTERIOR, STATES.BLOQUEADO],
-  [STATES.RECIBIDO_ANTERIOR]:    [STATES.COMPLETADA, STATES.BLOQUEADO],
+  [STATES.RECIBIDO_ANTERIOR]:    [STATES.PENDIENTE_ACTA, STATES.BLOQUEADO],
+  // GH3.42.9: tramo terminal correcto — Pendiente acta → Renovación completada → Pendiente aprobación
+  [STATES.PENDIENTE_ACTA]:       [STATES.COMPLETADA, STATES.CORRECCION_REQUERIDA],
   [STATES.COMPLETADA]:           [STATES.PENDIENTE_APROBACION],
-  [STATES.PENDIENTE_APROBACION]: [STATES.CERRADO, STATES.CORRECCION_REQUERIDA, STATES.FEEDBACK],
-  [STATES.FEEDBACK]:             [STATES.CERRADO],
+  [STATES.PENDIENTE_APROBACION]: [STATES.CORRECCION_REQUERIDA, STATES.FEEDBACK],
+  [STATES.FEEDBACK]:             [],
   [STATES.CORRECCION_REQUERIDA]: STATE_FLOW.slice(0, 9),
   [STATES.CERRADO]:              [],
   [STATES.BLOQUEADO]:            STATE_FLOW.slice(0, 9),

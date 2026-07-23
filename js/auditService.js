@@ -203,7 +203,11 @@ var AuditService = (function() {
     var queue = _readOfflineQueue();
     if (queue.length === 0) return Promise.resolve({ ok: true, drained: 0 });
     // Solo drenar si Graph está disponible
-    if (!window.GraphClient || !window.GraphResolver || typeof GraphResolver.getBase !== 'function') {
+    // GH3.42.7 FIX: usar isResolved() en vez de getBase() inexistente
+    var resolverReady = window.GraphResolver &&
+                        typeof GraphResolver.isResolved === 'function' &&
+                        GraphResolver.isResolved();
+    if (!window.GraphClient || !resolverReady) {
       return Promise.resolve({ ok: false, drained: 0, reason: 'no-graph' });
     }
     _draining = true;
@@ -337,7 +341,11 @@ var AuditService = (function() {
   function _flushBatch(entries, isDrain) {
     if (!entries || entries.length === 0) return Promise.resolve({ ok: true, written: 0, skipped: 0 });
 
-    if (!window.GraphClient || !window.GraphResolver || typeof GraphResolver.getBase !== 'function') {
+    // GH3.42.7 FIX: GraphResolver.getBase() no existe. API real: isResolved() + getCache()
+    var resolverReady = window.GraphResolver &&
+                        typeof GraphResolver.isResolved === 'function' &&
+                        typeof GraphResolver.getCache    === 'function';
+    if (!window.GraphClient || !resolverReady || !GraphResolver.isResolved()) {
       if (!isDrain) {
         console.info('[AuditService] Modo mock — persistiendo en cola offline:', entries.length);
         _enqueueOffline(entries);
@@ -346,11 +354,13 @@ var AuditService = (function() {
     }
 
     return _bootstrapLastIdLog().then(function() {
-      var base = GraphResolver.getBase();
-      if (!base) {
+      // GH3.42.7 FIX: construir base desde cache real de GraphResolver
+      var cache = GraphResolver.getCache();
+      if (!cache || !cache.driveId || !cache.itemId) {
         if (!isDrain) _enqueueOffline(entries);
         return { ok: false, written: 0, skipped: entries.length, reason: 'no-base' };
       }
+      var base = '/drives/' + cache.driveId + '/items/' + cache.itemId + '/workbook';
       var sheetUrl = base + '/worksheets/' + SHEET_NAME;
       // GH3.41.1 TASK 01: leer usedRange JUSTO ANTES del PATCH, y asignar id_log
       // en función de la fila real disponible. Reduce ventana de race condition.

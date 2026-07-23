@@ -42,6 +42,8 @@ function buildDashboardStats(users) {
   var devoluciones = activos.filter(function(u){ return !!u.fecha_solicitud_devolucion; }).length;
   // STAB-v10.1 P1: nuevos KPIs operativos
   var enEnvio = activos.filter(function(u){ return u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo'; }).length;
+  // GH3.42.9: nuevo KPI Pendiente acta (estado intermedio antes de Renovación completada)
+  var pendienteActa = activos.filter(function(u){ return u.estado === 'Pendiente acta'; }).length;
   var devolucionesPendientes = activos.filter(function(u){ return (u.lista_recoleccion || !!u.fecha_solicitud_devolucion) && !u.fecha_recepcion_bodega; }).length;
   var raee         = activos.filter(function(u){ return u.recomendacion_raee === 'RAEE'; }).length;
   var reasignables = activos.filter(function(u){
@@ -179,6 +181,7 @@ function buildDashboardStats(users) {
     backup:       backups.length,
     devoluciones: devoluciones,
     enEnvio: enEnvio,                           // P1: Programado + En tránsito equipo nuevo
+    pendienteActa: pendienteActa,               // GH3.42.9: nuevo KPI Pendiente acta
     devolucionesPendientes: devolucionesPendientes, // P1: en lista recolección sin recibir
     raee:         raee,
     reasignables: reasignables,

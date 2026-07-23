@@ -56,19 +56,34 @@ function _applyRBAC(role, userEmail) {
     'roles', 'configuracion', 'reportes-ejecutivos', 'administracion'
   ];
   var TECNICO_RESTRICTED = ['ajustes']; // ajustes siempre solo para admin
+  // GH3.42.8: Whitelist estricta para técnico — solo 4 vistas permitidas
+  var TECNICO_ALLOWED = ['resumen', 'usuarios', 'tecnicos', 'panel'];
   var isTecnico  = (role === 'tecnico');
   var isConsulta = (role === 'consulta' || role === 'visitante');
   var isRestricted = isTecnico || isConsulta;
 
-  // STAB-v09.2 TASK 4: aplicar restricciones por rol
+  // STAB-v09.2 TASK 4 + GH3.42.8: aplicar restricciones por rol
   document.querySelectorAll('.sb-item').forEach(function(item) {
     var view = item.dataset && item.dataset.view;
     if (!view) return;
     var blocked = false;
-    if (isRestricted && RESTRICTED_VIEWS.some(function(rv) { return view.indexOf(rv) >= 0; })) blocked = true;
+    // GH3.42.8: técnico usa whitelist estricta
+    if (isTecnico) {
+      if (TECNICO_ALLOWED.indexOf(view) < 0) blocked = true;
+    } else {
+      if (isRestricted && RESTRICTED_VIEWS.some(function(rv) { return view.indexOf(rv) >= 0; })) blocked = true;
+    }
     if (isTecnico  && TECNICO_RESTRICTED.some(function(rv) { return view === rv; })) blocked = true;
+    // GH3.42.9: Backup solo visible para GA (gestor_activos) + super_admin
+    if (view === 'backup' && role !== 'gestor_activos' && role !== 'super_admin') blocked = true;
     if (blocked) item.style.display = 'none';
   });
+
+  // GH3.42.9: Ocultar tarjeta Backups del Resumen si el rol no es GA/super_admin
+  var _cardBackups = document.getElementById('card-backups');
+  if (_cardBackups && role !== 'gestor_activos' && role !== 'super_admin') {
+    _cardBackups.style.display = 'none';
+  }
   // Panel/Seguimiento visible para técnico (STAB-v09.2 TASK 4)
   var panelItem = document.getElementById('sb-panel');
   if (panelItem && (isTecnico || ['gestor_activos','super_admin','director_ti','gerencia'].indexOf(role) >= 0)) {

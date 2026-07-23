@@ -511,13 +511,33 @@ const WorkbookWriter = (() => {
    */
   async function writeRecord(id, changes) {
     // Stage 1: Filtrar y validar (SIEMPRE — incluso en mock)
-    const safeChanges = WriteContract.filterWritable(changes);
+    let safeChanges = WriteContract.filterWritable(changes);
+
+    // GH3.42.7: filtrar campos required vacíos que ya venían vacíos en el record
+    // Evita falso positivo "Campo requerido no puede ser vacío" cuando el usuario
+    // NO está modificando ese campo (viene en el diff porque el formulario envía
+    // el objeto completo, pero el valor coincide con el registro existente).
+    const currentRecord = DataService.getRenewal(id);
+    if (currentRecord && WriteContract.REQUIRED_FIELDS) {
+      Object.keys(safeChanges).forEach(function(field) {
+        if (!WriteContract.REQUIRED_FIELDS.has(field)) return;
+        var newVal = safeChanges[field];
+        var oldVal = currentRecord[field];
+        var newEmpty = newVal === null || newVal === undefined || String(newVal).trim() === '';
+        var oldEmpty = oldVal === null || oldVal === undefined || String(oldVal).trim() === '';
+        // Si el usuario no está cambiando el campo (viene igual o ambos vacíos), eliminarlo del batch
+        if ((newEmpty && oldEmpty) || String(newVal) === String(oldVal)) {
+          delete safeChanges[field];
+        }
+      });
+    }
+
     if (Object.keys(safeChanges).length === 0) {
       { console.error('[WRITE ABORT] noChanges | id:', id); if(window.HBT)window.HBT._lastAbort={reason:'noChanges',id,t:Date.now()}; return { ok:true, noChanges:true, reason:'noChanges' }; }
     }
 
     // Stage 2 (siempre, incluso en mock): validar RBAC y reglas de negocio
-    const validation = GraphWriteValidator.validate(safeChanges, DataService.getRenewal(id), window.state && state.user);
+    const validation = GraphWriteValidator.validate(safeChanges, currentRecord, window.state && state.user);
     if (!validation.valid) {
       const err = new Error('[WorkbookWriter] validación fallida: ' + validation.errors.map(e => e.message).join('; '));
       err.retryable = false;

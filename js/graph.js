@@ -54,11 +54,45 @@ const GraphClient = (() => {
     return err;
   }
 
-  // ── GH3.42.6: Retry con Retry-After priority + backoff diferenciado ────
+  // ── GH3.42.7: Circuit breaker para throttling sostenido ──────
+  // Si Graph rechaza 5 requests con 429 en menos de 10s, pausamos TODAS
+  // las escrituras 45s para evitar amplificar el throttle.
+  let _throttleWindow = [];
+  let _circuitOpenUntil = 0;
+
+  function _recordThrottle() {
+    const now = Date.now();
+    _throttleWindow.push(now);
+    // Mantener solo los últimos 10 segundos
+    _throttleWindow = _throttleWindow.filter(t => now - t < 10000);
+    if (_throttleWindow.length >= 5) {
+      _circuitOpenUntil = now + 45000; // 45s de pausa
+      _throttleWindow = [];
+      console.warn('[GraphClient] Circuit breaker activado: pausa de 45s por throttle sostenido');
+    }
+  }
+  function _isCircuitOpen() {
+    return Date.now() < _circuitOpenUntil;
+  }
+
+  // ── Retry con backoff diferenciado ────────────────────────────
   async function withRetry(fn, attempt = 0) {
+    // GH3.42.7: si el circuit está abierto, esperar hasta que cierre
+    if (_isCircuitOpen()) {
+      const wait = _circuitOpenUntil - Date.now();
+      await new Promise(resolve => setTimeout(resolve, Math.max(wait, 100)));
+    }
     try {
       return await fn();
     } catch(err) {
+      // GH3.42.7: registrar el 429 para el circuit breaker
+      if (err.graphCode === 'THROTTLED') _recordThrottle();
+      // GH3.42.7: CORS error tras redirect a officeapps.live.com → tratable como transitorio
+      if (err.graphCode === 'NETWORK_ERROR' && err.message &&
+          (err.message.indexOf('officeapps.live.com') >= 0 ||
+           err.message.indexOf('CORS') >= 0)) {
+        err.retryable = true;
+      }
       if (!err.retryable || attempt >= _config.retryMax - 1) throw err;
 
       // Prioridad 1: si Graph envió Retry-After, respetarlo
@@ -67,11 +101,9 @@ const GraphClient = (() => {
         delay = err.retryAfterMs;
       } else {
         // Prioridad 2: backoff diferenciado por código de error
-        // 429 (throttling) usa base más agresiva porque Graph puede tardar 30-60s en abrir
         const isThrottle = err.graphCode === 'THROTTLED';
-        const baseMs = isThrottle ? 2000 : _config.retryBaseDelayMs;   // 2s vs 500ms
-        const maxMs  = isThrottle ? 60000 : 15000;                     // cap 60s vs 15s
-        // Exponential backoff con jitter ±25% (evita thundering herd)
+        const baseMs = isThrottle ? 2000 : _config.retryBaseDelayMs;
+        const maxMs  = isThrottle ? 60000 : 15000;
         const exp    = baseMs * Math.pow(2, attempt);
         const jitter = exp * 0.25 * (Math.random() * 2 - 1);
         delay        = Math.min(Math.round(exp + jitter), maxMs);
