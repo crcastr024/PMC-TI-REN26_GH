@@ -831,12 +831,8 @@
           <div id="pe-ciudades-cards" class="exec-city-grid"></div>
         </div>
       </div>
-      <!-- FILA 4: Distribución estados · Devoluciones · Destino final -->
-      <div class="panel-grid-3" style="margin-top:14px">
-        <div class="panel-card">
-          <div class="panel-card-title">Distribución de estados</div>
-          <div id="pe-estados-list"></div>
-        </div>
+      <!-- FILA 4: Devoluciones · Destino final (GH3.42.11: eliminado Distribución de estados, duplicaba Funnel) -->
+      <div class="panel-grid-2" style="margin-top:14px">
         <div class="panel-card">
           <div class="panel-card-title">Devoluciones</div>
           <div style="position:relative;height:190px"><canvas id="pe-devoluciones-donut"></canvas></div>
@@ -851,6 +847,8 @@
           <div class="panel-stat-row"><span class="panel-stat-label" style="color:#E65100">Donación</span><span class="panel-stat-val" id="pe-destino-donacion">0</span></div>
           <div class="panel-stat-row"><span class="panel-stat-label" style="color:#C00000">RAEE</span><span class="panel-stat-val" id="pe-destino-raee" style="color:#C00000">0</span></div>
         </div>
+        <!-- Distribución de estados ocultada — se muestra ya en Pipeline Funnel -->
+        <div id="pe-estados-list" style="display:none"></div>
       </div>
       <!-- FILA 5: Cuello de botella · Riesgos -->
       <div class="panel-grid-2" style="margin-top:14px">

@@ -296,6 +296,47 @@ function getFiltered() {
   });
 }
 
+// GH3.42.11: Helper para resolver el nombre del técnico logueado matcheando
+// contra la lista real de técnicos (window.CONFIG.technicians). Matching flexible
+// porque state.user.name puede ser "Cristian Castro" pero el técnico en Excel es "CRISTIAN".
+function _resolveMyTecnicoName() {
+  if (!window.state || !state.user) return null;
+  var uRole = state.user.role || state.user.rol;
+  if (uRole !== 'tecnico') return null;
+  var uName = String(state.user.nombre || state.user.name || '').toLowerCase().trim();
+  var uEmail = String(state.user.email || '').toLowerCase();
+  var mailPrefix = uEmail ? uEmail.split('@')[0].split(/[._-]/)[0] : '';
+  var techs = (window.CONFIG && window.CONFIG.technicians) || [];
+
+  // 1. Match exacto por nombre completo
+  var found = techs.find(function(t){ return t.toLowerCase() === uName; });
+  if (found) return found;
+  // 2. Match por primer nombre del usuario (Cristian Castro → "cristian")
+  var firstName = uName.split(/\s+/)[0];
+  if (firstName) {
+    found = techs.find(function(t){ return t.toLowerCase() === firstName; });
+    if (found) return found;
+  }
+  // 3. Match por prefix de email
+  if (mailPrefix) {
+    found = techs.find(function(t){ return t.toLowerCase() === mailPrefix; });
+    if (found) return found;
+    // 4. Substring: primer nombre técnico contenido en nombre usuario o viceversa
+    found = techs.find(function(t){
+      var tl = t.toLowerCase();
+      return tl.indexOf(mailPrefix) >= 0 || mailPrefix.indexOf(tl) >= 0;
+    });
+    if (found) return found;
+  }
+  // 5. Fallback: nombre técnico contenido en nombre usuario (indexOf)
+  found = techs.find(function(t){
+    var tl = t.toLowerCase();
+    return uName.indexOf(tl) >= 0 || tl.indexOf(firstName) >= 0;
+  });
+  return found || null;
+}
+window._resolveMyTecnicoName = _resolveMyTecnicoName;
+
 function renderUsuarios() {
   populateProjectFilter('filter-proyecto');
   var _dataAll = getFiltered();
@@ -304,13 +345,16 @@ function renderUsuarios() {
   // (los backups tienen vista propia en 'view-backup')
   var data = _dataAll.filter(function(u){ return !isBackup(u); });
 
-  // GH3.42.8: Si el rol es técnico, filtrar a solo sus equipos asignados
+  // GH3.42.8/11: Si el rol es técnico, filtrar a solo sus equipos asignados
   var _uRole = window.state && state.user && (state.user.role || state.user.rol);
   if (_uRole === 'tecnico') {
-    var _uName = window.state && state.user && (state.user.nombre || state.user.name || '');
-    if (_uName) {
+    var _myTecName = _resolveMyTecnicoName();
+    if (_myTecName) {
       data = data.filter(function(u){
-        return (u.tecnico || '').toLowerCase() === _uName.toLowerCase();
+        var t = String(u.tecnico || '').toLowerCase().trim();
+        return t === _myTecName.toLowerCase() ||
+               t.indexOf(_myTecName.toLowerCase()) >= 0 ||
+               _myTecName.toLowerCase().indexOf(t) >= 0;
       });
     }
   }
@@ -358,38 +402,45 @@ function renderUsuarios() {
 function renderTecnicos() {
   const techs = window.CONFIG.technicians;
   const real = getReal();
-  // GH3.42.8: si el usuario es técnico, filtrar techs a solo su nombre (matching case-insensitive)
+  // GH3.42.11: usar helper unificado para matching robusto
   var _uRole = window.state && state.user && (state.user.role || state.user.rol);
   var _myTec = null;
-  if (_uRole === 'tecnico') {
-    var _uName = window.state && state.user && (state.user.nombre || state.user.name || '');
-    if (_uName) {
-      _myTec = techs.find(function(t){ return t.toLowerCase() === _uName.toLowerCase(); });
-    }
-    // Si no encontramos coincidencia exacta por nombre, intentar por email
-    if (!_myTec && state.user.email) {
-      var _mail = state.user.email.split('@')[0].toLowerCase();
-      _myTec = techs.find(function(t){ return t.toLowerCase().indexOf(_mail) >= 0 || _mail.indexOf(t.toLowerCase()) >= 0; });
-    }
-  }
-  var _visibleTechs = _myTec ? [_myTec] : techs;
+  if (_uRole === 'tecnico') _myTec = _resolveMyTecnicoName();
+  var _visibleTechs = _myTec ? [_myTec] : techs.filter(function(t){ return t !== 'Sin asignar'; });
 
   // STAB-v10.1 P0+P2: reutilizar buildDashboardStats por técnico
   var _bdsAll = window.DashboardStats ? DashboardStats.compute(real) : {};
   var _ptAll  = _bdsAll.porTecnico || {};
-  $('tec-grid').innerHTML = _visibleTechs.map(t => {
+
+  // GH3.42.11: usar el mismo carrusel flashcard del leaderboard para consistencia visual
+  var tecList = _visibleTechs.map(function(t) {
     var _tKey = Object.keys(_ptAll).find(function(k){ return k.toLowerCase() === t.toLowerCase(); }) || t;
-    var _d = _ptAll[_tKey] || { asignados:0, pendientes:0, proceso:0, entregados:0, finalizados:0, pct:0 };
-    const total = _d.asignados;
-    const pend  = _d.pendientes;
-    const proc  = _d.proceso;
-    const ent   = _d.entregados;
-    const acta  = _d.actas || 0; // Auditoria Final: usa porTecnico.actas
-    const pct   = _d.pct;
-    const cls = t.toLowerCase() === 'sin asignar' ? 'unassigned' : t.toLowerCase();
-    const initials = t === 'Sin asignar' ? '—' : t.substring(0, 2).toUpperCase();
-    return '<div class="tec-card ' + cls + '" onclick="openTecnicoDetail(\'' + t.replace(/\'/g, "\\\'") + '\')" style="cursor:pointer"><div class="tec-head"><div class="tec-avatar">' + initials + '</div><div><div class="tec-name">' + t + '</div><div class="tec-meta">' + total + ' equipos asignados · click para detalle</div></div></div><div class="tec-stats"><div class="tec-stat"><div class="tec-stat-label">Pendientes</div><div class="tec-stat-val">' + pend + '</div></div><div class="tec-stat"><div class="tec-stat-label">En proceso</div><div class="tec-stat-val amb">' + proc + '</div></div><div class="tec-stat"><div class="tec-stat-label">Entregados</div><div class="tec-stat-val grn">' + ent + '</div></div><div class="tec-stat"><div class="tec-stat-label">Actas</div><div class="tec-stat-val blu">' + acta + '</div></div></div><div class="tec-progress"><div class="tec-progress-bar" style="width: ' + pct + '%"></div></div><div class="tec-progress-text">' + pct + '% completado</div></div>';
-  }).join('');
+    var _d = _ptAll[_tKey] || { asignados:0, pendientes:0, proceso:0, entregados:0, actas:0, finalizados:0, pct:0 };
+    return Object.assign({ tec: t }, _d);
+  }).filter(function(d){ return d.asignados > 0; })
+    .sort(function(a,b){ return b.entregados - a.entregados; });
+
+  var container = document.getElementById('tec-grid');
+  if (!container) return;
+  if (tecList.length === 0) {
+    container.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--muted,#6B6660);font-family:var(--font-body);font-size:13px">Sin técnicos con equipos asignados</div>';
+    return;
+  }
+  // Al hacer click en la card se navega al detalle
+  if (typeof _renderTecnicoCarousel === 'function') {
+    _renderTecnicoCarousel(container, tecList);
+    // Agregar click handler en cada card para openTecnicoDetail
+    setTimeout(function(){
+      container.querySelectorAll('.rc-card').forEach(function(card, i) {
+        card.style.cursor = 'pointer';
+        card.onclick = function(e){
+          // no hacer nada si el click fue en un botón/dot de navegación
+          if (e.target.closest('.rc-nav') || e.target.closest('.rc-arrow') || e.target.closest('.rc-dot')) return;
+          openTecnicoDetail(tecList[i].tec);
+        };
+      });
+    }, 50);
+  }
 }
 
 
@@ -1755,12 +1806,12 @@ function _renderFunnelPipeline(pipe, totalActivos, totalProyecto, totalBackup) {
     '</div>';
 
   // ── Trapezoides SVG animados ──
-  // Cada paso es una banda horizontal que va decreciendo (efecto funnel)
-  var STEP_H = 42;   // altura por banda
-  var STEP_GAP = 4;  // separación entre bandas
+  // GH3.42.11: bandas más compactas para reducir tamaño total
+  var STEP_H = 28;   // altura por banda (antes 42)
+  var STEP_GAP = 3;  // separación entre bandas (antes 4)
   var W = 400;       // ancho total
-  var svgH = steps.length * (STEP_H + STEP_GAP) + 12;
-  var svgHtml = '<svg viewBox="0 0 ' + W + ' ' + svgH + '" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;overflow:visible">' +
+  var svgH = steps.length * (STEP_H + STEP_GAP) + 8;
+  var svgHtml = '<svg viewBox="0 0 ' + W + ' ' + svgH + '" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;overflow:visible;max-height:340px">' +
     '<defs>' +
       '<linearGradient id="fnl-grad-brand" x1="0%" y1="0%" x2="100%" y2="0%">' +
         '<stop offset="0%" stop-color="#A51C2B" stop-opacity=".08"/>' +
@@ -1799,15 +1850,15 @@ function _renderFunnelPipeline(pipe, totalActivos, totalProyecto, totalBackup) {
         // Borde derecho del trapezoide
         '<line x1="' + (barX + barWidth) + '" y1="' + y + '" x2="' + (barX + barWidth) + '" y2="' + (y + STEP_H) + '" stroke="#A51C2B" stroke-width="1" opacity=".3"/>' +
         // Texto: etiqueta izquierda
-        '<text x="' + (barX + 12) + '" y="' + (y + STEP_H/2 + 4) + '" fill="#FAFAF8" font-size="12" font-weight="600" style="font-family:-apple-system,Segoe UI,sans-serif;pointer-events:none">' +
+        '<text x="' + (barX + 10) + '" y="' + (y + STEP_H/2 + 4) + '" fill="#FAFAF8" font-size="11" font-weight="600" style="font-family:-apple-system,Segoe UI,sans-serif;pointer-events:none">' +
           esc(LABELS_MAP[s.estado] || s.estado) +
         '</text>' +
         // Texto: número derecha
-        '<text x="' + (barX + barWidth - 12) + '" y="' + (y + STEP_H/2 - 2) + '" fill="#FAFAF8" font-size="15" font-weight="700" text-anchor="end" style="font-family:Charter,Georgia,serif;pointer-events:none" class="fnl-svg-count" data-target="' + s.count + '">' +
+        '<text x="' + (barX + barWidth - 10) + '" y="' + (y + STEP_H/2 - 1) + '" fill="#FAFAF8" font-size="12" font-weight="700" text-anchor="end" style="font-family:Charter,Georgia,serif;pointer-events:none" class="fnl-svg-count" data-target="' + s.count + '">' +
           '0' +
         '</text>' +
         // Texto: porcentaje debajo del número
-        '<text x="' + (barX + barWidth - 12) + '" y="' + (y + STEP_H/2 + 11) + '" fill="rgba(250,250,248,.75)" font-size="9" font-weight="600" text-anchor="end" style="font-family:ui-monospace,monospace;pointer-events:none">' +
+        '<text x="' + (barX + barWidth - 10) + '" y="' + (y + STEP_H/2 + 10) + '" fill="rgba(250,250,248,.75)" font-size="8" font-weight="600" text-anchor="end" style="font-family:ui-monospace,monospace;pointer-events:none">' +
           pctReal + '% total' +
         '</text>';
 
@@ -1914,12 +1965,27 @@ function _renderDestinoDonut(DF) {
   if (!cv || !window.Chart) return;
   if (cv._chart) cv._chart.destroy();
   if (!DF.total) {
-    var ctx = cv.getContext('2d');
-    ctx.clearRect(0,0,cv.width,cv.height);
-    ctx.font = '11px sans-serif';
-    ctx.fillStyle = '#94A3B8';
-    ctx.textAlign = 'center';
-    ctx.fillText('Sin recomendación asignada', cv.width/2, cv.height/2);
+    // GH3.42.11: estado vacío visual — círculo placeholder gris con texto centrado
+    cv._chart = new Chart(cv, {
+      type: 'doughnut',
+      data: {
+        labels: ['Sin datos'],
+        datasets: [{
+          data: [1],
+          backgroundColor: ['#E5E7EB'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '68%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        },
+        animation: { duration: 600 }
+      }
+    });
     return;
   }
   cv._chart = new Chart(cv, {

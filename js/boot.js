@@ -56,13 +56,17 @@ function _applyRBAC(role, userEmail) {
     'roles', 'configuracion', 'reportes-ejecutivos', 'administracion'
   ];
   var TECNICO_RESTRICTED = ['ajustes']; // ajustes siempre solo para admin
-  // GH3.42.8: Whitelist estricta para técnico — solo 4 vistas permitidas
-  var TECNICO_ALLOWED = ['resumen', 'usuarios', 'tecnicos', 'panel'];
-  var isTecnico  = (role === 'tecnico');
-  var isConsulta = (role === 'consulta' || role === 'visitante');
+  // GH3.42.8: Whitelist estricta para técnico — 5 vistas permitidas
+  // GH3.42.11: agregado 'tecnico-detail' (vista a la que se navega al hacer click en la tarjeta)
+  var TECNICO_ALLOWED = ['resumen', 'usuarios', 'tecnicos', 'tecnico-detail', 'panel'];
+  // GH3.42.10: Whitelist estricta para visitante — solo 3 vistas permitidas
+  var VISITANTE_ALLOWED = ['resumen', 'ciudades', 'panel'];
+  var isTecnico   = (role === 'tecnico');
+  var isVisitante = (role === 'visitante');
+  var isConsulta  = (role === 'consulta' || role === 'visitante');
   var isRestricted = isTecnico || isConsulta;
 
-  // STAB-v09.2 TASK 4 + GH3.42.8: aplicar restricciones por rol
+  // STAB-v09.2 TASK 4 + GH3.42.8/10: aplicar restricciones por rol
   document.querySelectorAll('.sb-item').forEach(function(item) {
     var view = item.dataset && item.dataset.view;
     if (!view) return;
@@ -70,6 +74,9 @@ function _applyRBAC(role, userEmail) {
     // GH3.42.8: técnico usa whitelist estricta
     if (isTecnico) {
       if (TECNICO_ALLOWED.indexOf(view) < 0) blocked = true;
+    } else if (isVisitante) {
+      // GH3.42.10: visitante usa whitelist estricta
+      if (VISITANTE_ALLOWED.indexOf(view) < 0) blocked = true;
     } else {
       if (isRestricted && RESTRICTED_VIEWS.some(function(rv) { return view.indexOf(rv) >= 0; })) blocked = true;
     }

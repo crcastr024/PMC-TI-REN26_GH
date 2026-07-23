@@ -356,13 +356,13 @@
 }
 
 /* Empresa cards */
-.exec-emp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--rule); }
+.exec-emp-grid { display: grid; grid-template-columns: 1fr; gap: 0; border: 1px solid var(--rule); }
 .exec-emp-card {
   background: var(--paper); border: 0;
-  border-right: 1px solid var(--rule); border-radius: 0;
-  padding: var(--sp-5); transition: background .15s;
+  border-bottom: 1px solid var(--rule); border-radius: 0;
+  padding: var(--sp-4) var(--sp-5); transition: background .15s;
 }
-.exec-emp-card:last-child { border-right: 0; }
+.exec-emp-card:last-child { border-bottom: 0; }
 .exec-emp-card:hover { background: var(--paper-2); box-shadow: none; transform: none; }
 .eec-head {
   display: flex; justify-content: space-between; align-items: baseline;
