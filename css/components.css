@@ -20,7 +20,11 @@
   background: var(--bg-elev);
   border-right: 1px solid var(--border);
   position: sticky; top: 0; left: 0;
-  height: calc(100vh - var(--topbar-h, 56px));
+  height: auto; /* GH3.42.12 FIX: restaura corrección GH3.38 FC-08 — con height fijo a 100vh
+                   el sidebar termina antes que el grid-area (footer footer), dejando hueco
+                   blanco al hacer scroll. height:auto + align-self:stretch (default del grid)
+                   hace que el sidebar ocupe todo su grid-area real y se despegue del sticky
+                   exactamente donde empieza el footer. */
   overflow-y: auto;
   align-self: stretch;
   display: flex; flex-direction: column;
@@ -872,16 +876,17 @@
 
 /* QA-05 Task 6 — Chips de estado completos */
 .badge-programado         { background: var(--blue-l);   color: var(--blue); }
-.badge-en-tránsito-equipo-nuevo,.badge-en-tránsito { background: #ede9fe; color: #7c3aed; }
+.badge-en-tránsito-equipo-nuevo,.badge-en-tránsito { background: var(--badge-violet-bg); color: var(--badge-violet-fg); }
 .badge-entregado-equipo-nuevo { background: var(--green-l); color: var(--green); }
-.badge-pendiente-devolución-equipo-anterior,.badge-recolección { background: #fff7ed; color: #c2410c; }
-.badge-en-tránsito-equipo-anterior { background: #fdf4ff; color: #9333ea; }
-.badge-equipo-anterior-recibido { background: #f0fdf4; color: var(--green); }
+.badge-pendiente-devolución-equipo-anterior,.badge-recolección { background: var(--badge-orange-bg); color: var(--badge-orange-fg); }
+.badge-en-tránsito-equipo-anterior { background: var(--badge-purple2-bg); color: var(--badge-purple2-fg); }
+.badge-equipo-anterior-recibido { background: var(--badge-green2-bg); color: var(--green); }
+.badge-pendiente-acta { background: var(--badge-teal-bg); color: var(--badge-teal-fg); }
 .badge-renovación-completada,.badge-cerrado,.badge-finalizado { background: var(--green-l); color: var(--green); font-weight:800; }
 .badge-pendiente-aprobación { background: var(--amber-l); color: var(--amber); }
-.badge-corrección-requerida { background: #fef2f2; color: #dc2626; }
-.badge-bloqueado { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-.badge-feedback  { background: #fdf4ff; color: #9333ea; }
+.badge-corrección-requerida { background: var(--badge-red-bg); color: var(--badge-red-fg); }
+.badge-bloqueado { background: var(--badge-red-bg); color: var(--badge-red-fg); border: 1px solid var(--badge-red-border); }
+.badge-feedback  { background: var(--badge-purple2-bg); color: var(--badge-purple2-fg); }
 .badge-backup    { background: rgba(245,158,11,.10); color: var(--amber); border: 1px dashed var(--amber); }
 /* status chip — versión pill con dot */
 .status-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 9px 3px 7px; border-radius:var(--r-pill); font-size:11px; font-weight:700; letter-spacing:.3px; white-space:nowrap; }

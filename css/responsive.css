@@ -210,11 +210,11 @@
   background: var(--blue-l); color: var(--blue); font-weight: 700;
 }
 .badge-corrección-requerida, .badge-correccion-requerida {
-  background: rgba(239,68,68,0.10); color: var(--red);
+  background: var(--badge-red-bg); color: var(--red);
 }
 .badge-cerrado { background: var(--green-l); color: var(--green); }
 .badge-feedback { background: var(--purple-l); color: var(--purple); }
-.badge-bloqueado { background: rgba(239,68,68,0.12); color: var(--red); border: 1px dashed var(--red); }
+.badge-bloqueado { background: var(--badge-red-bg); color: var(--red); border: 1px dashed var(--red); }
 
 /* ── Aprobaciones grid ── */
 .aprob-grid {

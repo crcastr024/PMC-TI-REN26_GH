@@ -1358,12 +1358,14 @@ const ConfigService = (() => {
   };
 
 
+  // GH3.42.12: etiquetas acortadas — las descripciones extendidas se retiraron
+  // porque el Excel maestro ya fue migrado al formato corto (ver informe).
   const NIVELES_REGISTRO = [
-    'Nivel 1 - Analista / Operativo (Asistentes, recepción, apoyo administrativo y cargos operativos).',
-    'Nivel 2 - Consultor / Profesional (Consultores, PMO, coordinadores y personal con contacto frecuente con clientes o gestión de proyectos).',
-    'Nivel 3 - Desarrollo / Técnico Especializado (Desarrolladores, ingenieros y personal técnico que ejecuta compilaciones, entornos virtuales, bases de datos o herramientas especializadas).',
+    'Nivel 1 - Analista / Operativo',
+    'Nivel 2 - Consultor / Profesional',
+    'Nivel 3 - Desarrollo / Técnico Especializado',
     'Nivel 4 - Diseño / Creativo',
-    'Nivel 5 - Gerencial / VIP (Gerencia, dirección, presidencia y cargos estratégicos que requieren alta movilidad, seguridad avanzada y representación corporativa).',
+    'Nivel 5 - Gerencial / VIP',
   ];
 
   return {

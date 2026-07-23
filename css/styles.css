@@ -59,6 +59,14 @@
   --notif-info: var(--blue);
   --notif-warn: var(--amber);
   --notif-crit: var(--red);
+
+  /* Badges — GH3.42.12: tokenizados (antes hex fijo, invisibles/rotos en dark) */
+  --badge-violet-bg: #ede9fe; --badge-violet-fg: #7c3aed;
+  --badge-orange-bg: #fff7ed; --badge-orange-fg: #c2410c;
+  --badge-purple2-bg: #fdf4ff; --badge-purple2-fg: #9333ea;
+  --badge-green2-bg: #f0fdf4;
+  --badge-red-bg: #fef2f2; --badge-red-fg: #dc2626; --badge-red-border: #fecaca;
+  --badge-teal-bg: #ecfeff; --badge-teal-fg: #0e7490;
   
   --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
   --shadow-sm: 0 2px 6px rgba(0,0,0,0.05);
@@ -91,6 +99,25 @@
   --shadow-sm: 0 2px 6px rgba(0,0,0,0.5);
   --shadow: 0 8px 24px rgba(0,0,0,0.6);
   --shadow-lg: 0 24px 60px rgba(0,0,0,0.7);
+
+  /* GH3.42.12 FIX: los tokens -l son overlays al 10% de opacidad pensados
+     para fondo blanco (--bg-card light: #FFFFFF). Sobre fondo casi negro
+     (--bg-card dark: #12121A) ese mismo 10% se vuelve casi invisible —
+     el badge queda como texto de color sin pill visible detrás (síntoma
+     reportado). Se sube el alpha para mantener el pill legible en dark. */
+  --accent-l: rgba(211, 0, 52, 0.20);
+  --green-l:  rgba(74, 222, 128, 0.16);
+  --blue-l:   rgba(96, 165, 250, 0.16);
+  --amber-l:  rgba(251, 191, 36, 0.18);
+  --purple-l: rgba(167, 139, 250, 0.18);
+
+  /* Badges que usaban hex fijo — equivalente oscuro con overlay translúcido */
+  --badge-violet-bg: rgba(139, 92, 246, 0.18); --badge-violet-fg: #c4b5fd;
+  --badge-orange-bg: rgba(234, 88, 12, 0.18);  --badge-orange-fg: #fdba74;
+  --badge-purple2-bg: rgba(168, 85, 247, 0.18); --badge-purple2-fg: #d8b4fe;
+  --badge-green2-bg: rgba(74, 222, 128, 0.16);
+  --badge-red-bg: rgba(239, 68, 68, 0.18); --badge-red-fg: #fca5a5; --badge-red-border: rgba(239, 68, 68, 0.4);
+  --badge-teal-bg: rgba(45, 212, 191, 0.18); --badge-teal-fg: #5eead4;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

@@ -889,9 +889,17 @@ function openEditModal(id) {
     : ['Pendiente','Alistamiento','Programado','En tránsito equipo nuevo',
        'Entregado equipo nuevo','Pendiente devolución equipo anterior',
        'En tránsito equipo anterior','Equipo anterior recibido',
-       'Renovación completada','Pendiente aprobación','Cerrado','BACKUP'];
+       'Pendiente acta','Pendiente aprobación','Renovación completada','Cerrado','BACKUP'];
   // RC-07: mostrar TODOS los estados disponibles (no restringir transiciones en el form)
   var estados = _allEstados.slice();
+  // GH3.42.12: Renovación completada es visible/seleccionable SOLO para
+  // super_admin o gestor_activos (GA). El resto de roles (técnico incluido)
+  // llega como máximo hasta Pendiente aprobación. Restricción de UI —
+  // no reemplaza validación de escritura en capas inferiores.
+  var _rbacRole = window.state && state.user && (state.user.role || state.user.rol);
+  if (['super_admin','gestor_activos'].indexOf(_rbacRole) < 0) {
+    estados = estados.filter(function(e){ return e !== StateMachine.states.COMPLETADA; });
+  }
   // Asegurar que el estado actual esté en la lista aunque no esté en _allEstados
   if (u.estado && estados.indexOf(u.estado) < 0) estados.unshift(u.estado);
   const estadoOpts = estados.map(e => '<option value="' + esc(e) + '"' + (u.estado === e ? ' selected' : '') + '>' + esc(e) + '</option>').join('');

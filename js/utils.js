@@ -178,12 +178,14 @@ const STATES = {
   BACKUP:                    'BACKUP',
 };
 
-// Lineal happy path — GH3.42.9: Pendiente acta va ANTES de Renovación completada
+// Lineal happy path — GH3.42.12: Pendiente aprobación va ANTES de Renovación
+// completada (ahora estado terminal). Orden solicitado explícitamente:
+// ... → Pendiente acta → Pendiente aprobación → Renovación completada
 const STATE_FLOW = [
   STATES.PENDIENTE, STATES.ALISTAMIENTO, STATES.PROGRAMADO,
   STATES.TRANSITO_NUEVO, STATES.ENTREGADO_NUEVO,
   STATES.PENDIENTE_RECOGER, STATES.TRANSITO_ANTERIOR, STATES.RECIBIDO_ANTERIOR,
-  STATES.PENDIENTE_ACTA, STATES.COMPLETADA, STATES.PENDIENTE_APROBACION,
+  STATES.PENDIENTE_ACTA, STATES.PENDIENTE_APROBACION, STATES.COMPLETADA,
 ];
 
 // Transiciones válidas: cada estado → lista de estados destino permitidos
@@ -199,10 +201,10 @@ const TRANSITIONS = {
   [STATES.PENDIENTE_RECOGER]:    [STATES.TRANSITO_ANTERIOR, STATES.BLOQUEADO],
   [STATES.TRANSITO_ANTERIOR]:    [STATES.RECIBIDO_ANTERIOR, STATES.BLOQUEADO],
   [STATES.RECIBIDO_ANTERIOR]:    [STATES.PENDIENTE_ACTA, STATES.BLOQUEADO],
-  // GH3.42.9: tramo terminal correcto — Pendiente acta → Renovación completada → Pendiente aprobación
-  [STATES.PENDIENTE_ACTA]:       [STATES.COMPLETADA, STATES.CORRECCION_REQUERIDA],
-  [STATES.COMPLETADA]:           [STATES.PENDIENTE_APROBACION],
-  [STATES.PENDIENTE_APROBACION]: [STATES.CORRECCION_REQUERIDA, STATES.FEEDBACK],
+  // GH3.42.12: tramo terminal correcto — Pendiente acta → Pendiente aprobación → Renovación completada (terminal)
+  [STATES.PENDIENTE_ACTA]:       [STATES.PENDIENTE_APROBACION, STATES.CORRECCION_REQUERIDA],
+  [STATES.PENDIENTE_APROBACION]: [STATES.COMPLETADA, STATES.CORRECCION_REQUERIDA],
+  [STATES.COMPLETADA]:           [STATES.FEEDBACK],
   [STATES.FEEDBACK]:             [],
   [STATES.CORRECCION_REQUERIDA]: STATE_FLOW.slice(0, 9),
   [STATES.CERRADO]:              [],

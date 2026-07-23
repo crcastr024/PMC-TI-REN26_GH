@@ -31,20 +31,23 @@ const ExcelMapper = (() => {
     if (raw === null || raw === undefined || raw === '') return '';
     const s = String(raw).trim();
     if (s === '' || s.toLowerCase() === 'null') return '';
+    // GH3.42.12 FIX: columnas numéricas conocidas nunca deben pasar por el cast
+    // booleano — bug real: ID=1 (registro 1) se casteaba a boolean `true` porque
+    // s==='1' matcheaba la rama booleana ANTES de llegar a la rama numérica.
+    // Todo ID>=2 no coincide con '1' así que el bug era invisible para el resto.
+    const numCols = ['ID','CALIFICACION_FEEDBACK','VERSION'];
+    const isNumCol = numCols.some(c => colName && colName.toUpperCase() === c);
     // Booleanos
-    if (s.toUpperCase() === 'TRUE'  || s === '1') return true;
-    if (s.toUpperCase() === 'FALSE' || s === '0') {
-      // Sólo cast a false si la columna es conocidamente booleana
-      const boolCols = ['LISTA_RECOLECCION']; // QA-03: solo columnas del Excel v1.0
-      if (boolCols.some(b => colName && colName.toUpperCase().includes(b.replace('_','')))) return false;
+    if (!isNumCol) {
+      if (s.toUpperCase() === 'TRUE'  || s === '1') return true;
+      if (s.toUpperCase() === 'FALSE' || s === '0') {
+        // Sólo cast a false si la columna es conocidamente booleana
+        const boolCols = ['LISTA_RECOLECCION']; // QA-03: solo columnas del Excel v1.0
+        if (boolCols.some(b => colName && colName.toUpperCase().includes(b.replace('_','')))) return false;
+      }
     }
     // Número
-    if (!isNaN(Number(s)) && s !== '') {
-      const n = Number(s);
-      // Solo cast numérico para columnas claramente numéricas
-      const numCols = ['ID','CALIFICACION_FEEDBACK','VERSION'];
-      if (numCols.some(c => colName && colName.toUpperCase() === c)) return n;
-    }
+    if (isNumCol && !isNaN(Number(s)) && s !== '') return Number(s);
     return s;
   }
 
