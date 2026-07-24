@@ -4,6 +4,18 @@
 
 /* ═══ Carrusel Flashcards Técnicos ═══ */
 .exec-tec-carousel-wrap {
+  /* GH3.42.15 FIX: este wrapper se monta sobre 2 contenedores distintos —
+     #tec-grid (vista "Por técnico") y #pe-tecnico-new (Seguimiento/Panel
+     Ejecutivo, clase .exec-leaderboard). #tec-grid es un CSS Grid legacy
+     de ANTES del carrusel (.tec-grid { display:grid; grid-template-columns:
+     repeat(auto-fit,minmax(320px,1fr)) }, pensado para varias tarjetas
+     simultáneas). El carrusel solo mete 2 hijos (.rc-viewport + .rc-nav,
+     pensados para apilarse verticalmente) — el grid heredado los coloca
+     como 2 columnas en vez de apilarlos, dejando el segundo (los controles
+     de navegación) como una celda vacía al lado de la tarjeta. display:block
+     explícito aquí gana en cascada (tecnico-funnel.css carga después) y
+     fuerza el apilamiento vertical en ambos contenedores por igual.*/
+  display: block;
   position: relative;
   padding: 4px 0;
   border: 0;

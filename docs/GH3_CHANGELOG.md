@@ -132,3 +132,38 @@ BOOT_SEQUENCE.md, SecurityFreeze.md
   exec-redesign.css (carga después) gana con las versiones ya
   tokenizadas. No se tocaron por no tener efecto visual — quedan como
   deuda técnica menor (limpiar en otro sprint si se quiere).
+
+## GH3.42.15
+- FIX vista "Por técnico" (#tec-grid): controles de navegación del
+  carrusel (flechas + dots) renderizando en una columna vacía al lado
+  de la tarjeta, en vez de debajo. Causa raíz: `.tec-grid` es CSS Grid
+  legacy de ANTES del carrusel (`display:grid; grid-template-columns:
+  repeat(auto-fit,minmax(320px,1fr))`, pensado para varias tarjetas
+  simultáneas, GH3.42.11 reemplazó eso por el carrusel de 1 tarjeta a
+  la vez pero nunca se actualizó este CSS). El carrusel solo mete 2
+  hijos (.rc-viewport + .rc-nav) y el grid heredado los coloca como
+  2 columnas en vez de apilarlos. Fix: `display:block` explícito en
+  `.exec-tec-carousel-wrap` (tecnico-funnel.css, carga después de
+  components.css, gana en cascada). Verificado que no afecta el otro
+  punto de uso del mismo carrusel (#pe-tecnico-new en Seguimiento, que
+  ya usaba flex-column correctamente — block se comporta igual para
+  2 hijos simples).
+
+## GH3.42.16
+- FIX CRÍTICO: filtro de estado en vista Usuarios (#filter-estado) —
+  3 de sus 6 opciones ("En tránsito", "Entregado", "Completado") devolvían
+  SIEMPRE 0 resultados, sin importar los demás filtros. Causa raíz:
+  `getFiltered()` comparaba `u.estado !== est` por igualdad EXACTA, pero
+  el `<select>` (index.html) usa categorías agrupadas/cortas que no
+  existen como valor literal en ningún registro (real: "En tránsito
+  equipo nuevo/anterior", "Entregado equipo nuevo", "Renovación
+  completada"/"Cerrado" — nunca literalmente "En tránsito"/"Entregado"/
+  "Completado"). Solo "Pendiente"/"Alistamiento"/"BACKUP" coincidían por
+  casualidad (etiqueta corta = valor real). Fix: matching agrupado —
+  "Completado" usa el mismo criterio de "finalizados" ya establecido en
+  el resto del código (Renovación completada/Cerrado/Finalizado/
+  Completado); "En tránsito"/"Entregado" usan prefijo sobre el estado
+  real. No se rediseñaron las categorías del select (haría falta
+  para cubrir Programado/Pendiente devolución/Pendiente acta/Pendiente
+  aprobación, que hoy no encajan en ningún bucket) — eso es una decisión
+  de producto más grande, fuera de alcance de este fix puntual.
