@@ -167,3 +167,26 @@ BOOT_SEQUENCE.md, SecurityFreeze.md
   para cubrir Programado/Pendiente devolución/Pendiente acta/Pendiente
   aprobación, que hoy no encajan en ningún bucket) — eso es una decisión
   de producto más grande, fuera de alcance de este fix puntual.
+
+## GH3.42.17
+- FIX CRÍTICO (autorizado explícitamente por Cristian — toca "core
+  congelado", provider.js): incidente de throttling 429 sostenido +
+  circuit breaker activado en producción. Causa raíz: `WorkbookWriter.
+  writeRecord()` hacía un PATCH por CELDA individual en un loop
+  secuencial — cada guardado de 1 registro disparaba mínimo 4 requests
+  (campo editado + _VERSION + _UPDATED_AT + _UPDATED_BY), cada uno como
+  llamada HTTP independiente a Graph. Con el volumen normal de uso esto
+  agotaba el rate limit de Graph y activaba el circuit breaker (GH3.42.7).
+- Fix: agrupar cellUpdates de columnas CONTIGUAS de la misma fila en un
+  solo PATCH de rango (ej. `range(address='P28:R28')` con
+  `values:[[v1,v2,v3]]`), en vez de 3 PATCHes sueltos. Mismo patrón ya
+  usado y probado en AuditService.flushBatch ("UN SOLO PATCH para todo
+  el batch — TASK 03 aprobado"). No cambia el contrato de escritura:
+  mismas validaciones (Stage 1-2), mismo lock (Stage 3), mismo logging
+  de auditoría y verificación post-PATCH (adaptada a leer por offset
+  dentro del rango en vez de una sola celda).
+- Confirmado contra el Excel maestro real: UPDATED_AT/UPDATED_BY/VERSION
+  son columnas 60/61/62 — CONTIGUAS. Un guardado típico de 1 campo pasa
+  de 4 PATCHes individuales a 2 (el campo editado + el batch de control),
+  -50% de requests. Peor caso (campos totalmente dispersos): igual que
+  antes, sin regresión.

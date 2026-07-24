@@ -590,6 +590,7 @@ const WorkbookWriter = (() => {
         if (colIdx < 0) { console.error('[WorkbookWriter] campo sin columna en Excel (descartado):', field, '| alias buscado:', excelFieldName); return; }
         cellUpdates.push({
           field:     field,  // GH3.24 logging
+          col:       colIdx, // GH3.42.17: necesario para agrupar PATCHes contiguos
           address:   `${ExcelMapper.columnLetter(colIdx)}${rowNum}`,
           prevValue: record[field],  // GH3.24 logging: valor anterior
           value:     value === null || value === undefined || value === '' ? null : value,
@@ -604,12 +605,12 @@ const WorkbookWriter = (() => {
       if (versionIdx >= 0) {
         // GH3.39.2 P1: record ya declarado arriba — no redeclarar
         const currentVersion = (record && record._version) ? Number(record._version) : 0;
-        cellUpdates.push({ address: `${ExcelMapper.columnLetter(versionIdx)}${rowNum}`, value: currentVersion + 1 });
+        cellUpdates.push({ field: 'VERSION', col: versionIdx, address: `${ExcelMapper.columnLetter(versionIdx)}${rowNum}`, value: currentVersion + 1 });
         // Actualizar en memoria también
         if (record) record._version = currentVersion + 1;
       }
-      if (updAtIdx >= 0) cellUpdates.push({ address: `${ExcelMapper.columnLetter(updAtIdx)}${rowNum}`, value: now });
-      if (updByIdx >= 0) cellUpdates.push({ address: `${ExcelMapper.columnLetter(updByIdx)}${rowNum}`, value: user.email || user.name });
+      if (updAtIdx >= 0) cellUpdates.push({ field: 'UPDATED_AT', col: updAtIdx, address: `${ExcelMapper.columnLetter(updAtIdx)}${rowNum}`, value: now });
+      if (updByIdx >= 0) cellUpdates.push({ field: 'UPDATED_BY', col: updByIdx, address: `${ExcelMapper.columnLetter(updByIdx)}${rowNum}`, value: user.email || user.name });
 
       if (cellUpdates.length === 0) { console.error('[WRITE ABORT] noColumns | id:', id, '| campos:', Object.keys(safeChanges)); if(window.HBT)window.HBT._lastAbort={reason:'noColumns',id,t:Date.now()}; return {ok:true,noChanges:true,reason:'noColumns'}; }
 
@@ -647,19 +648,48 @@ const WorkbookWriter = (() => {
       const _debug = window.PRODUCTION_CONFIG && window.PRODUCTION_CONFIG.debug;
       const _writeResults = [];
 
-      for (const upd of cellUpdates) {
-        const patchUrl = `${base}/worksheets/${sheetName}/range(address='${upd.address}')`;
+      // GH3.42.17 FIX: agrupar celdas contiguas de la misma fila en un solo
+      // PATCH de rango, en vez de un PATCH por celda. Antes: cada writeRecord()
+      // disparaba mínimo 4 PATCHes individuales (campo editado + _VERSION +
+      // _UPDATED_AT + _UPDATED_BY) — eso agotaba el rate limit de Graph con
+      // throttling 429 sostenido y activaba el circuit breaker (incidente
+      // reportado en consola: 429 en RENOVACIONES/range F28,F40,G114,H116...).
+      // No cambia el contrato de escritura: mismas validaciones, mismo lock,
+      // mismo logging de auditoría — solo se agrupan las celdas YA autorizadas
+      // en cellUpdates cuando son columnas consecutivas en la misma fila.
+      const _sortedUpdates = cellUpdates.slice().sort((a, b) => a.col - b.col);
+      const _batches = [];
+      _sortedUpdates.forEach(function(u) {
+        const last = _batches[_batches.length - 1];
+        if (last && u.col === last[last.length - 1].col + 1) {
+          last.push(u);
+        } else {
+          _batches.push([u]);
+        }
+      });
+
+      for (const batch of _batches) {
+        const startCol = batch[0].col;
+        const endCol   = batch[batch.length - 1].col;
+        const address  = batch.length === 1
+          ? `${ExcelMapper.columnLetter(startCol)}${rowNum}`
+          : `${ExcelMapper.columnLetter(startCol)}${rowNum}:${ExcelMapper.columnLetter(endCol)}${rowNum}`;
+        const patchUrl = `${base}/worksheets/${sheetName}/range(address='${address}')`;
+        const patchValues = [ batch.map(function(u){ return u.value; }) ];
+
         if (_debug) {
-          console.error('[WRITE DIAG] Campo:', upd.field,
-            '| Col:', upd.address.replace(/\d+/g,''),
-            '| Fila:', (upd.address.match(/\d+/) || ['?'])[0],
-            '| Anterior:', upd.prevValue, '| Nuevo:', upd.value);
+          batch.forEach(function(upd) {
+            console.error('[WRITE DIAG] Campo:', upd.field,
+              '| Col:', upd.address.replace(/\d+/g,''),
+              '| Fila:', (upd.address.match(/\d+/) || ['?'])[0],
+              '| Anterior:', upd.prevValue, '| Nuevo:', upd.value);
+          });
         }
 
-        // PATCH
+        // PATCH — 1 request para todo el batch, en vez de 1 por celda
         await GraphClient.patch(
           patchUrl,
-          { values: [[upd.value]] },
+          { values: patchValues },
           SCOPES,
           sessionHeaders
         );
@@ -669,45 +699,44 @@ const WorkbookWriter = (() => {
         if (_shouldVerify) {
           try {
             const getResp = await GraphClient.get(
-              `${base}/worksheets/${sheetName}/range(address='${upd.address}')`,
+              `${base}/worksheets/${sheetName}/range(address='${address}')`,
               SCOPES, sessionHeaders
             );
-            const readBack = getResp && getResp.values && getResp.values[0]
-              ? String(getResp.values[0][0] ?? '')
-              : null;
-            const expected = upd.value === null ? '' : String(upd.value);
-            const ok = readBack === expected || readBack === null;
-            if (ok) {
-              /* WRITE VERIFY OK: upd.field verified */
-            } else {
-              console.error('[WRITE VERIFY] MISMATCH', upd.field,
-                '| Esperado:', expected, '| Encontrado:', readBack);
-            }
-            _writeResults.push({ field: upd.field, address: upd.address, expected, readBack, ok });
-            if (window.HBT) {
-              window.HBT._lastWrite = {
-                // GH3.39.4: sessionId eliminado — modo stateless
-                field: upd.field,
-                address: upd.address,
-                patchUrl,
-                patchValue: upd.value,
-                getReadback: readBack,
-                verifyOk: ok,
-                time: new Date().toISOString(),
-              };
-            }
+            const readRow = (getResp && getResp.values && getResp.values[0]) || [];
+            batch.forEach(function(upd, i) {
+              const readBack = readRow[i] !== undefined && readRow[i] !== null ? String(readRow[i]) : null;
+              const expected = upd.value === null ? '' : String(upd.value);
+              const ok = readBack === expected || readBack === null;
+              if (ok) {
+                /* WRITE VERIFY OK: upd.field verified */
+              } else {
+                console.error('[WRITE VERIFY] MISMATCH', upd.field,
+                  '| Esperado:', expected, '| Encontrado:', readBack);
+              }
+              _writeResults.push({ field: upd.field, address: upd.address, expected, readBack, ok });
+              if (window.HBT) {
+                window.HBT._lastWrite = {
+                  field: upd.field, address: upd.address, patchUrl,
+                  patchValue: upd.value, getReadback: readBack, verifyOk: ok,
+                  time: new Date().toISOString(),
+                };
+              }
+            });
           } catch(e) {
-            console.error('[WRITE VERIFY] GET falló:', upd.field, e.message);
-            _writeResults.push({ field: upd.field, address: upd.address, ok: false, error: e.message });
+            console.error('[WRITE VERIFY] GET falló:', batch.map(function(u){ return u.field; }).join(','), e.message);
+            batch.forEach(function(upd) {
+              _writeResults.push({ field: upd.field, address: upd.address, ok: false, error: e.message });
+            });
           }
         } else {
           // Sin verificación: registrar solo el PATCH
           if (window.HBT) {
-            window.HBT._lastWrite = {
-              // GH3.39.4: sessionId eliminado — modo stateless
-              field: upd.field, address: upd.address,
-              patchUrl, patchValue: upd.value, time: new Date().toISOString(),
-            };
+            batch.forEach(function(upd) {
+              window.HBT._lastWrite = {
+                field: upd.field, address: upd.address,
+                patchUrl, patchValue: upd.value, time: new Date().toISOString(),
+              };
+            });
           }
         }
       }
