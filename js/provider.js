@@ -520,6 +520,19 @@ const WorkbookWriter = (() => {
     // Evita falso positivo "Campo requerido no puede ser vacío" cuando el usuario
     // NO está modificando ese campo (viene en el diff porque el formulario envía
     // el objeto completo, pero el valor coincide con el registro existente).
+    //
+    // GH3.42.19 FIX CRÍTICO: se retira la rama `String(newVal) === String(oldVal)`.
+    // saveRecord() (ui.js) llama a DataService.updateRenewal() — que hace
+    // Object.assign(record, changes) sobre la MISMA referencia que vive en
+    // window.USERS — ANTES de llegar aquí. Para cuando este código corre,
+    // `currentRecord` YA está mutado con el valor NUEVO, así que newVal===oldVal
+    // siempre daba true para CUALQUIER cambio real a un campo requerido
+    // (tecnico/estado/empresa/cedula/nombre) — el campo se borraba del payload
+    // y NUNCA llegaba a Graph, sin error visible (todo lo demás sí se guardaba).
+    // Reportado por Cristian: estado "Cerrado"→"Renovación completada" nunca
+    // persistía, volvía al valor anterior al refrescar. Se conserva SOLO el
+    // caso "ambos vacíos" (el problema original que GH3.42.7 resolvía), que
+    // no depende de comparar contra el valor ya mutado.
     const currentRecord = DataService.getRenewal(id);
     if (currentRecord && WriteContract.REQUIRED_FIELDS) {
       Object.keys(safeChanges).forEach(function(field) {
@@ -528,8 +541,9 @@ const WorkbookWriter = (() => {
         var oldVal = currentRecord[field];
         var newEmpty = newVal === null || newVal === undefined || String(newVal).trim() === '';
         var oldEmpty = oldVal === null || oldVal === undefined || String(oldVal).trim() === '';
-        // Si el usuario no está cambiando el campo (viene igual o ambos vacíos), eliminarlo del batch
-        if ((newEmpty && oldEmpty) || String(newVal) === String(oldVal)) {
+        // Solo eliminar del batch si AMBOS están vacíos (no es un cambio real,
+        // solo ruido del formulario). Ya NO se compara newVal contra oldVal.
+        if (newEmpty && oldEmpty) {
           delete safeChanges[field];
         }
       });

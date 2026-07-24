@@ -222,3 +222,56 @@ BOOT_SEQUENCE.md, SecurityFreeze.md
   ambos casos reportados → sin error, warning solo informativo; técnico
   en la misma transición → sigue bloqueado; técnico en transición
   normal → sin cambios.
+
+## GH3.42.19
+- FIX CRÍTICO (autorizado por Cristian — toca "core congelado", provider.js):
+  causa raíz definitiva de "estado no se guarda en Excel, vuelve al valor
+  anterior al refrescar". `saveRecord()` (ui.js:2417) llama a `DataService.
+  updateRenewal()`, que muta el registro EN MEMORIA (Object.assign sobre la
+  misma referencia de window.USERS) ANTES de que `writeRecord()` (provider.js)
+  lea `currentRecord` para decidir si un campo requerido realmente cambió.
+  La comparación `String(newVal) === String(oldVal)` (GH3.42.7) SIEMPRE
+  coincidía para tecnico/estado/empresa/cedula/nombre cuando de verdad
+  cambiaban, porque `currentRecord` ya reflejaba el valor NUEVO — el campo
+  se borraba del payload antes de llegar a Graph, sin error visible (el
+  resto del guardado sí se completaba, toast de éxito incluido).
+- Fix: se retira la rama `newVal===oldVal`. Se conserva SOLO `newEmpty &&
+  oldEmpty` (el caso original que GH3.42.7 quería resolver — dato
+  preexistente faltante, no una comparación contra el valor ya mutado).
+  Confirmado con 3 casos simulados (node -e): cambio real ahora SÍ se
+  envía; dato preexistente vacío sigue omitiéndose; borrado intencional
+  de un campo requerido pasa a validateField(), que sigue rechazándolo
+  ("Estado REN26 siempre debe tener un dato" — confirmado, esa protección
+  vive en graph.js y es independiente de este fix).
+
+### Auditoría solicitada por Cristian — hallazgos
+1. **[CRÍTICO — corregido arriba]** El bug de esta entrada.
+2. **[RIESGO, no corregido]** `submitBlock()` (boot.js) hace `DataService.
+   updateRenewal(id, {estado:'Bloqueado', ...})` y LUEGO llama a
+   `saveRecord()`, que re-lee el `<select id="m-estado">` del formulario —
+   si ese select no refleja "Bloqueado" en ese momento (submitBlock no lo
+   actualiza), saveRecord() podría reescribir encima con el valor que
+   estuviera seleccionado antes de bloquear. No confirmado en vivo — requiere
+   verificación y probablemente su propio fix/autorización aparte.
+3. **[DEUDA TÉCNICA, sin impacto activo confirmado]** Existen DOS tablas
+   `FIELD_COLUMN_ALIASES`: `window.FIELD_COLUMN_ALIASES` (init.js, ~40
+   entradas, comentario dice "contrato oficial") y una `const` local en
+   provider.js (5 entradas) que la sombrea por scope — la de init.js NUNCA
+   se lee en ningún lado. Confirmado que no causa fallas activas hoy (los
+   demás campos matchean por coincidencia case-insensitive sin necesitar
+   alias), pero es confuso: alguien podría editar la tabla equivocada
+   pensando que es la "oficial". Recomendado consolidar en una sola.
+4. **[VERIFICADO OK]** `ALLOWED_FIELDS`/`PROTECTED_FIELDS`/`READONLY_FIELDS`
+   (graph.js) — los 5 campos requeridos están correctamente en ALLOWED,
+   sin conflicto en las otras dos listas.
+5. **[VERIFICADO OK]** `WriteQueue.flush()` y `ConflictDetector` (cola
+   offline y detección de conflictos) usan el mismo `WorkbookWriter.
+   writeRecord()` ya corregido — se benefician del fix automáticamente,
+   sin cambios adicionales necesarios.
+6. **[NO RELACIONADO, informativo]** El warning de consola "Cross-Origin-
+   Opener-Policy would block the window.closed call" (msal-browser.min.js)
+   es benigno — MSAL usa `loginPopup()`, y el navegador bloquea la lectura
+   de `.closed` sobre la ventana de login.microsoftonline.com (origen
+   distinto). MSAL tiene su propio fallback interno; no afecta el login.
+   No es corregible desde este lado (GitHub Pages es hosting estático, y
+   el origen que dispara el warning es de Microsoft, no de esta app).
