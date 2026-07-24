@@ -290,3 +290,9 @@ BOOT_SEQUENCE.md, SecurityFreeze.md
 - No se agregó tarjeta de "Portátiles" — el pedido fue puntual para
   torres. El dato ya está disponible en porTipo['PORTATIL'] si se quiere
   agregar después, es una tarjeta más siguiendo el mismo patrón.
+
+## GH3.42.21
+- Completado el pedido de Cristian ("un KPI por tipo"): tarjeta
+  "Portátiles" en Resumen, mismo patrón que Torres (GH3.42.20). No
+  requirió tocar dashboard.js — porTipo['PORTATIL'] ya existía desde el
+  cambio anterior. Solo capa modificable: index.html + ui.js.

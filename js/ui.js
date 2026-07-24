@@ -57,9 +57,10 @@ function renderResumen() {
   var _peAll = m.porEmpresa || {};
   if (_bcSubEl) _bcSubEl.textContent = ((_peAll['HBT']||{}).backup||0) + ' HBT · ' + ((_peAll['HGS']||{}).backup||0) + ' HGS (backup)';
 
-  // GH3.42.20: tarjeta Torres
+  // GH3.42.20/21: tarjetas por tipo de equipo
   var _ptAll = m.porTipo || {};
   _setText('k-torres', (_ptAll['TORRE'] || {}).operativos || 0);
+  _setText('k-portatiles', (_ptAll['PORTATIL'] || {}).operativos || 0);
 
   // STAB-v16 TASK 1: subtítulo del Total con desglose asignados + backup
   var _tSubEl = document.getElementById('k-total-sub');

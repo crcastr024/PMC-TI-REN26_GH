@@ -370,6 +370,18 @@
             <div class="metric-card-sub">Equipos de escritorio</div>
           </div>
 
+          <!-- 8c. Portátiles — GH3.42.21 -->
+          <div class="metric-card" style="border-top-color:var(--text-3,#666)" onclick="setTipoFilter('PORTATIL')" data-tip="Equipos tipo portátil en el proyecto">
+            <div class="metric-card-head">
+              <span class="metric-card-label">Portátiles</span>
+              <div class="metric-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="10" rx="1"/><path d="M2 18h20l-1.5-3h-17z"/></svg>
+              </div>
+            </div>
+            <div class="metric-card-val" id="k-portatiles">—</div>
+            <div class="metric-card-sub">Equipos portátiles</div>
+          </div>
+
           <!-- 9. Por aprobar — TASK 01: oculta si 0, compacta si >0 -->
           <div class="metric-card red compact-alert" id="card-por-aprobar" onclick="goView('aprobaciones')" data-hide-if-zero="k-por-aprobar" data-tip="Renovaciones esperando validación gerencial">
             <div class="metric-card-head">
