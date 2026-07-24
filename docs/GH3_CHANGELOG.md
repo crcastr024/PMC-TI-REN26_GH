@@ -275,3 +275,18 @@ BOOT_SEQUENCE.md, SecurityFreeze.md
    distinto). MSAL tiene su propio fallback interno; no afecta el login.
    No es corregible desde este lado (GitHub Pages es hosting estático, y
    el origen que dispara el warning es de Microsoft, no de esta app).
+
+## GH3.42.20
+- Nuevo KPI solicitado por Cristian: tarjeta "Torres" en Resumen (autorizado
+  el cambio en dashboard.js — core congelado). No existía ningún breakdown
+  por tipo de equipo (u.tipo solo se usaba para filtro/badge de tabla).
+- `buildDashboardStats()`: agregado `porTipo` (PORTATIL/TORRE), mismo
+  patrón que `porEmpresa` (total/operativos/backup/entregados/pct).
+- `setTipoFilter(tipo)` (ui.js, capa modificable) — mismo patrón que
+  `setStateFilter`, navega a Usuarios y aplica el filtro por tipo.
+- Tarjeta "Torres" en el grid de Resumen (index.html), mismo estilo visual
+  que las demás tarjetas, clic navega a Usuarios filtrado por TORRE.
+- Verificado contra el Excel real: 21 torres de 146 equipos.
+- No se agregó tarjeta de "Portátiles" — el pedido fue puntual para
+  torres. El dato ya está disponible en porTipo['PORTATIL'] si se quiere
+  agregar después, es una tarjeta más siguiendo el mismo patrón.

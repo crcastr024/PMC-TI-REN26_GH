@@ -78,6 +78,24 @@ function buildDashboardStats(users) {
     };
   });
 
+  // Por tipo de equipo — GH3.42.20: nuevo breakdown (Torres/Portátiles)
+  // Mismo patrón que porEmpresa. u.tipo ya viene normalizado (dataService.js:
+  // fallback a eq_nvo_tipo si tipo no viene directo).
+  var porTipo = {};
+  ['PORTATIL','TORRE'].forEach(function(tipo) {
+    var tAll = all.filter(function(u){ return (u.tipo||'').toUpperCase() === tipo; });
+    var tOp  = activos.filter(function(u){ return (u.tipo||'').toUpperCase() === tipo; });
+    var tBk  = backups.filter(function(u){ return (u.tipo||'').toUpperCase() === tipo; });
+    var tEnt = tOp.filter(function(u){ return u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0; });
+    porTipo[tipo] = {
+      total:      tAll.length,
+      operativos: tOp.length,
+      backup:     tBk.length,
+      entregados: tEnt.length,
+      pct:        tOp.length ? Math.round(tEnt.length / tOp.length * 100) : 0,
+    };
+  });
+
   var porTecnico = {};
   activos.forEach(function(u) {
     var t = u.tecnico || 'Sin asignar';
@@ -187,6 +205,7 @@ function buildDashboardStats(users) {
     reasignables: reasignables,
     // Breakdowns
     porEmpresa:   porEmpresa,
+    porTipo:      porTipo,       // GH3.42.20: Torres/Portátiles
     porTecnico:   porTecnico,
     porCiudad:    porCiudad,
     estados:      estados,

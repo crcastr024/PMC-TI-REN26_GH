@@ -57,6 +57,10 @@ function renderResumen() {
   var _peAll = m.porEmpresa || {};
   if (_bcSubEl) _bcSubEl.textContent = ((_peAll['HBT']||{}).backup||0) + ' HBT · ' + ((_peAll['HGS']||{}).backup||0) + ' HGS (backup)';
 
+  // GH3.42.20: tarjeta Torres
+  var _ptAll = m.porTipo || {};
+  _setText('k-torres', (_ptAll['TORRE'] || {}).operativos || 0);
+
   // STAB-v16 TASK 1: subtítulo del Total con desglose asignados + backup
   var _tSubEl = document.getElementById('k-total-sub');
   var _activosCount = (_allCount || 0) - (_backupCount || 0);
@@ -261,6 +265,13 @@ function setStateFilter(estado) {
   setTimeout(() => { $('filter-estado').value = estado; renderUsuarios(); }, 100);
 }
 window.setStateFilter = setStateFilter;
+
+// GH3.42.20: filtro por tipo de equipo (Torres/Portátiles), mismo patrón que setStateFilter
+function setTipoFilter(tipo) {
+  goView('usuarios');
+  setTimeout(function() { $('filter-tipo').value = tipo; renderUsuarios(); }, 100);
+}
+window.setTipoFilter = setTipoFilter;
 
 // ═══ USUARIOS ═══
 function populateProjectFilter(selectId) {

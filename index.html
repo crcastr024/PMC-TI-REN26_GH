@@ -358,6 +358,18 @@
             <div class="metric-card-sub" id="k-backup-sub">Disponibles en bodega</div>
           </div>
 
+          <!-- 8b. Torres — GH3.42.20 -->
+          <div class="metric-card" style="border-top-color:var(--text-3,#666)" onclick="setTipoFilter('TORRE')" data-tip="Equipos tipo torre (escritorio) en el proyecto">
+            <div class="metric-card-head">
+              <span class="metric-card-label">Torres</span>
+              <div class="metric-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="3" width="8" height="18" rx="1"/><circle cx="10" cy="18" r="1"/><path d="M9 6h2"/></svg>
+              </div>
+            </div>
+            <div class="metric-card-val" id="k-torres">—</div>
+            <div class="metric-card-sub">Equipos de escritorio</div>
+          </div>
+
           <!-- 9. Por aprobar — TASK 01: oculta si 0, compacta si >0 -->
           <div class="metric-card red compact-alert" id="card-por-aprobar" onclick="goView('aprobaciones')" data-hide-if-zero="k-por-aprobar" data-tip="Renovaciones esperando validación gerencial">
             <div class="metric-card-head">
