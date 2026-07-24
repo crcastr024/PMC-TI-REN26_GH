@@ -327,6 +327,30 @@ function closeTorresModal() {
 }
 window.closeTorresModal = closeTorresModal;
 
+// GH3.42.26: consolidación Seguimiento↔Ejecutivos — las tarjetas KPI de
+// Seguimiento (panel-kpi) hoy son solo números estáticos; Ejecutivos ya
+// tiene el motor de drill-down completo (setReport → tabla filtrada
+// clickeable). En vez de duplicar ese motor, se reutiliza: clic en una
+// tarjeta de Seguimiento navega a Ejecutivos con el reporte correspondiente
+// ya abierto. Reduce a 0 el código nuevo de renderizado de detalle.
+//
+// LIMITACIÓN CONOCIDA: los filtros de Seguimiento (PANEL_FILTERS: empresa,
+// ciudad, proyecto, tecnico, estado, feedback) y los de Ejecutivos
+// (state.repFilters: empresa, tipo, proyecto, tecnico) no son 1:1 — solo
+// empresa/proyecto/tecnico se pueden trasladar. Si hay un filtro de
+// ciudad/estado/feedback activo en Seguimiento, el detalle en Ejecutivos
+// NO lo hereda (Ejecutivos no tiene esas dimensiones de filtro).
+function _goToReport(type) {
+  var pf = window.PANEL_FILTERS || {};
+  if (!state.repFilters) state.repFilters = {};
+  if (pf.empresa)  state.repFilters.empresa  = pf.empresa;
+  if (pf.proyecto) state.repFilters.proyecto = pf.proyecto;
+  if (pf.tecnico)  state.repFilters.tecnico  = pf.tecnico;
+  goView('reportes');
+  setTimeout(function(){ setReport(type); }, 120);
+}
+window._goToReport = _goToReport;
+
 // ═══ USUARIOS ═══
 function populateProjectFilter(selectId) {
   const sel = $(selectId);
@@ -1454,15 +1478,27 @@ window.actualizarRecomendacion = function() {
     resultado.recomendacion = 'Reasignacion';
     resultado.motivo = 'Motor A: procesador de generación reciente — equipo apto para reasignación.';
   }
-  // GH3.42.24 FIX: regla espejo que faltaba — si Motor A clasifica el
-  // equipo como RAEE (procesador obsoleto), Motor B (evaluación física)
-  // no puede recomendar Reasignación/Donación/Venta interna solo porque
-  // el estado físico esté bien — la obsolescencia técnica manda sobre
-  // la condición cosmética. Reportado por Cristian: equipo marcado RAEE
-  // por obsolescencia mostraba "Reasignación" en este mismo widget.
+  // GH3.42.27 REFINAMIENTO (a pedido de Cristian, sobre GH3.42.24):
+  // obsoleto NO es automáticamente RAEE. Un equipo obsoleto pero
+  // físicamente sano debe poder donarse o venderse internamente —
+  // solo va a RAEE si ADEMÁS está dañado. Lo único que la obsolescencia
+  // descarta es "Reasignación" (no tiene sentido reasignar un equipo
+  // obsoleto a un usuario nuevo). Umbrales idénticos a los que ya usa
+  // RAEEEngine.calcular() para el resto de equipos (2+ Malo, 2+ Regular).
   else if (window._currentRecord && window._currentRecord.estado_eq_ant === 'RAEE') {
-    resultado.recomendacion = 'RAEE';
-    resultado.motivo = 'Motor A: procesador obsoleto — disposición RAEE independiente del estado físico.';
+    var _vals27 = [bat, tec, tou, est].filter(function(v){ return ['Excelente','Bueno','Regular','Malo'].indexOf(v) >= 0; });
+    var _malos27 = _vals27.filter(function(v){ return v === 'Malo'; }).length;
+    var _regulares27 = _vals27.filter(function(v){ return v === 'Regular'; }).length;
+    if (_malos27 >= 2) {
+      resultado.recomendacion = 'RAEE';
+      resultado.motivo = 'Motor A: procesador obsoleto + equipo dañado físicamente — disposición RAEE.';
+    } else if (_regulares27 >= 2) {
+      resultado.recomendacion = 'Donacion';
+      resultado.motivo = 'Motor A: procesador obsoleto, estado físico regular — apto para donación.';
+    } else {
+      resultado.recomendacion = 'Venta interna';
+      resultado.motivo = 'Motor A: procesador obsoleto pero sin daño físico — apto para venta interna (no reasignable por obsolescencia).';
+    }
   }
   var colors = { 'RAEE': { bg: '#FFEBEE', fg: '#C00000' }, 'Donacion': { bg: '#FFF3E0', fg: '#E65100' },
     'Venta interna': { bg: '#E8F5E9', fg: '#2E7D32' }, 'Reasignacion': { bg: '#E3F2FD', fg: '#1565C0' } };
@@ -2447,15 +2483,26 @@ function saveRecord() {
           _raeeResult.recomendacion = 'Reasignacion';
           _raeeResult.motivo = 'Motor A: procesador de generación reciente — reasignación.';
         }
-        // GH3.42.24 FIX: regla espejo — si Motor A clasifica RAEE, forzar
-        // RAEE en Motor B también (independiente del estado físico). Sin
-        // esto, `recomendacion_raee` (usado por _computeDestinoFinal en
-        // dashboard.js para el KPI "Destino Final") quedaba con el valor
-        // físico-únicamente, contradiciendo la clasificación de
-        // obsolescencia ya guardada en el registro.
+        // GH3.42.27 REFINAMIENTO (sobre GH3.42.24): obsoleto no es
+        // automáticamente RAEE. Solo si ADEMÁS está dañado físicamente
+        // (2+ componentes Malo). Si no, Donación o Venta interna según
+        // los mismos umbrales de RAEEEngine.calcular(). Reasignación
+        // queda descartada en cualquier caso (obsoleto no se reasigna).
         else if (_raeeResult && u.estado_eq_ant === 'RAEE') {
-          _raeeResult.recomendacion = 'RAEE';
-          _raeeResult.motivo = 'Motor A: procesador obsoleto — disposición RAEE independiente del estado físico.';
+          var _vals27b = [changes.eval_bateria, changes.eval_teclado, changes.eval_touchpad, changes.eval_estetico]
+            .filter(function(v){ return ['Excelente','Bueno','Regular','Malo'].indexOf(v) >= 0; });
+          var _malos27b = _vals27b.filter(function(v){ return v === 'Malo'; }).length;
+          var _regulares27b = _vals27b.filter(function(v){ return v === 'Regular'; }).length;
+          if (_malos27b >= 2) {
+            _raeeResult.recomendacion = 'RAEE';
+            _raeeResult.motivo = 'Motor A: procesador obsoleto + equipo dañado físicamente — disposición RAEE.';
+          } else if (_regulares27b >= 2) {
+            _raeeResult.recomendacion = 'Donacion';
+            _raeeResult.motivo = 'Motor A: procesador obsoleto, estado físico regular — apto para donación.';
+          } else {
+            _raeeResult.recomendacion = 'Venta interna';
+            _raeeResult.motivo = 'Motor A: procesador obsoleto pero sin daño físico — apto para venta interna (no reasignable por obsolescencia).';
+          }
         }
         if (_raeeResult) {
           changes.recomendacion_raee     = _raeeResult.recomendacion;

@@ -394,3 +394,44 @@ BOOT_SEQUENCE.md, SecurityFreeze.md
   `node --check` antes de empaquetar.
 - Verificado con dataset sintético (node -e): split entregadas/
   pendientes correcto contra 4 casos de prueba.
+
+## GH3.42.26
+- Fase 1 de la consolidación Seguimiento↔Ejecutivos (discutida con
+  Cristian): las tarjetas de Seguimiento que tienen equivalente exacto
+  en `setReport()` (Entregados, Actas firmadas, Finalizados,
+  Pendientes, En envío) ahora son clickeables — navegan a Ejecutivos
+  con el reporte correspondiente ya abierto, reutilizando 100% el motor
+  de drill-down existente (0 código nuevo de renderizado de tabla).
+- No se tocó dashboard.js — todo el bridge de filtros vive en ui.js
+  (`_goToReport()`).
+- Limitación conocida, documentada: los filtros de Seguimiento
+  (PANEL_FILTERS: empresa/ciudad/proyecto/tecnico/estado/feedback) y
+  los de Ejecutivos (state.repFilters: empresa/tipo/proyecto/tecnico)
+  no son 1:1. Solo empresa/proyecto/tecnico se trasladan. Si hay un
+  filtro de ciudad/estado/feedback activo en Seguimiento, el detalle en
+  Ejecutivos no lo hereda.
+- "Total equipos", "En proceso" y "Backups" quedan SIN clic por ahora —
+  no tienen caso equivalente exacto en setReport() (en particular "En
+  proceso" es el agregado PROC_ST de 9 estados, no uno solo).
+- Pendiente de decisión: retirar "Ejecutivos" del sidebar (paso 3 del
+  plan acordado) queda condicionado a confirmar si alguien lo usa hoy
+  para exportar/imprimir a un stakeholder externo.
+
+## GH3.42.27
+- REFINAMIENTO de GH3.42.24, a pedido de Cristian: obsolescencia (Motor
+  A = RAEE) ya NO fuerza automáticamente "RAEE" en el resultado final.
+  Regla correcta: un equipo obsoleto pero físicamente sano debe poder
+  donarse o venderse internamente — solo va a RAEE si ADEMÁS está
+  dañado físicamente (2+ componentes en Malo). Lo único que la
+  obsolescencia descarta es "Reasignación" (no tiene sentido reasignar
+  un equipo obsoleto a un usuario nuevo).
+- Nueva lógica (misma que GH3.42.24, en los mismos 2 lugares —
+  `actualizarRecomendacion()` y `saveRecord()`, ambos en ui.js):
+  malos≥2 → RAEE; si no, regulares≥2 → Donación; si no → Venta interna.
+  Umbrales idénticos a los que ya usa `RAEEEngine.calcular()` para el
+  resto de equipos — no se inventaron números nuevos, solo se
+  reutilizaron los ya establecidos.
+- Verificado con 4 casos (node -e): el caso exacto de la captura
+  (batería Regular, resto Bueno) pasa de "RAEE" a "Venta interna";
+  un caso con 2 componentes Malo sigue yendo a RAEE; 3 Regular →
+  Donación; condición perfecta → Venta interna (tampoco reasignable).

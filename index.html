@@ -777,12 +777,12 @@
           </div>
           <div class="panel-kpi-strip">
             <div class="panel-kpi"><div class="panel-kpi-label">Total equipos</div><div class="panel-kpi-val" id="pe-total">—</div><div class="panel-kpi-sub">HBT + HGS</div></div>
-            <div class="panel-kpi"><div class="panel-kpi-label">Entregados (hito)</div><div class="panel-kpi-val grn" id="pe-entregados">—</div><div class="panel-kpi-sub">Acumulativo</div></div>
-            <div class="panel-kpi"><div class="panel-kpi-label">Actas firmadas</div><div class="panel-kpi-val grn" id="pe-actas">—</div><div class="panel-kpi-sub">Acumulativo</div></div>
-            <div class="panel-kpi"><div class="panel-kpi-label">Finalizados</div><div class="panel-kpi-val grn" id="pe-cerrados">—</div><div class="panel-kpi-sub">Ren. completada + Cerrado</div></div>
+            <div class="panel-kpi" style="cursor:pointer" onclick="_goToReport('entregados')" data-tip="Ver detalle en Ejecutivos"><div class="panel-kpi-label">Entregados (hito)</div><div class="panel-kpi-val grn" id="pe-entregados">—</div><div class="panel-kpi-sub">Acumulativo</div></div>
+            <div class="panel-kpi" style="cursor:pointer" onclick="_goToReport('actas')" data-tip="Ver detalle en Ejecutivos"><div class="panel-kpi-label">Actas firmadas</div><div class="panel-kpi-val grn" id="pe-actas">—</div><div class="panel-kpi-sub">Acumulativo</div></div>
+            <div class="panel-kpi" style="cursor:pointer" onclick="_goToReport('finalizados')" data-tip="Ver detalle en Ejecutivos"><div class="panel-kpi-label">Finalizados</div><div class="panel-kpi-val grn" id="pe-cerrados">—</div><div class="panel-kpi-sub">Ren. completada + Cerrado</div></div>
             <div class="panel-kpi"><div class="panel-kpi-label">En proceso</div><div class="panel-kpi-val amb" id="pe-proceso">—</div><div class="panel-kpi-sub">Exclusivo</div></div>
-            <div class="panel-kpi"><div class="panel-kpi-label">Pendientes</div><div class="panel-kpi-val accent" id="pe-pendientes">—</div><div class="panel-kpi-sub">Sin iniciar</div></div>
-            <div class="panel-kpi"><div class="panel-kpi-label">En envío</div><div class="panel-kpi-val" id="pe-en-envio">—</div><div class="panel-kpi-sub">Prog. + Tránsito</div></div>
+            <div class="panel-kpi" style="cursor:pointer" onclick="_goToReport('pendientes')" data-tip="Ver detalle en Ejecutivos"><div class="panel-kpi-label">Pendientes</div><div class="panel-kpi-val accent" id="pe-pendientes">—</div><div class="panel-kpi-sub">Sin iniciar</div></div>
+            <div class="panel-kpi" style="cursor:pointer" onclick="_goToReport('envio')" data-tip="Ver detalle en Ejecutivos"><div class="panel-kpi-label">En envío</div><div class="panel-kpi-val" id="pe-en-envio">—</div><div class="panel-kpi-sub">Prog. + Tránsito</div></div>
             <div class="panel-kpi"><div class="panel-kpi-label">Backups</div><div class="panel-kpi-val" id="pe-backup">—</div><div class="panel-kpi-sub">HBT 3 · HGS 1</div></div>
             <div class="panel-kpi" style="display:none"><div class="panel-kpi-label">Completados</div><div class="panel-kpi-val" id="pe-completados">—</div><div class="panel-kpi-sub" id="pe-pct-sub">—</div></div>
           </div>
