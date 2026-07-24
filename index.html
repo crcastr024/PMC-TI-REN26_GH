@@ -359,7 +359,7 @@
           </div>
 
           <!-- 8b. Torres — GH3.42.20 -->
-          <div class="metric-card" style="border-top-color:var(--text-3,#666)" onclick="setTipoFilter('TORRE')" data-tip="Equipos tipo torre (escritorio) en el proyecto">
+          <div class="metric-card" style="border-top-color:var(--text-3,#666)" onclick="openTorresReport()" data-tip="Ver seguimiento: entregadas vs. pendientes">
             <div class="metric-card-head">
               <span class="metric-card-label">Torres</span>
               <div class="metric-card-icon" aria-hidden="true">
@@ -1100,6 +1100,24 @@
 <div class="modal-foot">
 <button class="btn" onclick="closeConfirmSave()">Cancelar</button>
 <button class="btn btn-primary" onclick="confirmarGuardado()">Confirmar</button>
+</div>
+</div>
+</div>
+
+<!-- GH3.42.25: Reporte de seguimiento — Torres entregadas/pendientes -->
+<div class="modal-bg" id="torres-modal-bg" onclick="if(event.target===this)closeTorresModal()">
+<div class="modal" style="max-width:640px">
+<div class="modal-head">
+  <div class="modal-title-block">
+    <div class="modal-eyebrow">Seguimiento</div>
+    <div class="modal-title">Torres — entregadas y pendientes</div>
+  </div>
+  <button class="modal-close" onclick="closeTorresModal()" title="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+</div>
+<div class="modal-body" id="torres-modal-body" style="padding:20px 24px;max-height:60vh;overflow-y:auto"></div>
+<div class="modal-foot">
+  <button class="btn" onclick="closeTorresModal()">Cerrar</button>
+  <button class="btn btn-primary" onclick="closeTorresModal();setTipoFilter('TORRE')">Ver todas en Usuarios</button>
 </div>
 </div>
 </div>

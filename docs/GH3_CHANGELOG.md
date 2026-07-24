@@ -296,3 +296,101 @@ BOOT_SEQUENCE.md, SecurityFreeze.md
   "Portátiles" en Resumen, mismo patrón que Torres (GH3.42.20). No
   requirió tocar dashboard.js — porTipo['PORTATIL'] ya existía desde el
   cambio anterior. Solo capa modificable: index.html + ui.js.
+
+## GH3.42.22
+- FIX vista Ejecutivos/Reportes: la tarjeta "REP-01 · Alistamiento"
+  mostraba `_bdsR.proceso` (agrupa 9 estados: Alistamiento + Programado +
+  En tránsito + Entregado + Pendiente devolución + En tránsito anterior +
+  Equipo anterior recibido + Pendiente aprobación + Cerrado), no el
+  conteo específico de Alistamiento. Por eso el número de la tarjeta
+  (ej. "9" con filtro TORRE) no coincidía con el detalle al hacer clic
+  ("Sin resultados con los filtros actuales") — el detalle sí filtraba
+  correctamente solo `estado==='Alistamiento'`, la tarjeta apuntaba al
+  valor equivocado. Reportado por Cristian con captura real (filtro
+  TORRE, 19 de 142 base).
+- Fix: `r-alistamiento` ahora lee `_bdsR.estados['Alistamiento']`
+  (mismo patrón ya usado en Resumen — `renderResumen()` usa
+  `m.estados['Alistamiento']` para su propia tarjeta "En alistamiento").
+- Hallazgo secundario del mismo tipo, corregido de una vez: `ENTREGADO_
+  STATES` (local a `setReport()`, usado en el detalle de REP-04) no
+  incluía 'Entregado'/'Completado' (legacy/genéricos), a diferencia de
+  `ENTREGADO_ST` en dashboard.js — alineado para evitar el mismo tipo de
+  discrepancia tarjeta-vs-detalle en "Entregados".
+
+## GH3.42.23
+- FIX (autorizado por Cristian — toca dashboard.js, core congelado):
+  panel Seguimiento mostraba Pendientes(10) + En proceso(118) +
+  Finalizados(11) = 139, pero Total equipos = 142 — faltaban 3.
+  Reportado por Cristian con captura real (modo oscuro, filtros
+  globales sin aplicar).
+- Causa raíz: `PROC_ST` (usado para el KPI "En proceso" general, y los
+  desgloses por empresa y por técnico — los 3 leen de la misma
+  constante) tenía dos problemas:
+  1. No incluía 'Pendiente acta' (estado agregado en GH3.42.8, nunca
+     sumado aquí) — esos registros no contaban en Pendientes, En
+     proceso NI Finalizados, cayendo en un hueco invisible.
+  2. Incluía 'Cerrado', que TAMBIÉN está en el criterio de
+     "Finalizados" — un registro Cerrado se contaba dos veces
+     (En proceso Y Finalizados a la vez), contradiciendo la etiqueta
+     "Exclusivo" del KPI.
+- Fix: PROC_ST ahora es Alistamiento, Programado, En tránsito equipo
+  nuevo, Entregado equipo nuevo, Pendiente devolución equipo anterior,
+  En tránsito equipo anterior, Equipo anterior recibido, Pendiente
+  acta, Pendiente aprobación (9 estados) — se quita Cerrado, se agrega
+  Pendiente acta. Afecta consistentemente `proceso` (KPI general),
+  `porEmpresa[emp].proceso` y `porTecnico[t].proceso` — una sola
+  constante, los 3 se corrigen a la vez.
+- Nota: Feedback/Bloqueado/Corrección requerida siguen sin contar en
+  ninguno de los 3 buckets (Pendientes/Proceso/Finalizados) — igual que
+  antes del fix, no es una regresión nueva. Son estados de excepción
+  fuera del flujo feliz de 11 estados, no forman parte de esta
+  aritmética de 3 categorías por diseño original.
+
+## GH3.42.24
+- FIX reportado por Cristian: equipo clasificado como RAEE por
+  obsolescencia (Motor A — generación de procesador) mostraba
+  "Reasignación" en el widget de evaluación física (Motor B —
+  RAEEEngine, basado solo en batería/teclado/touchpad/estético).
+- Causa raíz: ya existía una regla de reconciliación entre los dos
+  motores ("RC-07 T3: Si Motor A Reasignable → forzar Reasignacion en
+  Motor B"), pero era ASIMÉTRICA — solo cubría el caso "CPU reciente
+  (Reasignable) gana sobre estado físico", nunca el caso inverso
+  ("CPU obsoleto (RAEE) gana sobre estado físico"). Un equipo con
+  procesador viejo pero condición física aceptable (batería Regular,
+  resto Bueno) caía en la recomendación por defecto del motor físico
+  ("Reasignación — estado general aceptable"), ignorando que Motor A ya
+  lo había marcado RAEE.
+- Impacto más allá del widget: `recomendacion_raee` (el campo que
+  queda guardado) es el mismo que usa `_computeDestinoFinal()` en
+  dashboard.js para el KPI "Destino Final" del panel Seguimiento — sin
+  este fix, el equipo se hubiera contado como "Reasignación" en ese
+  reporte ejecutivo, no como "RAEE", en toda la vida del registro.
+- Fix: agregada la regla espejo — `estado_eq_ant === 'RAEE'` fuerza
+  `recomendacion_raee = 'RAEE'`, igual que ya pasa con 'Reasignable'.
+  Aplicado en los 2 lugares donde vive la regla original:
+  `actualizarRecomendacion()` (vista previa en vivo, lo que se ve en el
+  modal) y `saveRecord()` (lo que se persiste a Excel). No tocó
+  archivos core congelado — ambos puntos están en ui.js.
+- Verificado con los valores exactos de la captura (batería Regular,
+  teclado/touchpad/estético Bueno): Motor B solo → "Reasignacion";
+  con Motor A=RAEE y el fix → "RAEE".
+
+## GH3.42.25
+- A pedido de Cristian: la tarjeta "Torres" pasa de mostrar solo un
+  número a abrir un reporte de seguimiento — dos listas (Entregadas /
+  Pendientes) con nombre, ciudad, técnico y badge de estado por
+  persona, para poder hacerle seguimiento puntual a quién falta.
+- Nuevo modal `#torres-modal-bg` (index.html, mismo patrón visual que
+  el resto de modales) + `openTorresReport()`/`closeTorresModal()`
+  (ui.js). Criterio "entregado" alineado con `porTipo.entregados` de
+  dashboard.js (fecha_entrega presente O estado en la lista de estados
+  post-entrega) — sin necesidad de tocar dashboard.js, todo vive en la
+  capa modificable.
+- Se conserva acceso a la tabla completa filtrable vía botón
+  "Ver todas en Usuarios" dentro del modal (reutiliza setTipoFilter).
+- Corregido en el camino, antes de entregar: usé `badgeClass()` como
+  función global por error — en realidad vive en
+  `ConfigService.badgeClass()`. Corregido y verificado con
+  `node --check` antes de empaquetar.
+- Verificado con dataset sintético (node -e): split entregadas/
+  pendientes correcto contra 4 casos de prueba.

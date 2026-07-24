@@ -274,6 +274,59 @@ function setTipoFilter(tipo) {
 }
 window.setTipoFilter = setTipoFilter;
 
+// GH3.42.25: reporte de seguimiento — Torres entregadas vs. pendientes.
+// A pedido de Cristian: prefiere esto como reporte (con nombres, para
+// hacerle seguimiento a quién falta) en vez de solo una tarjeta numérica.
+// Mismo criterio "entregado" que usa buildDashboardStats (dashboard.js)
+// para porTipo.entregados — no se tocó dashboard.js, todo vive aquí.
+function openTorresReport() {
+  var ENTREGADO_TORRE = ['Entregado equipo nuevo','Pendiente devolución equipo anterior',
+    'En tránsito equipo anterior','Equipo anterior recibido','Renovación completada',
+    'Pendiente aprobación','Cerrado','Entregado','Completado'];
+  var torres = (window.USERS || []).filter(function(u){
+    return !isBackup(u) && (u.tipo || '').toUpperCase() === 'TORRE';
+  });
+  var entregadas  = torres.filter(function(u){ return !!u.fecha_entrega || ENTREGADO_TORRE.indexOf(u.estado) >= 0; });
+  var pendientes  = torres.filter(function(u){ return !(u.fecha_entrega || ENTREGADO_TORRE.indexOf(u.estado) >= 0); });
+
+  function fila(u) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-weight:600;font-size:13px;color:var(--text-1)">' + esc(u.nombre || '—') + '</div>' +
+        '<div style="font-size:11px;color:var(--text-3)">' + esc(u.ciudad || '—') + ' · ' + esc(u.tecnico || 'Sin asignar') + '</div>' +
+      '</div>' +
+      '<span class="badge ' + ConfigService.badgeClass(u.estado) + '" style="flex-shrink:0">' + esc(u.estado || '—') + '</span>' +
+    '</div>';
+  }
+
+  var html =
+    '<div style="margin-bottom:18px">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
+        '<span style="width:8px;height:8px;border-radius:50%;background:var(--green)"></span>' +
+        '<strong style="font-size:13px;letter-spacing:.03em;text-transform:uppercase;color:var(--text-2)">Entregadas</strong>' +
+        '<span style="font-size:12px;color:var(--text-3)">(' + entregadas.length + ')</span>' +
+      '</div>' +
+      (entregadas.length ? entregadas.map(fila).join('') : '<div style="font-size:12px;color:var(--text-3);padding:8px 0">Ninguna todavía.</div>') +
+    '</div>' +
+    '<div>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
+        '<span style="width:8px;height:8px;border-radius:50%;background:var(--red)"></span>' +
+        '<strong style="font-size:13px;letter-spacing:.03em;text-transform:uppercase;color:var(--text-2)">Pendientes</strong>' +
+        '<span style="font-size:12px;color:var(--text-3)">(' + pendientes.length + ')</span>' +
+      '</div>' +
+      (pendientes.length ? pendientes.map(fila).join('') : '<div style="font-size:12px;color:var(--text-3);padding:8px 0">No quedan pendientes.</div>') +
+    '</div>';
+
+  $('torres-modal-body').innerHTML = html;
+  document.getElementById('torres-modal-bg').classList.add('active');
+}
+window.openTorresReport = openTorresReport;
+
+function closeTorresModal() {
+  document.getElementById('torres-modal-bg').classList.remove('active');
+}
+window.closeTorresModal = closeTorresModal;
+
 // ═══ USUARIOS ═══
 function populateProjectFilter(selectId) {
   const sel = $(selectId);
@@ -772,7 +825,13 @@ function renderReportes() {
   $('rep-base-count').textContent = base.length + ' de ' + (window.calculateProjectMetrics ? calculateProjectMetrics().totalColaboradores : getReal().length) + ' base';
   // Auditoria Final: usar buildDashboardStats para consistencia con Dashboard
   var _bdsR = window.DashboardStats ? DashboardStats.compute(base) : {};
-  $('r-alistamiento').textContent = _bdsR.proceso    || 0; // proceso activo
+  // GH3.42.22 FIX: r-alistamiento mostraba _bdsR.proceso (agrupa 9 estados:
+  // Alistamiento+Programado+En tránsito+...+Cerrado) en vez del conteo
+  // específico de "Alistamiento". Por eso el número de la tarjeta no
+  // coincidía con el detalle al hacer clic (setReport('alistamiento') SÍ
+  // filtra solo estado==='Alistamiento', igual que el título REP-01 · En
+  // alistamiento — es la tarjeta la que apuntaba al valor equivocado).
+  $('r-alistamiento').textContent = (_bdsR.estados && _bdsR.estados['Alistamiento']) || 0;
   $('r-entregados').textContent   = _bdsR.entregados || 0;
   $('r-actas').textContent        = _bdsR.actas      || 0;
   $('r-devoluciones').textContent = _bdsR.devoluciones || 0;
@@ -792,9 +851,12 @@ function setReport(type, btn) {
   if (!state.repFilters) state.repFilters = {};
   // STAB-v16 TASK 7: cada reporte filtra EXCLUSIVAMENTE sus estados canónicos
   // Excepción: 'entregados' cuenta hito acumulativo (usuario recibió equipo aunque luego cambie)
+  // GH3.42.22: alineado con ENTREGADO_ST de dashboard.js (agrega 'Entregado'
+  // y 'Completado' — legacy/genéricos, mismo criterio que buildDashboardStats)
   var ENTREGADO_STATES = ['Entregado equipo nuevo','Pendiente devolución equipo anterior',
                           'En tránsito equipo anterior','Equipo anterior recibido',
-                          'Pendiente aprobación','Renovación completada','Cerrado'];
+                          'Pendiente aprobación','Renovación completada','Cerrado',
+                          'Entregado','Completado'];
   var DEVOLUCION_STATES = ['Pendiente devolución equipo anterior','En tránsito equipo anterior','Equipo anterior recibido'];
   switch(type) {
     case 'alistamiento':
@@ -1391,6 +1453,16 @@ window.actualizarRecomendacion = function() {
   if (window._currentRecord && window._currentRecord.estado_eq_ant === 'Reasignable') {
     resultado.recomendacion = 'Reasignacion';
     resultado.motivo = 'Motor A: procesador de generación reciente — equipo apto para reasignación.';
+  }
+  // GH3.42.24 FIX: regla espejo que faltaba — si Motor A clasifica el
+  // equipo como RAEE (procesador obsoleto), Motor B (evaluación física)
+  // no puede recomendar Reasignación/Donación/Venta interna solo porque
+  // el estado físico esté bien — la obsolescencia técnica manda sobre
+  // la condición cosmética. Reportado por Cristian: equipo marcado RAEE
+  // por obsolescencia mostraba "Reasignación" en este mismo widget.
+  else if (window._currentRecord && window._currentRecord.estado_eq_ant === 'RAEE') {
+    resultado.recomendacion = 'RAEE';
+    resultado.motivo = 'Motor A: procesador obsoleto — disposición RAEE independiente del estado físico.';
   }
   var colors = { 'RAEE': { bg: '#FFEBEE', fg: '#C00000' }, 'Donacion': { bg: '#FFF3E0', fg: '#E65100' },
     'Venta interna': { bg: '#E8F5E9', fg: '#2E7D32' }, 'Reasignacion': { bg: '#E3F2FD', fg: '#1565C0' } };
@@ -2374,6 +2446,16 @@ function saveRecord() {
         if (_raeeResult && u.estado_eq_ant === 'Reasignable') {
           _raeeResult.recomendacion = 'Reasignacion';
           _raeeResult.motivo = 'Motor A: procesador de generación reciente — reasignación.';
+        }
+        // GH3.42.24 FIX: regla espejo — si Motor A clasifica RAEE, forzar
+        // RAEE en Motor B también (independiente del estado físico). Sin
+        // esto, `recomendacion_raee` (usado por _computeDestinoFinal en
+        // dashboard.js para el KPI "Destino Final") quedaba con el valor
+        // físico-únicamente, contradiciendo la clasificación de
+        // obsolescencia ya guardada en el registro.
+        else if (_raeeResult && u.estado_eq_ant === 'RAEE') {
+          _raeeResult.recomendacion = 'RAEE';
+          _raeeResult.motivo = 'Motor A: procesador obsoleto — disposición RAEE independiente del estado físico.';
         }
         if (_raeeResult) {
           changes.recomendacion_raee     = _raeeResult.recomendacion;

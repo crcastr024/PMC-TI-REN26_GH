@@ -18,10 +18,16 @@ function buildDashboardStats(users) {
   var activos = all.filter(function(u){ return !isBackup(u); });
 
   // TASK 3 — estados canónicos de proceso (sin Pendiente, sin Completado/Cancelado)
+  // GH3.42.23 FIX: se quita 'Cerrado' (duplicaba conteo con `finalizados` —
+  // un registro Cerrado se contaba en "En proceso" Y en "Finalizados" a la
+  // vez, contradiciendo la etiqueta "Exclusivo" del KPI). Se agrega
+  // 'Pendiente acta' (estado agregado en GH3.42.8, nunca se sumó aquí —
+  // esos registros no contaban en Pendientes, En proceso NI Finalizados,
+  // causando que Pendientes+Proceso+Finalizados no sumara el total real).
   var PROC_ST = ['Alistamiento','Programado','En tránsito equipo nuevo',
     'Entregado equipo nuevo','Pendiente devolución equipo anterior',
     'En tránsito equipo anterior','Equipo anterior recibido',
-    'Pendiente aprobación','Cerrado'];
+    'Pendiente acta','Pendiente aprobación'];
   // Estados que significan "ya entregado" (hito acumulativo — no disminuye)
   var ENTREGADO_ST = ['Entregado equipo nuevo','Pendiente devolución equipo anterior',
     'En tránsito equipo anterior','Equipo anterior recibido',
