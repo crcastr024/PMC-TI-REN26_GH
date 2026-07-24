@@ -841,9 +841,23 @@ const GraphWriteValidator = (() => {
         if (fromState === toState) {
           // Mismo estado — no es un cambio real, solo advertencia
           warnings.push({ field: 'estado', message: `estado sin cambio: ${toState} → ${toState}` });
-        } else if (typeof StateMachine !== 'undefined'
-            && !StateMachine.isValidTransition(fromState, toState)) {
-          errors.push({ field: 'estado', message: `Transición inválida: ${fromState} → ${toState}` });
+        } else {
+          // GH3.42.18: super_admin/gestor_activos pueden hacer correcciones
+          // administrativas fuera de la secuencia estándar (ej. sacar un
+          // registro legacy de "Cerrado", o corregir un estado mal asignado).
+          // isValidTransition() sigue rigiendo para el resto de roles (técnico),
+          // que no debe poder saltarse pasos de su flujo diario. El valor de
+          // "estado" en sí sigue validado como choice más arriba (VALID_CHOICES)
+          // para TODOS los roles — esto libera únicamente el orden, no el valor.
+          const _u = user || (window.state && state.user);
+          const _role = _u && (_u.role || _u.rol);
+          const _isAdminOverride = _role === 'super_admin' || _role === 'gestor_activos';
+          const _validSeq = typeof StateMachine === 'undefined' || StateMachine.isValidTransition(fromState, toState);
+          if (!_validSeq && !_isAdminOverride) {
+            errors.push({ field: 'estado', message: `Transición inválida: ${fromState} → ${toState}` });
+          } else if (!_validSeq && _isAdminOverride) {
+            warnings.push({ field: 'estado', message: `Corrección administrativa fuera de flujo estándar: ${fromState} → ${toState} (rol ${_role})` });
+          }
         }
       }
 

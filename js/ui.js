@@ -283,7 +283,26 @@ function getFiltered() {
     if (tipo && (u.tipo || '').toUpperCase() !== tipo) return false;
     if (tec && (u.tecnico || '').toLowerCase() !== tec.toLowerCase()) return false;
     if (proj && u.proyecto !== proj) return false;
-    if (est && u.estado !== est) return false;
+    // GH3.42.16 FIX: el select #filter-estado usa categorías agrupadas
+    // ('En tránsito', 'Entregado', 'Completado') que no existen como
+    // valor literal en ningún registro — u.estado real es 'En tránsito
+    // equipo nuevo/anterior', 'Entregado equipo nuevo', 'Renovación
+    // completada'/'Cerrado'. La comparación exacta (===) hacía que estas
+    // 3 de 6 opciones del filtro devolvieran siempre 0 resultados, sin
+    // importar los demás filtros. 'Pendiente'/'Alistamiento'/'BACKUP' sí
+    // coinciden por igualdad exacta y quedan igual.
+    if (est) {
+      var _estMatch;
+      if (est === 'Completado') {
+        // Mismo criterio de "finalizados" usado en el resto del código (línea ~791)
+        _estMatch = ['Renovación completada','Cerrado','Finalizado','Completado'].indexOf(u.estado) >= 0;
+      } else if (est === 'En tránsito' || est === 'Entregado') {
+        _estMatch = (u.estado || '').indexOf(est) === 0;
+      } else {
+        _estMatch = u.estado === est;
+      }
+      if (!_estMatch) return false;
+    }
     // Auditoría Final: soporte de multiStateFilter (tarjeta En envío)
     if (window.state && state.multiStateFilter && state.multiStateFilter.length) {
       if (state.multiStateFilter.indexOf(u.estado) < 0) return false;

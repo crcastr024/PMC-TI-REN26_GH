@@ -132,3 +132,93 @@ BOOT_SEQUENCE.md, SecurityFreeze.md
   exec-redesign.css (carga después) gana con las versiones ya
   tokenizadas. No se tocaron por no tener efecto visual — quedan como
   deuda técnica menor (limpiar en otro sprint si se quiere).
+
+## GH3.42.15
+- FIX vista "Por técnico" (#tec-grid): controles de navegación del
+  carrusel (flechas + dots) renderizando en una columna vacía al lado
+  de la tarjeta, en vez de debajo. Causa raíz: `.tec-grid` es CSS Grid
+  legacy de ANTES del carrusel (`display:grid; grid-template-columns:
+  repeat(auto-fit,minmax(320px,1fr))`, pensado para varias tarjetas
+  simultáneas, GH3.42.11 reemplazó eso por el carrusel de 1 tarjeta a
+  la vez pero nunca se actualizó este CSS). El carrusel solo mete 2
+  hijos (.rc-viewport + .rc-nav) y el grid heredado los coloca como
+  2 columnas en vez de apilarlos. Fix: `display:block` explícito en
+  `.exec-tec-carousel-wrap` (tecnico-funnel.css, carga después de
+  components.css, gana en cascada). Verificado que no afecta el otro
+  punto de uso del mismo carrusel (#pe-tecnico-new en Seguimiento, que
+  ya usaba flex-column correctamente — block se comporta igual para
+  2 hijos simples).
+
+## GH3.42.16
+- FIX CRÍTICO: filtro de estado en vista Usuarios (#filter-estado) —
+  3 de sus 6 opciones ("En tránsito", "Entregado", "Completado") devolvían
+  SIEMPRE 0 resultados, sin importar los demás filtros. Causa raíz:
+  `getFiltered()` comparaba `u.estado !== est` por igualdad EXACTA, pero
+  el `<select>` (index.html) usa categorías agrupadas/cortas que no
+  existen como valor literal en ningún registro (real: "En tránsito
+  equipo nuevo/anterior", "Entregado equipo nuevo", "Renovación
+  completada"/"Cerrado" — nunca literalmente "En tránsito"/"Entregado"/
+  "Completado"). Solo "Pendiente"/"Alistamiento"/"BACKUP" coincidían por
+  casualidad (etiqueta corta = valor real). Fix: matching agrupado —
+  "Completado" usa el mismo criterio de "finalizados" ya establecido en
+  el resto del código (Renovación completada/Cerrado/Finalizado/
+  Completado); "En tránsito"/"Entregado" usan prefijo sobre el estado
+  real. No se rediseñaron las categorías del select (haría falta
+  para cubrir Programado/Pendiente devolución/Pendiente acta/Pendiente
+  aprobación, que hoy no encajan en ningún bucket) — eso es una decisión
+  de producto más grande, fuera de alcance de este fix puntual.
+
+## GH3.42.17
+- FIX CRÍTICO (autorizado explícitamente por Cristian — toca "core
+  congelado", provider.js): incidente de throttling 429 sostenido +
+  circuit breaker activado en producción. Causa raíz: `WorkbookWriter.
+  writeRecord()` hacía un PATCH por CELDA individual en un loop
+  secuencial — cada guardado de 1 registro disparaba mínimo 4 requests
+  (campo editado + _VERSION + _UPDATED_AT + _UPDATED_BY), cada uno como
+  llamada HTTP independiente a Graph. Con el volumen normal de uso esto
+  agotaba el rate limit de Graph y activaba el circuit breaker (GH3.42.7).
+- Fix: agrupar cellUpdates de columnas CONTIGUAS de la misma fila en un
+  solo PATCH de rango (ej. `range(address='P28:R28')` con
+  `values:[[v1,v2,v3]]`), en vez de 3 PATCHes sueltos. Mismo patrón ya
+  usado y probado en AuditService.flushBatch ("UN SOLO PATCH para todo
+  el batch — TASK 03 aprobado"). No cambia el contrato de escritura:
+  mismas validaciones (Stage 1-2), mismo lock (Stage 3), mismo logging
+  de auditoría y verificación post-PATCH (adaptada a leer por offset
+  dentro del rango en vez de una sola celda).
+- Confirmado contra el Excel maestro real: UPDATED_AT/UPDATED_BY/VERSION
+  son columnas 60/61/62 — CONTIGUAS. Un guardado típico de 1 campo pasa
+  de 4 PATCHes individuales a 2 (el campo editado + el batch de control),
+  -50% de requests. Peor caso (campos totalmente dispersos): igual que
+  antes, sin regresión.
+
+## GH3.42.18
+- FIX CRÍTICO (autorizado explícitamente por Cristian — toca "core
+  congelado", graph.js): reportado por Cristian — cambios de estado a
+  "Renovación completada" (desde un registro en "Cerrado") y a
+  "Pendiente devolución equipo anterior" (Mercedes Peña) no persistían
+  en el Excel; al refrescar volvía a aparecer el estado anterior.
+- Causa raíz: `GraphWriteValidator.validate()` llama a `StateMachine.
+  isValidTransition(fromState, toState)` y RECHAZA el guardado (lanza
+  excepción, no escribe nada) si la transición no está en el mapa
+  TRANSITIONS — para TODOS los roles por igual, incluido Super Admin.
+  Caso 1 confirmado en código: `TRANSITIONS['Cerrado'] = []` — Cerrado
+  es un estado legacy sin ninguna salida definida (desde GH3.42.8), así
+  que cualquier intento de sacar un registro de Cerrado se rechazaba
+  sin importar el destino. Caso 2 (Mercedes Peña): mismo mecanismo —
+  "Pendiente devolución equipo anterior" solo es alcanzable desde
+  "Entregado equipo nuevo" en el mapa; si su estado previo era otro,
+  se rechazaba igual. El error SÍ generaba un toast (ui.js ya tenía el
+  catch), pero el mensaje técnico ("Transición inválida: X → Y") no fue
+  suficientemente claro/notorio.
+- Fix: `super_admin`/`gestor_activos` ahora pueden hacer correcciones
+  administrativas fuera de la secuencia estándar de TRANSITIONS (se
+  registra como warning para trazabilidad, no bloquea el guardado).
+  Técnico sigue restringido exactamente igual que antes — no puede
+  saltarse pasos de su flujo diario. El valor de "estado" sigue
+  validado como choice válido (VALID_CHOICES, Object.values(STATES))
+  para TODOS los roles — el fix libera únicamente el ORDEN, no permite
+  valores inválidos.
+- Verificado con simulación de la lógica (node -e): super_admin en
+  ambos casos reportados → sin error, warning solo informativo; técnico
+  en la misma transición → sigue bloqueado; técnico en transición
+  normal → sin cambios.
