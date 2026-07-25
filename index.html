@@ -830,30 +830,21 @@
           <div style="position:relative;height:210px"><canvas id="pe-burndown-chart"></canvas></div>
         </div>
       </div>
-      <!-- FILA 2: Pipeline Funnel · Cumplimiento por empresa -->
-      <div class="panel-grid-2" style="margin-top:14px">
-        <div class="panel-card">
-          <div class="panel-card-title">Pipeline REN26 · Funnel</div>
-          <div id="pe-funnel" class="exec-funnel"></div>
-        </div>
-        <div class="panel-card">
-          <div class="panel-card-title">Cumplimiento por empresa</div>
-          <div id="pe-empresa-new" class="exec-emp-grid"></div>
-          <span id="pe-hbt-n" style="display:none">—</span><span id="pe-hbt-pct" style="display:none">—</span>
-          <span id="pe-hgs-n" style="display:none">—</span><span id="pe-hgs-pct" style="display:none">—</span>
-        </div>
+      <!-- FILA 2: Cumplimiento por empresa — ancho completo.
+           GH3.42.28: Pipeline/Funnel retirado a pedido de Cristian. -->
+      <div class="panel-card" style="margin-top:14px">
+        <div class="panel-card-title">Cumplimiento por empresa</div>
+        <div id="pe-empresa-new"></div>
       </div>
-      <!-- FILA 3: Leaderboard técnicos · Ciudades -->
-      <div class="panel-grid-2" style="margin-top:14px">
-        <div class="panel-card">
-          <div class="panel-card-title">Leaderboard técnicos</div>
-          <div id="pe-tecnico-new" class="exec-leaderboard"></div>
-          <div id="pe-por-tecnico" style="display:none"></div>
-        </div>
-        <div class="panel-card">
-          <div class="panel-card-title">Ciudades</div>
-          <div id="pe-ciudades-cards" class="exec-city-grid"></div>
-        </div>
+      <!-- FILA 3: Leaderboard técnicos — ancho completo, a pedido de Cristian -->
+      <div class="panel-card" style="margin-top:14px">
+        <div class="panel-card-title">Leaderboard técnicos</div>
+        <div id="pe-tecnico-new" class="exec-leaderboard"></div>
+      </div>
+      <!-- FILA 3b: Ciudades — fila propia -->
+      <div class="panel-card" style="margin-top:14px">
+        <div class="panel-card-title">Ciudades</div>
+        <div id="pe-ciudades-cards" class="exec-city-grid"></div>
       </div>
       <!-- FILA 4: Devoluciones · Destino final (GH3.42.11: eliminado Distribución de estados, duplicaba Funnel) -->
       <div class="panel-grid-2" style="margin-top:14px">

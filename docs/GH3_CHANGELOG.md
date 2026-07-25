@@ -435,3 +435,43 @@ BOOT_SEQUENCE.md, SecurityFreeze.md
   (batería Regular, resto Bueno) pasa de "RAEE" a "Venta interna";
   un caso con 2 componentes Malo sigue yendo a RAEE; 3 Regular →
   Donación; condición perfecta → Venta interna (tampoco reasignable).
+
+## GH3.42.28
+Batch de cambios en la vista Seguimiento, a pedido de Cristian:
+
+- **FIX CRÍTICO**: los 6 filtros globales (empresa/ciudad/proyecto/
+  técnico/estado/feedback) actualizaban `PANEL_FILTERS` pero
+  `renderPanelEjecutivo()` llamaba `DataService.getRenewals({})` con
+  objeto vacío — ignoraba los filtros por completo. Toda la vista
+  (hero, KPIs, cumplimiento, leaderboard, ciudades, donuts) se
+  recalcula ahora sobre el subconjunto filtrado.
+- **FIX adicional, mismo bug de raíz**: los dropdowns de empresa/
+  ciudad/proyecto/técnico nunca se poblaban con opciones reales — solo
+  tenían el placeholder "Todas las X". Sin esto, aunque el filtrado ya
+  funcionara, no había nada que seleccionar. Agregado
+  `_populatePanelFilters()`.
+- Agregado contador "X de Y" (`#pf-count`) cuando hay algún filtro
+  activo, igual que en Ejecutivos.
+- REP-01/Alistamiento ahora también incluye "Programado" (antes solo
+  estado==='Alistamiento' estricto, GH3.42.22) — mismo criterio
+  aplicado en la tarjeta y en el detalle al hacer clic.
+- Retirado Pipeline/Funnel de Seguimiento (HTML + llamada JS).
+- "Cumplimiento por empresa" reemplazado por la MISMA construcción que
+  usa Ejecutivos (`.exec-empresa-card`, 9 estadísticas) — antes eran
+  dos versiones distintas (Seguimiento tenía `.exec-emp-card`, 5
+  estadísticas).
+- Leaderboard técnicos: ahora ocupa una fila completa (antes compartía
+  fila con Cumplimiento por empresa/Ciudades).
+- Ciudades: fila propia, separada del Leaderboard.
+- FIX responsive encontrado en el camino: `.exec-empresa-grid` (9
+  estadísticas en 6 columnas fijas) no tenía ningún breakpoint —
+  afecta tanto Ejecutivos como Seguimiento, ambas usan esta misma
+  clase. Agregado: 3 columnas a 1024px, 2 columnas a 640px.
+- Verificado con simulación (node -e): 5 casos de filtrado combinado,
+  todos correctos.
+
+### Alcance de la revisión responsive/simetría
+Se revisó y corrigió lo directamente relacionado con esta vista
+(Cumplimiento por empresa, ahora compartido con Ejecutivos). No se
+hizo una auditoría exhaustiva de "todos los cuadros" del resto de la
+app — si se quiere ese alcance completo, es un trabajo aparte.

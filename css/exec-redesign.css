@@ -641,4 +641,11 @@
   .exec-emp-grid { grid-template-columns: 1fr; }
   .exec-emp-card { border-right: 0; border-bottom: 1px solid var(--rule); }
   .exec-emp-card:last-child { border-bottom: 0; }
+  /* GH3.42.28: .exec-empresa-grid (9 stats) no tenía breakpoint — afecta
+     Ejecutivos y Seguimiento, ambas vistas usan esta misma clase. */
+  .exec-empresa-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .exec-empresa-grid { grid-template-columns: repeat(2, 1fr); }
 }

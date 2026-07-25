@@ -849,13 +849,10 @@ function renderReportes() {
   $('rep-base-count').textContent = base.length + ' de ' + (window.calculateProjectMetrics ? calculateProjectMetrics().totalColaboradores : getReal().length) + ' base';
   // Auditoria Final: usar buildDashboardStats para consistencia con Dashboard
   var _bdsR = window.DashboardStats ? DashboardStats.compute(base) : {};
-  // GH3.42.22 FIX: r-alistamiento mostraba _bdsR.proceso (agrupa 9 estados:
-  // Alistamiento+Programado+En tránsito+...+Cerrado) en vez del conteo
-  // específico de "Alistamiento". Por eso el número de la tarjeta no
-  // coincidía con el detalle al hacer clic (setReport('alistamiento') SÍ
-  // filtra solo estado==='Alistamiento', igual que el título REP-01 · En
-  // alistamiento — es la tarjeta la que apuntaba al valor equivocado).
-  $('r-alistamiento').textContent = (_bdsR.estados && _bdsR.estados['Alistamiento']) || 0;
+  // GH3.42.28: a pedido de Cristian, REP-01/Alistamiento también incluye
+  // 'Programado' (antes solo estado==='Alistamiento' estricto, GH3.42.22).
+  $('r-alistamiento').textContent = ((_bdsR.estados && _bdsR.estados['Alistamiento']) || 0) +
+                                     ((_bdsR.estados && _bdsR.estados['Programado']) || 0);
   $('r-entregados').textContent   = _bdsR.entregados || 0;
   $('r-actas').textContent        = _bdsR.actas      || 0;
   $('r-devoluciones').textContent = _bdsR.devoluciones || 0;
@@ -884,8 +881,9 @@ function setReport(type, btn) {
   var DEVOLUCION_STATES = ['Pendiente devolución equipo anterior','En tránsito equipo anterior','Equipo anterior recibido'];
   switch(type) {
     case 'alistamiento':
-      filtered = base.filter(function(u){ return u.estado === 'Alistamiento'; });
-      title = 'REP-01 · En alistamiento'; break;
+      // GH3.42.28: incluye también 'Programado', a pedido de Cristian
+      filtered = base.filter(function(u){ return u.estado === 'Alistamiento' || u.estado === 'Programado'; });
+      title = 'REP-01 · Alistamiento + Programado'; break;
     case 'envio':
       filtered = base.filter(function(u){ return u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo'; });
       title = 'REP-02 · En envío'; break;
@@ -1630,6 +1628,25 @@ function renderEstadosChart(stats) {
 }
 window.renderEstadosChart = renderEstadosChart;
 
+// GH3.42.28: los dropdowns de filtro de Seguimiento (pf-empresa, pf-ciudad,
+// pf-proyecto, pf-tecnico) nunca se poblaban con valores reales — solo
+// tenían el placeholder "Todas las X". Mismo patrón que populateProjectFilter.
+function _populatePanelFilters() {
+  var all = window.USERS || [];
+  function fill(id, getter, placeholder) {
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    var vals = Array.from(new Set(all.map(getter).filter(Boolean))).sort();
+    var current = sel.value;
+    sel.innerHTML = '<option value="">' + placeholder + '</option>' +
+      vals.map(function(v){ return '<option' + (v === current ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('');
+  }
+  fill('pf-empresa',  function(u){ return u.empresa; }, 'Todas las empresas');
+  fill('pf-ciudad',   function(u){ return window.CityNormalizer ? CityNormalizer.normalize(u.ciudad) : u.ciudad; }, 'Todas las ciudades');
+  fill('pf-proyecto', function(u){ return u.proyecto; }, 'Todos los proyectos');
+  fill('pf-tecnico',  function(u){ return u.tecnico; },  'Todos los técnicos');
+}
+
 function renderPanelEjecutivo() {
   var role = window.state && state.user && (state.user.role || state.user.rol);
   var allowed = ['super_admin','gestor_activos','director_ti','gerencia','tecnico'];
@@ -1638,11 +1655,36 @@ function renderPanelEjecutivo() {
     if (vp) vp.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-3)">Vista no disponible para tu rol</div>';
     return;
   }
-  var records   = window.DataService ? DataService.getRenewals({}) : [];
-  var _allStats = window.DashboardStats ? DashboardStats.get() : {};
-  var _stats    = window.DashboardStats ? DashboardStats.compute(records.filter(function(r){ return !isBackup(r); })) : {};
+  _populatePanelFilters();
+  // GH3.42.28 FIX CRÍTICO: los 6 filtros globales (empresa/ciudad/proyecto/
+  // tecnico/estado/feedback) actualizaban window.PANEL_FILTERS pero NUNCA
+  // se aplicaban al cálculo — records/​_stats/​_allStats se armaban sobre
+  // TODO el dataset sin importar los filtros. Reportado por Cristian.
+  var pf = window.PANEL_FILTERS || {};
+  var _matchPF = function(u) {
+    if (pf.empresa && u.empresa !== pf.empresa) return false;
+    if (pf.ciudad) {
+      var nc = window.CityNormalizer ? CityNormalizer.normalize(u.ciudad) : u.ciudad;
+      var nf = window.CityNormalizer ? CityNormalizer.normalize(pf.ciudad) : pf.ciudad;
+      if (nc !== nf) return false;
+    }
+    if (pf.proyecto && u.proyecto !== pf.proyecto) return false;
+    if (pf.tecnico && (u.tecnico || '').toLowerCase() !== pf.tecnico.toLowerCase()) return false;
+    if (pf.estado && u.estado !== pf.estado) return false;
+    if (pf.feedback && !(Number(u.feedback || 0) >= Number(pf.feedback))) return false;
+    return true;
+  };
+  var _filteredAll = (window.USERS || []).filter(_matchPF);
+  var records   = _filteredAll.filter(function(u){ return !isBackup(u); });
+  var _allStats = window.DashboardStats ? DashboardStats.compute(_filteredAll) : {};
+  var _stats    = window.DashboardStats ? DashboardStats.compute(records) : {};
   var total     = _stats.total || 0;
   var set = function(id,v){ var e=document.getElementById(id); if(e) e.textContent = v; };
+  var _pfCountEl = document.getElementById('pf-count');
+  if (_pfCountEl) {
+    var _pfHasFilter = !!(pf.empresa || pf.ciudad || pf.proyecto || pf.tecnico || pf.estado || pf.feedback);
+    _pfCountEl.textContent = _pfHasFilter ? (_filteredAll.length + ' de ' + (window.USERS || []).length) : '';
+  }
 
   // ─── Proyecto: fechas, días, semáforo ─────────────────────────────
   var P = _stats.proyecto || {};
@@ -1714,31 +1756,36 @@ function renderPanelEjecutivo() {
   // ─── Burn Down Chart ──────────────────────────────────────────────
   _renderBurnDownChart(_stats.burnDown || []);
 
-  // ─── Funnel Pipeline ──────────────────────────────────────────────
-  // GH3.42.5 FIX: mostrar total del proyecto (146) con desglose activos/backup
-  var totalProyecto = (_allStats.total || 0) + (_allStats.totalBackups || 0);
-  _renderFunnelPipeline(_stats.pipeline || [], total, totalProyecto, _allStats.totalBackups || 0);
+  // GH3.42.28: Pipeline/Funnel retirado a pedido de Cristian (antes:
+  // _renderFunnelPipeline(_stats.pipeline || [], total, totalProyecto, _allStats.totalBackups || 0);
+  // — el elemento #pe-funnel ya no existe en el HTML).
 
   // ─── Cumplimiento por empresa (cards) ─────────────────────────────
+  // GH3.42.28: reemplazado por la MISMA construcción que usa
+  // renderReportesEjecutivos() (.exec-empresa-card, 9 estadísticas) —
+  // a pedido de Cristian, para que ambas vistas muestren exactamente
+  // lo mismo en vez de dos versiones distintas (.exec-emp-card, 5
+  // estadísticas, era la versión vieja de Seguimiento).
   var empEl = document.getElementById('pe-empresa-new');
   if (empEl) {
     empEl.innerHTML = ['HBT','HGS'].map(function(emp) {
       var d = (_allStats.porEmpresa && _allStats.porEmpresa[emp]) ||
-        {total:0,operativos:0,backup:0,pendientes:0,proceso:0,entregados:0,actas:0,cerrados:0,pct:0};
-      return '<div class="exec-emp-card">' +
-        '<div class="eec-head"><span class="eec-name">'+emp+'</span><span class="eec-pct">'+d.pct+'%</span></div>' +
-        '<div class="eec-total">Total <strong>'+d.total+'</strong> <span class="eec-sub">('+d.operativos+' oper. + '+d.backup+' bk)</span></div>' +
-        '<div class="eec-grid">' +
-          '<div><div class="eec-v accent">'+d.pendientes+'</div><div class="eec-l">Pend.</div></div>' +
-          '<div><div class="eec-v amb">'+d.proceso+'</div><div class="eec-l">Proceso</div></div>' +
-          '<div><div class="eec-v grn">'+d.entregados+'</div><div class="eec-l">Entreg.</div></div>' +
-          '<div><div class="eec-v">'+(d.actas||0)+'</div><div class="eec-l">Actas</div></div>' +
-          '<div><div class="eec-v grn">'+(d.cerrados||0)+'</div><div class="eec-l">Fin.</div></div>' +
+        { total:0, operativos:0, backup:0, pendientes:0, proceso:0, entregados:0, actas:0, cerrados:0, pct:0 };
+      return '<div class="exec-empresa-card">' +
+        '<div class="exec-empresa-label">' + emp + '</div>' +
+        '<div class="exec-empresa-grid">' +
+        '<div><div class="exec-stat-v">' + d.operativos + '</div><div class="exec-stat-l">Asignados</div></div>' +
+        '<div><div class="exec-stat-v">' + d.backup + '</div><div class="exec-stat-l">Backup</div></div>' +
+        '<div><div class="exec-stat-v" style="color:var(--accent);font-weight:900">' + d.total + '</div><div class="exec-stat-l"><strong>Total</strong></div></div>' +
+        '<div><div class="exec-stat-v acc">' + d.pendientes + '</div><div class="exec-stat-l">Pendientes</div></div>' +
+        '<div><div class="exec-stat-v amb">' + d.proceso + '</div><div class="exec-stat-l">Proceso</div></div>' +
+        '<div><div class="exec-stat-v grn">' + d.entregados + '</div><div class="exec-stat-l">Entregados</div></div>' +
+        '<div><div class="exec-stat-v">' + (d.actas||0) + '</div><div class="exec-stat-l">Actas</div></div>' +
+        '<div><div class="exec-stat-v">' + (d.cerrados||0) + '</div><div class="exec-stat-l">Cerrados</div></div>' +
+        '<div><div class="exec-stat-v grn" style="font-size:18px">' + d.pct + '%</div><div class="exec-stat-l">Avance</div></div>' +
         '</div>' +
-        '<div class="op-bar"><div class="op-bar-fill grn" data-pct="'+Math.min(d.pct,100)+'" style="width:0%"></div></div>' +
       '</div>';
     }).join('');
-    setTimeout(function(){empEl.querySelectorAll('.op-bar-fill[data-pct]').forEach(function(b){b.style.width=b.dataset.pct+'%';});},80);
   }
 
   // ─── Leaderboard técnicos — Carrusel flashcards (GH3.42.5) ───────
