@@ -327,6 +327,59 @@ function closeTorresModal() {
 }
 window.closeTorresModal = closeTorresModal;
 
+// GH3.42.29: panel de referencia para llenar el formulario de SharePoint
+// (Lista de Control de Recolecciones) — a pedido de Cristian. Reúne los
+// datos del equipo devuelto + el resultado del motor RAEE (ya reconciliado
+// vía _reconciliarMotorRAEE, mismo helper que usan actualizarRecomendacion()
+// y saveRecord() — no se recalcula por separado). No auto-completa el
+// campo "ESTADO FINAL" de SharePoint: no hay forma confirmada de mapear
+// la recomendación del motor al choice exacto de esa lista — se muestra
+// como referencia para que el usuario lo seleccione manualmente.
+function openSharePointCopyPanel() {
+  var u = window._currentRecord || {};
+  var tipo = (u.eq_ant_tipo || u.tipo || '—').toString().toUpperCase();
+  var partes = [u.eq_ant_marca, u.eq_ant_modelo, u.eq_ant_serial, u.eq_ant_af, u.eq_ant_placa, u.eq_ant_hostname].filter(Boolean);
+  var linea2 = partes.length ? partes.join(' ') : '(sin datos de equipo anterior registrados)';
+
+  var bat = ($('m-eval_bateria') || {}).value, tec = ($('m-eval_teclado') || {}).value,
+      tou = ($('m-eval_touchpad') || {}).value, est = ($('m-eval_estetico') || {}).value;
+  var raee = (typeof RAEEEngine !== 'undefined' && bat && tec && tou && est)
+    ? _reconciliarMotorRAEE(RAEEEngine.calcular(bat, tec, tou, est), u.estado_eq_ant, bat, tec, tou, est)
+    : null;
+
+  var texto =
+    'EQUIPO DEVUELTO\n' + tipo + '\n' + linea2 + '\n\n' +
+    'CLASIFICACIÓN TÉCNICA (Motor A · generación de procesador)\n' +
+    (u.estado_eq_ant || '—') + '\n\n' +
+    'RECOMENDACIÓN FÍSICA (Motor B · evaluación física — RAEEEngine)\n' +
+    (raee ? raee.recomendacion : 'Evaluación física incompleta — completa los 4 campos primero') + '\n' +
+    (raee ? raee.motivo : '') + '\n\n' +
+    '— "ESTADO FINAL" de SharePoint: seleccionar manualmente con base en lo anterior —';
+
+  document.getElementById('sp-copy-text').value = texto;
+  document.getElementById('sp-copy-modal-bg').classList.add('active');
+}
+window.openSharePointCopyPanel = openSharePointCopyPanel;
+
+function closeSPCopyPanel() {
+  document.getElementById('sp-copy-modal-bg').classList.remove('active');
+}
+window.closeSPCopyPanel = closeSPCopyPanel;
+
+function copySPText() {
+  var ta = document.getElementById('sp-copy-text');
+  ta.select();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value)
+      .then(function(){ toast('Copiado al portapapeles'); })
+      .catch(function(){ document.execCommand('copy'); toast('Copiado (modo compatibilidad)'); });
+  } else {
+    document.execCommand('copy');
+    toast('Copiado al portapapeles');
+  }
+}
+window.copySPText = copySPText;
+
 // GH3.42.26: consolidación Seguimiento↔Ejecutivos — las tarjetas KPI de
 // Seguimiento (panel-kpi) hoy son solo números estáticos; Ejecutivos ya
 // tiene el motor de drill-down completo (setReport → tabla filtrada
@@ -1190,6 +1243,7 @@ function openEditModal(id) {
       '<div class="form-group"><label class="form-label">Estado estético</label><select class="form-select" id="m-eval_estetico" onchange="actualizarRecomendacion()"><option value="">—</option>' + ['Excelente','Bueno','Regular','Malo'].map(function(o){return '<option value="'+o+'"'+(u.eval_estetico===o?' selected':'')+'>'+o+'</option>';}).join('') + '</select></div>' +
     '</div>' +
     '<div id="m-motor-eval-container" style="margin-top:12px"><div id="m-recomendacion-display" style="display:none"></div><div id="m-motivo-raee-display" style="display:none"></div></div>' +
+    '<button type="button" class="btn" style="margin-top:12px" onclick="openSharePointCopyPanel()">Preparar datos para SharePoint (Recolecciones)</button>' +
     '</div>' +
   '</div>' +
   '</div>' +
@@ -1460,6 +1514,40 @@ window.updateSectionVisibility = updateSectionVisibility;
 
   // GH3.27 CAMBIO 4: Motor de recomendación automática
   // GH3.28: actualizarRecomendacion usa exclusivamente RAEEEngine
+// GH3.42.29: helper compartido — reconciliación Motor A (obsolescencia por
+// generación de procesador) / Motor B (RAEEEngine, evaluación física).
+// Antes vivía duplicada en actualizarRecomendacion() y saveRecord(); se
+// consolida aquí para no repetir el mismo patrón de deriva que ya causó
+// bugs esta sesión (Alistamiento GH3.42.22, PROC_ST GH3.42.23,
+// ENTREGADO_STATES GH3.42.22). Reglas (GH3.42.24 + refinamiento GH3.42.27):
+// Motor A='Reasignable' → fuerza Reasignación. Motor A='RAEE' → obsoleto
+// no es automáticamente RAEE: solo si además hay 2+ componentes 'Malo';
+// si no, Donación (2+ 'Regular') o Venta interna. Nunca Reasignación para
+// equipo obsoleto.
+function _reconciliarMotorRAEE(resultado, estadoEqAnt, bat, tec, tou, est) {
+  if (!resultado) return resultado;
+  if (estadoEqAnt === 'Reasignable') {
+    resultado.recomendacion = 'Reasignacion';
+    resultado.motivo = 'Motor A: procesador de generación reciente — equipo apto para reasignación.';
+  } else if (estadoEqAnt === 'RAEE') {
+    var _vals = [bat, tec, tou, est].filter(function(v){ return ['Excelente','Bueno','Regular','Malo'].indexOf(v) >= 0; });
+    var _malos = _vals.filter(function(v){ return v === 'Malo'; }).length;
+    var _regulares = _vals.filter(function(v){ return v === 'Regular'; }).length;
+    if (_malos >= 2) {
+      resultado.recomendacion = 'RAEE';
+      resultado.motivo = 'Motor A: procesador obsoleto + equipo dañado físicamente — disposición RAEE.';
+    } else if (_regulares >= 2) {
+      resultado.recomendacion = 'Donacion';
+      resultado.motivo = 'Motor A: procesador obsoleto, estado físico regular — apto para donación.';
+    } else {
+      resultado.recomendacion = 'Venta interna';
+      resultado.motivo = 'Motor A: procesador obsoleto pero sin daño físico — apto para venta interna (no reasignable por obsolescencia).';
+    }
+  }
+  return resultado;
+}
+window._reconciliarMotorRAEE = _reconciliarMotorRAEE;
+
 window.actualizarRecomendacion = function() {
   var bat  = ($('m-eval_bateria')  || {}).value || '';
   var tec  = ($('m-eval_teclado')  || {}).value || '';
@@ -1471,33 +1559,11 @@ window.actualizarRecomendacion = function() {
   if (!bat && !tec && !tou && !est) { disp.style.display = 'none'; if (motdisp) motdisp.style.display='none'; return; }
   var resultado = (typeof RAEEEngine !== 'undefined') ? RAEEEngine.calcular(bat, tec, tou, est) : null;
   if (!resultado) { disp.style.display = 'none'; return; }
-  // RC-07 T3: Si Motor A clasifica como Reasignable → Motor B debe ser Reasignacion
-  if (window._currentRecord && window._currentRecord.estado_eq_ant === 'Reasignable') {
-    resultado.recomendacion = 'Reasignacion';
-    resultado.motivo = 'Motor A: procesador de generación reciente — equipo apto para reasignación.';
-  }
-  // GH3.42.27 REFINAMIENTO (a pedido de Cristian, sobre GH3.42.24):
-  // obsoleto NO es automáticamente RAEE. Un equipo obsoleto pero
-  // físicamente sano debe poder donarse o venderse internamente —
-  // solo va a RAEE si ADEMÁS está dañado. Lo único que la obsolescencia
-  // descarta es "Reasignación" (no tiene sentido reasignar un equipo
-  // obsoleto a un usuario nuevo). Umbrales idénticos a los que ya usa
-  // RAEEEngine.calcular() para el resto de equipos (2+ Malo, 2+ Regular).
-  else if (window._currentRecord && window._currentRecord.estado_eq_ant === 'RAEE') {
-    var _vals27 = [bat, tec, tou, est].filter(function(v){ return ['Excelente','Bueno','Regular','Malo'].indexOf(v) >= 0; });
-    var _malos27 = _vals27.filter(function(v){ return v === 'Malo'; }).length;
-    var _regulares27 = _vals27.filter(function(v){ return v === 'Regular'; }).length;
-    if (_malos27 >= 2) {
-      resultado.recomendacion = 'RAEE';
-      resultado.motivo = 'Motor A: procesador obsoleto + equipo dañado físicamente — disposición RAEE.';
-    } else if (_regulares27 >= 2) {
-      resultado.recomendacion = 'Donacion';
-      resultado.motivo = 'Motor A: procesador obsoleto, estado físico regular — apto para donación.';
-    } else {
-      resultado.recomendacion = 'Venta interna';
-      resultado.motivo = 'Motor A: procesador obsoleto pero sin daño físico — apto para venta interna (no reasignable por obsolescencia).';
-    }
-  }
+  // GH3.42.29: reconciliación Motor A/Motor B consolidada en helper
+  // compartido — ver _reconciliarMotorRAEE (antes duplicada aquí y en
+  // saveRecord(); una tercera copia para el panel de SharePoint hubiera
+  // repetido el mismo patrón de deriva que ya causó bugs esta sesión).
+  resultado = _reconciliarMotorRAEE(resultado, window._currentRecord && window._currentRecord.estado_eq_ant, bat, tec, tou, est);
   var colors = { 'RAEE': { bg: '#FFEBEE', fg: '#C00000' }, 'Donacion': { bg: '#FFF3E0', fg: '#E65100' },
     'Venta interna': { bg: '#E8F5E9', fg: '#2E7D32' }, 'Reasignacion': { bg: '#E3F2FD', fg: '#1565C0' } };
   var c = colors[resultado.recomendacion] || { bg: '#F5F5F5', fg: '#555' };
@@ -2525,32 +2591,14 @@ function saveRecord() {
           changes.eval_bateria, changes.eval_teclado,
           changes.eval_touchpad, changes.eval_estetico
         );
-        // RC-07 T3: Si Motor A Reasignable → forzar Reasignacion en Motor B
-        if (_raeeResult && u.estado_eq_ant === 'Reasignable') {
-          _raeeResult.recomendacion = 'Reasignacion';
-          _raeeResult.motivo = 'Motor A: procesador de generación reciente — reasignación.';
-        }
-        // GH3.42.27 REFINAMIENTO (sobre GH3.42.24): obsoleto no es
-        // automáticamente RAEE. Solo si ADEMÁS está dañado físicamente
-        // (2+ componentes Malo). Si no, Donación o Venta interna según
-        // los mismos umbrales de RAEEEngine.calcular(). Reasignación
-        // queda descartada en cualquier caso (obsoleto no se reasigna).
-        else if (_raeeResult && u.estado_eq_ant === 'RAEE') {
-          var _vals27b = [changes.eval_bateria, changes.eval_teclado, changes.eval_touchpad, changes.eval_estetico]
-            .filter(function(v){ return ['Excelente','Bueno','Regular','Malo'].indexOf(v) >= 0; });
-          var _malos27b = _vals27b.filter(function(v){ return v === 'Malo'; }).length;
-          var _regulares27b = _vals27b.filter(function(v){ return v === 'Regular'; }).length;
-          if (_malos27b >= 2) {
-            _raeeResult.recomendacion = 'RAEE';
-            _raeeResult.motivo = 'Motor A: procesador obsoleto + equipo dañado físicamente — disposición RAEE.';
-          } else if (_regulares27b >= 2) {
-            _raeeResult.recomendacion = 'Donacion';
-            _raeeResult.motivo = 'Motor A: procesador obsoleto, estado físico regular — apto para donación.';
-          } else {
-            _raeeResult.recomendacion = 'Venta interna';
-            _raeeResult.motivo = 'Motor A: procesador obsoleto pero sin daño físico — apto para venta interna (no reasignable por obsolescencia).';
-          }
-        }
+        // GH3.42.29: reconciliación consolidada en helper compartido
+        // (ver _reconciliarMotorRAEE) — antes duplicada aquí y en
+        // actualizarRecomendacion().
+        _raeeResult = _reconciliarMotorRAEE(
+          _raeeResult, u.estado_eq_ant,
+          changes.eval_bateria, changes.eval_teclado,
+          changes.eval_touchpad, changes.eval_estetico
+        );
         if (_raeeResult) {
           changes.recomendacion_raee     = _raeeResult.recomendacion;
           changes.motivo_raee            = _raeeResult.motivo;

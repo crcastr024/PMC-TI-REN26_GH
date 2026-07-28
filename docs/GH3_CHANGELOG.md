@@ -475,3 +475,30 @@ Se revisó y corrigió lo directamente relacionado con esta vista
 (Cumplimiento por empresa, ahora compartido con Ejecutivos). No se
 hizo una auditoría exhaustiva de "todos los cuadros" del resto de la
 app — si se quiere ese alcance completo, es un trabajo aparte.
+
+## GH3.42.29
+- A pedido de Cristian: botón "Preparar datos para SharePoint
+  (Recolecciones)" en la sección de evaluación física del modal.
+  Reúne tipo + marca/modelo/serial/AF/placa/hostname del equipo
+  devuelto, la clasificación técnica (Motor A) y la recomendación
+  física ya reconciliada (Motor B), en un panel con texto listo para
+  copiar (botón "Copiar todo", Clipboard API con fallback a
+  document.execCommand).
+- Formato del bloque de equipo verificado contra el ejemplo real de la
+  captura ("PORTATIL" + "DELL LATITUDE 3400 FNCJJW2 7953 601827
+  PO-4820-CJJW2") — coincide exacto asumiendo el orden marca→modelo→
+  serial→AF→placa→hostname. Ese orden se infirió de un solo ejemplo —
+  pedirle a Cristian que confirme si alguna vez sale desordenado.
+- DECISIÓN EXPLÍCITA, no auto-completa "ESTADO FINAL" de SharePoint —
+  no hay forma confirmada de mapear la recomendación del motor
+  (RAEE/Donación/Venta interna/Reasignación) al choice exacto de esa
+  lista (ej. "Obsoleto"). Se muestra la clasificación + recomendación
+  como referencia para que el usuario seleccione el valor correcto él
+  mismo, en vez de arriesgar un mapeo adivinado.
+- REFACTOR en el camino: la reconciliación Motor A/Motor B (GH3.42.24 +
+  GH3.42.27) vivía duplicada en `actualizarRecomendacion()` y
+  `saveRecord()`. Agregar un tercer punto de uso para este botón hubiera
+  repetido el mismo patrón de deriva que ya causó bugs esta sesión
+  (Alistamiento GH3.42.22, PROC_ST GH3.42.23, ENTREGADO_STATES
+  GH3.42.22) — se extrajo a `_reconciliarMotorRAEE()`, un solo lugar,
+  los 3 puntos de uso la llaman igual.

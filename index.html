@@ -1095,7 +1095,30 @@
 </div>
 </div>
 
-<!-- GH3.42.25: Reporte de seguimiento — Torres entregadas/pendientes -->
+<!-- GH3.42.29: panel de datos para copiar al formulario de SharePoint (Lista de Control de Recolecciones) -->
+<div class="modal-bg" id="sp-copy-modal-bg" onclick="if(event.target===this)closeSPCopyPanel()">
+<div class="modal" style="max-width:560px">
+<div class="modal-head">
+  <div class="modal-title-block">
+    <div class="modal-eyebrow">Referencia</div>
+    <div class="modal-title">Datos para SharePoint · Recolecciones</div>
+  </div>
+  <button class="modal-close" onclick="closeSPCopyPanel()" title="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+</div>
+<div class="modal-body" style="padding:20px 24px">
+  <p style="margin:0 0 12px;font-size:12px;color:var(--text-3)">
+    "ESTADO FINAL" no se rellena automático — no hay forma confirmada de mapear la
+    recomendación del motor al choice exacto de SharePoint. Se muestra como referencia
+    para que lo selecciones tú en el formulario.
+  </p>
+  <textarea id="sp-copy-text" readonly style="width:100%;min-height:220px;font-family:var(--font-data,monospace);font-size:12.5px;padding:12px;border:1px solid var(--border-strong);border-radius:var(--r-sm);background:var(--bg-elev);color:var(--text-1)"></textarea>
+</div>
+<div class="modal-foot">
+  <button class="btn" onclick="closeSPCopyPanel()">Cerrar</button>
+  <button class="btn btn-primary" onclick="copySPText()">Copiar todo</button>
+</div>
+</div>
+</div>
 <div class="modal-bg" id="torres-modal-bg" onclick="if(event.target===this)closeTorresModal()">
 <div class="modal" style="max-width:640px">
 <div class="modal-head">
