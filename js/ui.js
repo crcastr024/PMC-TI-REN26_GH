@@ -337,9 +337,7 @@ window.closeTorresModal = closeTorresModal;
 // como referencia para que el usuario lo seleccione manualmente.
 function openSharePointCopyPanel() {
   var u = window._currentRecord || {};
-  var tipo = (u.eq_ant_tipo || u.tipo || '—').toString().toUpperCase();
-  var partes = [u.eq_ant_marca, u.eq_ant_modelo, u.eq_ant_serial, u.eq_ant_af, u.eq_ant_placa, u.eq_ant_hostname].filter(Boolean);
-  var linea2 = partes.length ? partes.join(' ') : '(sin datos de equipo anterior registrados)';
+  var modelo = [u.eq_ant_marca, u.eq_ant_modelo].filter(Boolean).join(' ') || '—';
 
   var bat = ($('m-eval_bateria') || {}).value, tec = ($('m-eval_teclado') || {}).value,
       tou = ($('m-eval_touchpad') || {}).value, est = ($('m-eval_estetico') || {}).value;
@@ -347,14 +345,24 @@ function openSharePointCopyPanel() {
     ? _reconciliarMotorRAEE(RAEEEngine.calcular(bat, tec, tou, est), u.estado_eq_ant, bat, tec, tou, est)
     : null;
 
+  // GH3.42.30: formato exacto pedido por Cristian. Asunción: "Funcional"
+  // = estado teclado (eval_teclado) — es el único de los 4 campos que
+  // alimentan RAEEEngine.calcular() que no tenía un rótulo explícito en
+  // la lista que compartió. Corregir si el rótulo se refería a otra cosa.
   var texto =
-    'EQUIPO DEVUELTO\n' + tipo + '\n' + linea2 + '\n\n' +
-    'CLASIFICACIÓN TÉCNICA (Motor A · generación de procesador)\n' +
-    (u.estado_eq_ant || '—') + '\n\n' +
-    'RECOMENDACIÓN FÍSICA (Motor B · evaluación física — RAEEEngine)\n' +
-    (raee ? raee.recomendacion : 'Evaluación física incompleta — completa los 4 campos primero') + '\n' +
-    (raee ? raee.motivo : '') + '\n\n' +
-    '— "ESTADO FINAL" de SharePoint: seleccionar manualmente con base en lo anterior —';
+    'Recomendacion RAEE: ' + (raee ? raee.recomendacion : 'Evaluación física incompleta') + '\n' +
+    '♦ Usuario: ' + (u.nombre || '—') + '\n' +
+    '♦ Modelo: ' + modelo + '\n' +
+    '♦ HN: ' + (u.eq_ant_hostname || '—') + '\n' +
+    '♦ SN: ' + (u.eq_ant_serial || '—') + '\n' +
+    '♦ Placa: ' + (u.eq_ant_placa || '—') + '\n' +
+    '♦ Procesador: ' + (u.eq_ant_procesador || '—') + '\n' +
+    '♦ RAM: ' + (u.eq_ant_ram || '—') + '\n' +
+    '♦ Disco: ' + (u.eq_ant_disco || '—') + '\n' +
+    '♦ Bateria: ' + (bat || '—') + '\n' +
+    '♦ Estetico: ' + (est || '—') + '\n' +
+    '♦ Touchpad: ' + (tou || '—') + '\n' +
+    '♦ Funcional: ' + (tec || '—');
 
   document.getElementById('sp-copy-text').value = texto;
   document.getElementById('sp-copy-modal-bg').classList.add('active');

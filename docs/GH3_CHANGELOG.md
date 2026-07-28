@@ -502,3 +502,19 @@ app — si se quiere ese alcance completo, es un trabajo aparte.
   (Alistamiento GH3.42.22, PROC_ST GH3.42.23, ENTREGADO_STATES
   GH3.42.22) — se extrajo a `_reconciliarMotorRAEE()`, un solo lugar,
   los 3 puntos de uso la llaman igual.
+
+## GH3.42.30
+- Cambiado el formato del texto generado por "Preparar datos para
+  SharePoint" al formato exacto pedido por Cristian (lista con
+  viñetas ♦: Usuario, Modelo, HN, SN, Placa, Procesador, RAM, Disco,
+  Bateria, Estetico, Touchpad, Funcional), con "Recomendacion RAEE"
+  como encabezado.
+- ASUNCIÓN A CONFIRMAR: "Funcional" se mapeó a `eval_teclado` (estado
+  del teclado) — es el único de los 4 campos que alimentan
+  `RAEEEngine.calcular()` (batería/teclado/touchpad/estético) que no
+  tenía rótulo explícito en la lista que compartió Cristian. Si
+  "Funcional" se refería a otra cosa, avisar para corregir.
+- "Modelo" combina marca + modelo (ej. "DELL LATITUDE 3400") — no se
+  pidió un campo "Marca" separado.
+- Verificado con dataset de ejemplo (node -e): salida coincide con el
+  formato exacto solicitado.
