@@ -633,3 +633,36 @@ capturas reales (vista "Por técnico" y widget "Avance esperado vs real").
   rgba) que no responden al toggle de tema, en componentes que SÍ
   necesitaban adaptarse (a diferencia de los que correctamente se
   mantienen oscuros siempre — heroes, tooltips).
+
+## GH3.42.34
+A pedido de Cristian, sobre la vista Ejecutivos/Reportes y Seguimiento.
+
+- **FIX encontrado en la captura**: franja angosta "fantasma" entre
+  REP-01 y REP-02 (mismo ícono que REP-01, sin número ni título).
+  Causa: `#view-reportes .reports-grid` usaba `grid-template-columns:
+  repeat(auto-fill, minmax(180px,1fr))` — con un número fijo de
+  tarjetas (6, ahora 8), `auto-fill` puede dejar una columna sobrante
+  angosta cuando el ancho disponible no calza exacto. Cambiado a
+  `auto-fit`, que colapsa cualquier columna sobrante a cero.
+- Agregado **REP-07 · En tránsito (equipo nuevo)** — conteo estricto de
+  `estado==='En tránsito equipo nuevo'`.
+- Agregado **REP-08 · Pend. devolución** — `Pendiente devolución equipo
+  anterior` + `En tránsito equipo anterior` (los 2 estados exactos que
+  pidió Cristian).
+- **AVISO, no resuelto por decisión de Cristian**: REP-08 se superpone
+  con REP-04 "Devoluciones" (ya existente), que cubre esos MISMOS 2
+  estados más "Equipo anterior recibido". Se creó igual porque se pidió
+  explícitamente con ese alcance más angosto — queda a decisión de
+  Cristian si REP-04 sigue siendo necesario o se reemplaza.
+- Nota de numeración interna (preexistente, no corregida): el "title"
+  interno de cada reporte (usado en el encabezado del detalle) no
+  coincide con el número REP-XX visible en la tarjeta desde antes de
+  este cambio (ej. "Devoluciones" se ve como REP-04 pero decía
+  "REP-06" internamente). REP-07/REP-08 nuevos usan REP-10/REP-11
+  internamente para no chocar con los ya existentes — es un parche
+  puntual, no una corrección de la numeración vieja.
+- Agregado filtro **"Tipo"** (PORTATIL/TORRE) a los filtros globales de
+  Seguimiento — dropdown nuevo (`#pf-tipo`), poblado dinámicamente,
+  sumado a `_matchPF()` y al contador de filtros activos.
+- Verificado: `node --check`, balance de llaves en 7 CSS, simulación de
+  los 2 nuevos reportes con dataset sintético (2/2 casos correctos).

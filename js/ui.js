@@ -919,6 +919,11 @@ function renderReportes() {
   $('r-devoluciones').textContent = _bdsR.devoluciones || 0;
   $('r-finalizados').textContent  = _bdsR.finalizados || 0;
   $('r-feedback').textContent     = base.filter(function(u){ return (u.feedback||0) > 0; }).length;
+  // GH3.42.34: REP-07/REP-08 a pedido de Cristian
+  $('r-transito-nuevo').textContent = base.filter(function(u){ return u.estado === 'En tránsito equipo nuevo'; }).length;
+  $('r-pend-devolucion').textContent = base.filter(function(u){
+    return u.estado === 'Pendiente devolución equipo anterior' || u.estado === 'En tránsito equipo anterior';
+  }).length;
   // STAB-v12 TASK 06: tablero gerencial ejecutivo
   if (window.renderReportesEjecutivos) renderReportesEjecutivos();
 }
@@ -973,6 +978,23 @@ function setReport(type, btn) {
     case 'raee':
       filtered = base.filter(function(u){ return !!u.recomendacion_raee; });
       title = 'REP-09 · Clasificación RAEE'; break;
+    // GH3.42.34: REP-07/REP-08 a pedido de Cristian. Nota: la numeración
+    // interna de "title" ya no coincidía con la numeración visible de las
+    // tarjetas antes de este cambio (preexistente — ej. "Devoluciones" se
+    // ve como REP-04 en la tarjeta pero decía "REP-06" en este título).
+    // Se usan REP-10/REP-11 aquí para no chocar con los que ya existen;
+    // no se corrige la numeración vieja, es un cambio aparte.
+    case 'transito_nuevo':
+      filtered = base.filter(function(u){ return u.estado === 'En tránsito equipo nuevo'; });
+      title = 'REP-10 · En tránsito (equipo nuevo)'; break;
+    case 'pend_devolucion':
+      // Mismos 2 estados que pidió Cristian explícitamente. NOTA: esto
+      // se superpone con 'devoluciones' (REP-04 visible), que además
+      // incluye 'Equipo anterior recibido' — ver aviso en el resumen.
+      filtered = base.filter(function(u){
+        return u.estado === 'Pendiente devolución equipo anterior' || u.estado === 'En tránsito equipo anterior';
+      });
+      title = 'REP-11 · Pendiente devolución + en tránsito anterior'; break;
     default:
       filtered = base;
       title = 'Reporte general'; break;
@@ -1719,6 +1741,8 @@ function _populatePanelFilters() {
   fill('pf-ciudad',   function(u){ return window.CityNormalizer ? CityNormalizer.normalize(u.ciudad) : u.ciudad; }, 'Todas las ciudades');
   fill('pf-proyecto', function(u){ return u.proyecto; }, 'Todos los proyectos');
   fill('pf-tecnico',  function(u){ return u.tecnico; },  'Todos los técnicos');
+  // GH3.42.34: filtro por tipo de activo (PORTATIL/TORRE), a pedido de Cristian
+  fill('pf-tipo',     function(u){ return (u.tipo || '').toUpperCase(); }, 'Todos los tipos');
 }
 
 function renderPanelEjecutivo() {
@@ -1744,6 +1768,8 @@ function renderPanelEjecutivo() {
     }
     if (pf.proyecto && u.proyecto !== pf.proyecto) return false;
     if (pf.tecnico && (u.tecnico || '').toLowerCase() !== pf.tecnico.toLowerCase()) return false;
+    // GH3.42.34: filtro por tipo de activo, a pedido de Cristian
+    if (pf.tipo && (u.tipo || '').toUpperCase() !== pf.tipo.toUpperCase()) return false;
     if (pf.estado && u.estado !== pf.estado) return false;
     if (pf.feedback && !(Number(u.feedback || 0) >= Number(pf.feedback))) return false;
     return true;
@@ -1756,7 +1782,7 @@ function renderPanelEjecutivo() {
   var set = function(id,v){ var e=document.getElementById(id); if(e) e.textContent = v; };
   var _pfCountEl = document.getElementById('pf-count');
   if (_pfCountEl) {
-    var _pfHasFilter = !!(pf.empresa || pf.ciudad || pf.proyecto || pf.tecnico || pf.estado || pf.feedback);
+    var _pfHasFilter = !!(pf.empresa || pf.ciudad || pf.proyecto || pf.tecnico || pf.tipo || pf.estado || pf.feedback);
     _pfCountEl.textContent = _pfHasFilter ? (_filteredAll.length + ' de ' + (window.USERS || []).length) : '';
   }
 

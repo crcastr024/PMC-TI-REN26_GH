@@ -120,7 +120,12 @@
 /* ── Report cards (view-reportes) ── */
 #view-reportes .reports-grid {
   display: grid; gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  /* GH3.42.34 FIX: auto-fill deja una columna extra "fantasma" (angosta,
+     sin contenido visible pero ocupando espacio) cuando el ancho del
+     contenedor no calza exacto con el número real de tarjetas —
+     reportado por Cristian (franja entre REP-01 y REP-02). auto-fit
+     colapsa cualquier columna sobrante a cero en vez de dejarla angosta. */
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 #view-reportes .report-card {
   background: var(--paper);
