@@ -518,3 +518,82 @@ app — si se quiere ese alcance completo, es un trabajo aparte.
   pidió un campo "Marca" separado.
 - Verificado con dataset de ejemplo (node -e): salida coincide con el
   formato exacto solicitado.
+
+## GH3.42.31
+- Integrado el componente "Meniscus Dock" (meniscus-dock.html, Cristian)
+  como dock de acceso rápido — 5 vistas curadas (Resumen/Usuarios/
+  Seguimiento/Actividad/Ajustes), animación de "bead" líquido con
+  física de resorte manual (rAF) y filtro SVG "goo".
+- Proceso: Council previo (Parte 2 del workflow) definió contenido y
+  reutilización de goView(); Cristian confirmó pero retiró la condición
+  "solo mobile" — el dock queda visible en todos los tamaños de pantalla.
+- Colores: los 5 acentos originales del demo (#c2f542/#4ec5f1/#ffa53d/
+  #b98cff/#ff4fa0) reemplazados por la familia roja REN26, a pedido
+  explícito (reemplaza la restricción dura original del brief, que
+  pedía mantenerlos fijos — se documenta el cambio de instrucción).
+- Sin las ".faces" de texto del demo original ("solo quiero la
+  animación") — cada vista real ya tiene su propio contenido.
+- FIX crítico encontrado antes de integrar: el original hacía
+  `document.documentElement.style.setProperty('--accent', ...)` — habría
+  sobreescrito el token `--accent` GLOBAL de toda la app (botones,
+  badges, focus rings) con el color del tab activo del dock. Se
+  escopeó a `--mdock-accent`, propio de `#mdock`, sin tocar ningún
+  token existente.
+- FIX de arquitectura: no se creó un segundo router — el dock llama a
+  `goView()` existente. Se agregó un gancho de una línea en `goView()`
+  (utils.js) para sincronizar el bead cuando la navegación viene del
+  sidebar (`MeniscusDock.setActiveByView`).
+- Guardia RBAC agregada (no estaba en el original): técnico no tiene
+  acceso a 'actividad' ni 'ajustes' — el dock ahora verifica
+  `AuthorizationService.canAccess()` antes de animar el bead hacia esos
+  tabs, evitando que quede desincronizado de la vista realmente
+  mostrada si `goView()` bloquea la navegación.
+- Mejora de rendimiento agregada (no estaba en el original): el loop de
+  `requestAnimationFrame` se pausa con `document.hidden` — el dock ahora
+  es permanente (no solo mobile), correr el loop indefinidamente en
+  background era un costo de batería innecesario.
+- Sin tocar: dataService.js, graph.js, provider.js, refresh.js,
+  dashboard.js, sync.js, auditService.js, mismatches.js (core
+  congelado, respetado). Sin tocar ningún `[data-theme="dark"]`
+  existente — el dock mantiene su propia estética oscura fija en
+  ambos modos de la app, mismo criterio que los tooltips globales.
+- Clases CSS nuevas prefijadas `mdock-` — verificado sin colisión con
+  el resto del proyecto antes de escribir.
+- Archivos: index.html (markup + filtro SVG goo, nuevos, sin reemplazar
+  bloques existentes), css/components.css (bloque nuevo anexado),
+  js/meniscusDock.js (nuevo), js/utils.js (1 línea en goView()).
+
+### Verificado
+- `node --check` en los 19 archivos JS (18 + meniscusDock.js nuevo).
+- Balance de llaves en los 7 CSS — sin discrepancias.
+- Simulación de guardia RBAC (node -e): técnico correctamente bloqueado
+  de actividad/ajustes, super_admin con acceso completo, mapeo de
+  índices de tabs correcto.
+- **Pendiente de confirmación visual tras deploy** — no hay navegador
+  en este entorno para verificar la física del bead en vivo.
+
+### Riesgos / decisiones abiertas, no resueltas
+- El dock ahora es permanente y no tiene forma de ocultarse — no se
+  agregó botón de cierre/colapso por no haber sido pedido. Si resulta
+  intrusivo, decir y se agrega.
+- Los tabs "Actividad"/"Ajustes" siguen siendo VISIBLES para técnico
+  (solo se bloquea la navegación); no se filtran/ocultan del dock por
+  rol, a diferencia del sidebar que sí los oculta con display:none.
+  Si se quiere el mismo comportamiento, es un cambio adicional.
+
+## GH3.42.32
+- Calibrado el fondo general de modo oscuro (`--bg`) contra el sitio
+  real de Heinsohn (heinsohn.co/co, captura del modo oscuro real
+  compartida por Cristian) — de `#0B0B10` a `#08080B`, más cerca del
+  negro auténtico de marca.
+- NO se tocó `--bg-elev`/`--bg-card` (superficies con texto/datos:
+  inputs, tarjetas) — ahí sigue aplicando el criterio "más amigable"
+  de GH3.42.14 (evitar fatiga visual en un dashboard denso de
+  tarjetas/tablas). Son dos criterios distintos que conviven: fondo
+  general más fiel a marca, superficies de contenido más suaves.
+- No se pudo leer la paleta exacta vía `web_fetch` a heinsohn.co/co —
+  el tool solo devuelve texto extraído, sin CSS ni colores. Se usó la
+  captura visual real que compartió Cristian en su lugar.
+- Sin cambios en --accent/--brand — ya están en la familia roja
+  correcta, usados como acento (no como fondo sólido), consistente
+  con cómo se usa el rojo en el sitio real.

@@ -87,7 +87,7 @@
   /* GH3.42.13: paleta suavizada — "más amigable" (menos negro/blanco puros,
      que causan alto contraste tipo halation). Solo neutros; --accent y
      el resto de colores de marca/estado quedan igual que antes. */
-  --bg: #0B0B10;
+  --bg: #08080B;
   --bg-elev: #13131A;
   --bg-card: #191922;
   --bg-card-hover: #21212E;
