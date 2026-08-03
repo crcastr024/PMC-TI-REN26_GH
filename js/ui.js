@@ -1996,12 +1996,12 @@ function _renderGaugeSVG(elId, G) {
   }
   el.innerHTML =
     '<svg viewBox="0 0 200 130" width="100%" style="max-width:280px;display:block;margin:0 auto">' +
-      '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#E5E7EB" stroke-width="18" stroke-linecap="round"/>' +
+      '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" style="stroke:var(--border-strong,#E5E7EB)" stroke-width="18" stroke-linecap="round"/>' +
       '<path d="' + arcPath(real, 80) + '" fill="none" stroke="'+color+'" stroke-width="18" stroke-linecap="round" style="transition:stroke-dasharray 1.2s ease"/>' +
-      '<line x1="100" y1="100" x2="' + pExp.x.toFixed(1) + '" y2="' + pExp.y.toFixed(1) + '" stroke="#475569" stroke-width="2" stroke-dasharray="3,3"/>' +
-      '<circle cx="' + pExp.x.toFixed(1) + '" cy="' + pExp.y.toFixed(1) + '" r="4" fill="#475569"/>' +
+      '<line x1="100" y1="100" x2="' + pExp.x.toFixed(1) + '" y2="' + pExp.y.toFixed(1) + '" style="stroke:var(--text-3,#475569)" stroke-width="2" stroke-dasharray="3,3"/>' +
+      '<circle cx="' + pExp.x.toFixed(1) + '" cy="' + pExp.y.toFixed(1) + '" r="4" style="fill:var(--text-3,#475569)"/>' +
       '<text x="100" y="90" text-anchor="middle" font-family="Inter Tight,sans-serif" font-size="34" font-weight="900" fill="'+color+'">' + real + '%</text>' +
-      '<text x="100" y="115" text-anchor="middle" font-size="10" fill="#6B7280">Real vs '+esperado+'% esperado</text>' +
+      '<text x="100" y="115" text-anchor="middle" font-size="10" style="fill:var(--text-3,#6B7280)">Real vs '+esperado+'% esperado</text>' +
     '</svg>';
 }
 

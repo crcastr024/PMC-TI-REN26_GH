@@ -172,12 +172,18 @@
 .rc-stat {
   display: flex; flex-direction: column;
   padding: 7px 10px;
-  background: rgba(255,255,255,.5);
+  /* GH3.42.33 FIX: rgba(255,255,255,.5) fijo — en dark mode da un box
+     gris-claro medio, y la etiqueta (--muted, gris medio en dark)
+     pierde casi todo el contraste contra ese fondo (texto ilegible,
+     reportado por Cristian). --paper-2 mantiene el mismo aspecto en
+     claro (su valor claro es casi idéntico al blanco-50% original) y
+     da un fondo realmente oscuro en dark, restaurando el contraste. */
+  background: var(--paper-2, rgba(255,255,255,.5));
   border: 1px solid var(--rule-2, #EBE8E1);
   border-radius: 2px;
   transition: border-color .18s, background .18s;
 }
-.rc-stat:hover { background: #fff; border-color: var(--rule); }
+.rc-stat:hover { background: var(--paper, #fff); border-color: var(--rule); }
 .rc-stat-v {
   font-family: var(--font-display);
   font-size: 20px;

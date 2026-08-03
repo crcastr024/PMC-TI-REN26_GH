@@ -597,3 +597,39 @@ app — si se quiere ese alcance completo, es un trabajo aparte.
 - Sin cambios en --accent/--brand — ya están en la familia roja
   correcta, usados como acento (no como fondo sólido), consistente
   con cómo se usa el rojo en el sitio real.
+
+## GH3.42.33
+Dos bugs de contraste en modo oscuro, reportados por Cristian con
+capturas reales (vista "Por técnico" y widget "Avance esperado vs real").
+
+- **FIX severo — hero ilegible en 8 vistas** (Usuarios, Por técnico, Por
+  ciudad, Devoluciones, Reportes, Actividad, Ajustes, Aprobaciones):
+  `.view .hero.compact` (global-refinement.css) usaba `background:
+  var(--ink, #0A0E14)`. Este hero es oscuro SIEMPRE por diseño (el texto
+  de adentro está hardcodeado en blanco: #FAFAF8, rgba(255,255,255,.5/.6)).
+  Cuando `--ink` pasó a ser CLARO en modo oscuro (GH3.42.14, para servir
+  de color de texto en la sección "papel" de Seguimiento), este OTRO uso
+  se rompió: fondo casi blanco + texto blanco encima = ilegible. Mismo
+  tipo de colisión que ya se corrigió una vez para `#view-panel
+  .panel-hero` — esta segunda instancia se escapó porque vive en un
+  archivo distinto (global-refinement.css) que no se auditó en su
+  momento. Fix: fondo fijo `#0A0E14`, igual criterio que la vez anterior.
+- **FIX contraste — etiquetas invisibles en tarjeta de técnico**
+  (carrusel Leaderboard): `.rc-stat` usaba `background: rgba(255,255,255,.5)`
+  fijo — en dark mode da un box gris-claro medio, y `.rc-stat-l`
+  (`color: var(--muted)`, gris medio en dark) pierde casi todo el
+  contraste contra ese fondo. Cambiado a `var(--paper-2, ...)` — mismo
+  aspecto en claro, fondo realmente oscuro en dark.
+- **FIX contraste — gauge "Avance esperado vs real"**: `_renderGaugeSVG()`
+  dibujaba el track (`#E5E7EB`), el marcador/línea punteada y el
+  subtítulo (`#475569`/`#6B7280`) con hex fijo vía atributos XML
+  (`stroke=`/`fill=`), que NO resuelven `var()`. Cambiados a `style=`
+  (que sí resuelve CSS custom properties) con `var(--border-strong)`/
+  `var(--text-3)` — el track claro se quedaba claro sobre tarjeta
+  oscura, y los grises oscuros del marcador/subtítulo no tenían
+  contraste contra un fondo oscuro. De paso, alineado el swatch
+  "Esperado" de la leyenda (hex fijo `#94A3B8`) al mismo token.
+- Patrón repetido en los 3 hallazgos: colores fijos (hex u overlays
+  rgba) que no responden al toggle de tema, en componentes que SÍ
+  necesitaban adaptarse (a diferencia de los que correctamente se
+  mantienen oscuros siempre — heroes, tooltips).
