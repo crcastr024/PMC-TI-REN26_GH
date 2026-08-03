@@ -536,54 +536,61 @@
           <span class="filter-count" id="rep-base-count">— de 132 base</span>
         </div>
         <div class="reports-grid">
+          <!-- GH3.42.35: reordenado según la secuencia real de estados
+               (Alistamiento → En tránsito nuevo → Entregados → Pend.
+               devolución → Devoluciones → Actas → Finalizados → Feedback),
+               a pedido de Cristian. REP-01..08 renumerados para que la
+               numeración visible sea consistente con el orden — de paso
+               corrige la inconsistencia interna/visible dejada pendiente
+               en GH3.42.34. data-rep/id/onclick sin cambios, solo posición
+               y el texto "REP-XX" mostrado. -->
           <div class="report-card" data-rep="alistamiento" onclick="setReport('alistamiento', this)">
             <div class="report-head"><span class="report-code">REP-01</span><span class="report-icon"><svg viewBox="0 0 24 24"><path d="M9 11H1l8-8 8 8h-8v8z"/></svg></span></div>
             <div class="report-title">Alistamiento</div>
             <div class="report-value" id="r-alistamiento">—</div>
             <div class="report-desc">Equipos en preparación</div>
           </div>
+          <div class="report-card" data-rep="transito_nuevo" onclick="setReport('transito_nuevo', this)">
+            <div class="report-head"><span class="report-code">REP-02</span><span class="report-icon"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span></div>
+            <div class="report-title">En tránsito (nuevo)</div>
+            <div class="report-value" id="r-transito-nuevo" style="color: var(--blue)">—</div>
+            <div class="report-desc">Equipo nuevo en camino al usuario</div>
+          </div>
           <div class="report-card" data-rep="entregados" onclick="setReport('entregados', this)">
-            <div class="report-head"><span class="report-code">REP-02</span><span class="report-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span></div>
+            <div class="report-head"><span class="report-code">REP-03</span><span class="report-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span></div>
             <div class="report-title">Entregados</div>
             <div class="report-value" id="r-entregados" style="color: var(--green)">—</div>
             <div class="report-desc">En manos del usuario</div>
           </div>
-          <div class="report-card" data-rep="actas" onclick="setReport('actas', this)">
-            <div class="report-head"><span class="report-code">REP-03</span><span class="report-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span></div>
-            <div class="report-title">Actas firmadas</div>
-            <div class="report-value" id="r-actas" style="color: var(--blue)">—</div>
-            <div class="report-desc">PandaDoc</div>
+          <div class="report-card" data-rep="pend_devolucion" onclick="setReport('pend_devolucion', this)">
+            <div class="report-head"><span class="report-code">REP-04</span><span class="report-icon"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.63"/><polyline points="21 3 21 9 15 9"/></svg></span></div>
+            <div class="report-title">Pend. devolución</div>
+            <div class="report-value" id="r-pend-devolucion" style="color: var(--amber)">—</div>
+            <div class="report-desc">Pendiente recoger + en tránsito equipo anterior</div>
           </div>
           <div class="report-card" data-rep="devoluciones" onclick="setReport('devoluciones', this)">
-            <div class="report-head"><span class="report-code">REP-04</span><span class="report-icon"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></span></div>
+            <div class="report-head"><span class="report-code">REP-05</span><span class="report-icon"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></span></div>
             <div class="report-title">Devoluciones</div>
             <div class="report-value" id="r-devoluciones" style="color: var(--amber)">—</div>
             <div class="report-desc">Equipos antiguos recibidos</div>
           </div>
+          <div class="report-card" data-rep="actas" onclick="setReport('actas', this)">
+            <div class="report-head"><span class="report-code">REP-06</span><span class="report-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span></div>
+            <div class="report-title">Actas firmadas</div>
+            <div class="report-value" id="r-actas" style="color: var(--blue)">—</div>
+            <div class="report-desc">PandaDoc</div>
+          </div>
           <div class="report-card" data-rep="finalizados" onclick="setReport('finalizados', this)">
-            <div class="report-head"><span class="report-code">REP-05</span><span class="report-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg></span></div>
+            <div class="report-head"><span class="report-code">REP-07</span><span class="report-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg></span></div>
             <div class="report-title">Finalizados</div>
             <div class="report-value" id="r-finalizados" style="color: var(--green)">—</div>
             <div class="report-desc">Proceso completo</div>
           </div>
           <div class="report-card" data-rep="feedback" onclick="setReport('feedback', this)">
-            <div class="report-head"><span class="report-code">REP-06</span><span class="report-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span></div>
+            <div class="report-head"><span class="report-code">REP-08</span><span class="report-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span></div>
             <div class="report-title">Feedback</div>
             <div class="report-value" id="r-feedback">—</div>
             <div class="report-desc">Encuestas a usuarios</div>
-          </div>
-          <!-- GH3.42.34: REP-07/REP-08 a pedido de Cristian -->
-          <div class="report-card" data-rep="transito_nuevo" onclick="setReport('transito_nuevo', this)">
-            <div class="report-head"><span class="report-code">REP-07</span><span class="report-icon"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span></div>
-            <div class="report-title">En tránsito (nuevo)</div>
-            <div class="report-value" id="r-transito-nuevo" style="color: var(--blue)">—</div>
-            <div class="report-desc">Equipo nuevo en camino al usuario</div>
-          </div>
-          <div class="report-card" data-rep="pend_devolucion" onclick="setReport('pend_devolucion', this)">
-            <div class="report-head"><span class="report-code">REP-08</span><span class="report-icon"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.63"/><polyline points="21 3 21 9 15 9"/></svg></span></div>
-            <div class="report-title">Pend. devolución</div>
-            <div class="report-value" id="r-pend-devolucion" style="color: var(--amber)">—</div>
-            <div class="report-desc">Pendiente recoger + en tránsito equipo anterior</div>
           </div>
         </div>
         <div class="panel" id="report-detail">

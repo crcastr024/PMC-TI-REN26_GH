@@ -950,22 +950,31 @@ function setReport(type, btn) {
       // GH3.42.28: incluye también 'Programado', a pedido de Cristian
       filtered = base.filter(function(u){ return u.estado === 'Alistamiento' || u.estado === 'Programado'; });
       title = 'REP-01 · Alistamiento + Programado'; break;
-    case 'envio':
-      filtered = base.filter(function(u){ return u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo'; });
-      title = 'REP-02 · En envío'; break;
-    case 'pendientes':
-      filtered = base.filter(function(u){ return u.estado === 'Pendiente'; });
-      title = 'REP-03 · Pendientes'; break;
+    // GH3.42.35: numeración interna alineada con el nuevo orden visual
+    // de las tarjetas (por secuencia real de estados). 'envio'/
+    // 'pendientes'/'raee' no tienen tarjeta visible — quedan al final
+    // (REP-09/10/11) para no chocar con los 8 que sí se muestran.
+    case 'transito_nuevo':
+      filtered = base.filter(function(u){ return u.estado === 'En tránsito equipo nuevo'; });
+      title = 'REP-02 · En tránsito (equipo nuevo)'; break;
     case 'entregados':
       // HITO acumulativo: usuario recibió equipo aunque luego cambie de estado
       filtered = base.filter(function(u){ return !!u.fecha_entrega || ENTREGADO_STATES.indexOf(u.estado) >= 0; });
-      title = 'REP-04 · Entregados'; break;
-    case 'actas':
-      filtered = base.filter(function(u){ return !!u.fecha_firma_acta; });
-      title = 'REP-05 · Actas firmadas'; break;
+      title = 'REP-03 · Entregados'; break;
+    case 'pend_devolucion':
+      // Mismos 2 estados que pidió Cristian explícitamente. NOTA: esto
+      // se superpone con 'devoluciones' (REP-05), que además incluye
+      // 'Equipo anterior recibido' — ver aviso en el resumen (GH3.42.34).
+      filtered = base.filter(function(u){
+        return u.estado === 'Pendiente devolución equipo anterior' || u.estado === 'En tránsito equipo anterior';
+      });
+      title = 'REP-04 · Pendiente devolución + en tránsito anterior'; break;
     case 'devoluciones':
       filtered = base.filter(function(u){ return DEVOLUCION_STATES.indexOf(u.estado) >= 0; });
-      title = 'REP-06 · Devoluciones'; break;
+      title = 'REP-05 · Devoluciones'; break;
+    case 'actas':
+      filtered = base.filter(function(u){ return !!u.fecha_firma_acta; });
+      title = 'REP-06 · Actas firmadas'; break;
     case 'finalizados':
       // GH3.42.5 FIX: alineado con buildDashboardStats — 4 estados terminales
       filtered = base.filter(function(u){
@@ -975,26 +984,15 @@ function setReport(type, btn) {
     case 'feedback':
       filtered = base.filter(function(u){ return (u.feedback||0) > 0; });
       title = 'REP-08 · Con feedback'; break;
+    case 'envio':
+      filtered = base.filter(function(u){ return u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo'; });
+      title = 'REP-09 · En envío'; break;
+    case 'pendientes':
+      filtered = base.filter(function(u){ return u.estado === 'Pendiente'; });
+      title = 'REP-10 · Pendientes'; break;
     case 'raee':
       filtered = base.filter(function(u){ return !!u.recomendacion_raee; });
-      title = 'REP-09 · Clasificación RAEE'; break;
-    // GH3.42.34: REP-07/REP-08 a pedido de Cristian. Nota: la numeración
-    // interna de "title" ya no coincidía con la numeración visible de las
-    // tarjetas antes de este cambio (preexistente — ej. "Devoluciones" se
-    // ve como REP-04 en la tarjeta pero decía "REP-06" en este título).
-    // Se usan REP-10/REP-11 aquí para no chocar con los que ya existen;
-    // no se corrige la numeración vieja, es un cambio aparte.
-    case 'transito_nuevo':
-      filtered = base.filter(function(u){ return u.estado === 'En tránsito equipo nuevo'; });
-      title = 'REP-10 · En tránsito (equipo nuevo)'; break;
-    case 'pend_devolucion':
-      // Mismos 2 estados que pidió Cristian explícitamente. NOTA: esto
-      // se superpone con 'devoluciones' (REP-04 visible), que además
-      // incluye 'Equipo anterior recibido' — ver aviso en el resumen.
-      filtered = base.filter(function(u){
-        return u.estado === 'Pendiente devolución equipo anterior' || u.estado === 'En tránsito equipo anterior';
-      });
-      title = 'REP-11 · Pendiente devolución + en tránsito anterior'; break;
+      title = 'REP-11 · Clasificación RAEE'; break;
     default:
       filtered = base;
       title = 'Reporte general'; break;

@@ -666,3 +666,20 @@ A pedido de Cristian, sobre la vista Ejecutivos/Reportes y Seguimiento.
   sumado a `_matchPF()` y al contador de filtros activos.
 - Verificado: `node --check`, balance de llaves en 7 CSS, simulación de
   los 2 nuevos reportes con dataset sintético (2/2 casos correctos).
+
+## GH3.42.35
+- A pedido de Cristian: reordenadas las 8 tarjetas de Ejecutivos/Reportes
+  según la secuencia real de estados del flujo REN26 — Alistamiento →
+  En tránsito (nuevo) → Entregados → Pend. devolución → Devoluciones →
+  Actas firmadas → Finalizados → Feedback.
+- Renumeradas REP-01..08 consistente con el nuevo orden visual. De paso
+  se cierra la inconsistencia interna/visible que había quedado
+  documentada como pendiente en GH3.42.34 (el "title" interno de
+  `setReport()` ya no coincidía con el número mostrado en la tarjeta).
+- Los 3 reportes sin tarjeta visible ('envio','pendientes','raee',
+  alcanzables solo por código, no por UI) quedaron renumerados al final
+  (REP-09/10/11) para no chocar con los 8 visibles.
+- Sin cambios de comportamiento — mismos data-rep/id/onclick/filtros,
+  solo posición en el grid y el texto "REP-XX" mostrado/interno.
+- Verificado: `node --check`, conteo de tarjetas (8, sin duplicados ni
+  huecos en REP-01..08).
