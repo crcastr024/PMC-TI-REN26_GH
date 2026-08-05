@@ -942,8 +942,17 @@ function renderView(id) {
 }
 
 function scrollMainTop() {
+  // GH3.42.48 FIX: confirmado en vivo — el scroll real de la página
+  // vive en <html>/document, no en #main-scroll. scrollMainTop()
+  // reseteaba el elemento equivocado: quien navegaba desde una vista
+  // scrolleada hacia abajo llegaba a la vista nueva con ese mismo
+  // desplazamiento heredado (hueco en blanco arriba, contenido
+  // empezando a mitad de página). Se resetean ambos — el original
+  // (#main-scroll, por si en algún layout sí es el que scrollea) y el
+  // real (window/document).
   const main = $('main-scroll');
   if (main && typeof main.scrollTo === 'function') main.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 window.scrollMainTop = scrollMainTop;
 

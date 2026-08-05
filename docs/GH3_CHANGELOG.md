@@ -950,3 +950,59 @@ gusta, sin embargo mantengamos el timeline").
   contenedor.
 - Verificado: `node --check`, balance de llaves en 7 CSS, simulación
   de generación de etiquetas con los 7 textos reales exactos.
+
+## GH3.42.47
+Dos correcciones al formulario, reportadas por Cristian con captura.
+
+- **FIX real (no cosmético)**: el clic en un tab de sección hacía
+  `scrollIntoView()`, pero el navegador no sabe que `.form-nav-tabs` es
+  sticky — el salto dejaba el encabezado y las primeras etiquetas de
+  la sección destino tapados detrás de la barra fija. Se veía "5 ·
+  Estado REN26" y las etiquetas TÉCNICO/ESTADO desaparecidas, solo los
+  valores de los campos sueltos. Fix: `scroll-margin-top: 56px` en
+  `.form-section` — el navegador ahora reserva ese espacio en
+  cualquier salto a una sección, sin tocar la lógica de scroll en JS.
+- Campos del formulario (`.form-input`, `.form-select`,
+  `.form-textarea`) con esquinas más redondeadas — `var(--r-sm)` (6px)
+  → `var(--r-md)` (10px).
+- Verificado: balance de llaves en 7 CSS, `node --check`.
+
+## GH3.42.48
+Bug crítico encontrado y corregido — reportado por Cristian ("da clic
+sobre la tarjeta de los técnicos y mira lo que sucede"). No era menor:
+la vista completa "Por técnico → detalle" probablemente nunca funcionó
+para nadie, en ningún navegador, desde que existe.
+
+- **Causa raíz**: `</div>` duplicado en index.html (línea 943) cerraba
+  `<main id="main-scroll">` prematuramente. Todo lo que venía después
+  en el HTML (`#view-tecnico-detail`, `#view-home-tecnico`, y
+  potencialmente otras vistas) terminaba como hijo directo de `<body>`
+  en vez de vivir dentro de `#main-scroll` — el contenido SÍ se
+  renderizaba (confirmado: 30871 caracteres en el DOM, sin errores de
+  consola) pero aparecía empujado una pantalla completa hacia abajo,
+  invisible sin scroll manual. Encontrado inspeccionando el DOM en
+  vivo (`parentElement.id`, balance de `<div>` línea por línea) —
+  balance global de 631 aperturas/630 cierres delató la causa exacta.
+- **Fix**: eliminado el `</div>` sobrante. Verificado en vivo
+  (inyectado directo en el sitio desplegado antes de esperar
+  redeploy): SANTIAGO detalle ahora muestra hero, 6 KPIs y tabla de 48
+  usuarios asignados — completo.
+- **De paso, mismo patrón de bug que ya until esta sesión ha corregido
+  3 veces**: `.hero-sub strong` (número de equipos, ciudad principal)
+  usaba `var(--text-1)`, invisible en modo claro contra el fondo
+  oscuro fijo de este hero — mismo tipo de colisión que GH3.42.14/33.
+  Se agregó el override que faltaba (`.view .hero.compact .hero-sub
+  strong { color: #fff }`), siguiendo el mismo patrón ya establecido
+  para `.hero-title strong`.
+- **También corregido en la misma sesión**: `scrollMainTop()`
+  reseteaba `#main-scroll`, pero el scroll real de la página vive en
+  `<html>`/document — confirmado con `document.scrollingElement` en
+  vivo. Ahora resetea ambos.
+- **Pendiente, sin impacto visible conocido**: balance global de
+  `<div>` en index.html quedó en 631/630 (un div sin cerrar en algún
+  otro punto del archivo, no identificado con precisión). No causa
+  síntoma visible — los navegadores cierran divs huérfanos al final
+  del documento sin romper el layout. Se documenta para no perderlo
+  de vista, no se persiguió exhaustivamente dado el bajo riesgo.
+- Verificado: `node --check`, balance de llaves en 7 CSS, balance
+  local del bloque view-panel (167=167, antes 167/168).

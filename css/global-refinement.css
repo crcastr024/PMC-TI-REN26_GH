@@ -43,6 +43,15 @@
 .view .hero.compact .hero-sub {
   font-size: 13px; color: rgba(255,255,255,.6); font-family: var(--font-body);
 }
+/* GH3.42.48 FIX: faltaba este override — .hero-title strong (arriba)
+   ya tenía el suyo, pero <strong> dentro de .hero-sub se quedaba con
+   el color genérico de components.css (var(--text-1)), que en modo
+   claro es casi negro. Invisible sobre el fondo oscuro fijo de este
+   hero — confirmado en vivo en "Por técnico → detalle" (el número de
+   equipos y la ciudad principal desaparecían en modo claro). */
+.view .hero.compact .hero-sub strong {
+  color: #fff; font-weight: 700;
+}
 
 /* ── Section titles — tipografía consistente ── */
 .view .section-eyebrow {

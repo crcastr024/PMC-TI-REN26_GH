@@ -738,6 +738,15 @@
 .form-section { margin-bottom: 20px; width: 100%; box-sizing: border-box; }
 .form-section:last-child { margin-bottom: 0; }
 .form-section-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+/* GH3.42.47 FIX: el clic en un tab hacía scrollIntoView(), pero el
+   navegador no sabe que .form-nav-tabs es sticky — el salto dejaba el
+   encabezado y las primeras etiquetas de la sección destino tapados
+   detrás de la barra fija (reportado por Cristian con captura: se
+   veían los valores de los campos de la sección 5 sin sus etiquetas
+   ni el título "5 · Estado REN26" encima). scroll-margin-top reserva
+   ese espacio para cualquier salto a una sección, sin importar cómo
+   se dispare (clic en tab, o cualquier scrollIntoView futuro). */
+.form-section { scroll-margin-top: 56px; }
 /* GH3.42.46: nav de secciones del formulario — sticky bajo el Timeline,
    que se mantiene intacto arriba (pedido explícito de Cristian). Los
    márgenes negativos compensan el padding de .modal-body para que se
@@ -762,7 +771,7 @@
 .form-group.full { grid-column: 1 / -1; }
 .form-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
 .form-input, .form-select, .form-textarea {
-  padding: 10px 13px; border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+  padding: 10px 13px; border: 1px solid var(--border-strong); border-radius: var(--r-md);
   font-size: 13px; background: var(--bg-elev); color: var(--text-1);
   box-sizing: border-box; width: 100%;
   transition: all 0.15s; font-family: inherit;
