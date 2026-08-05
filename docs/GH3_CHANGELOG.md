@@ -683,3 +683,58 @@ A pedido de Cristian, sobre la vista Ejecutivos/Reportes y Seguimiento.
   solo posición en el grid y el texto "REP-XX" mostrado/interno.
 - Verificado: `node --check`, conteo de tarjetas (8, sin duplicados ni
   huecos en REP-01..08).
+
+## GH3.42.36
+Primer paso de la consolidación Resumen/Seguimiento/Ejecutivos
+(análisis de redundancia con Cristian, enfoque de presentación de
+datos — pirámide invertida). Cambios seguros y reversibles; nada se
+eliminó.
+
+- **Resumen reordenado**: 7 tarjetas clave primero (Total equipos,
+  Pendientes, Entregados, Por aprobar, Pendiente acta, Dev. pendientes,
+  Renovaciones completadas — las que definen avance o requieren acción),
+  divisor "Detalle operativo", luego las 6 restantes (En alistamiento,
+  En envío, Actas firmadas, Backups, Torres, Portátiles). Mismos ids/
+  onclick/data-tip en las 13 — solo posición y jerarquía visual.
+- **"Ejecutivos" retirado del menú principal** — `display:none` en el
+  `.sb-item`, la vista sigue funcionando y se alcanza por clic desde
+  las 8 tarjetas de Seguimiento (enlace ya construido en GH3.42.26).
+  Verificado que RBAC (boot.js) no tiene ninguna referencia que
+  reactive este ítem para algún rol.
+- Verificado: `node --check`, conteo de `.sb-item` (13) y `.metric-card`
+  (13) sin cambios — confirma que no se perdió ningún elemento.
+
+### Pendiente, sin resolver
+- La pregunta del Council anterior sigue sin respuesta explícita: si
+  alguna de las 3 vistas se usa para exportar/imprimir a un
+  stakeholder externo. Se procedió asumiendo que no, dado que "retirar
+  del menú" es 100% reversible (una línea de CSS) si resulta que sí.
+- Destino final de "Resumen" como vista propia (¿se queda tal cual,
+  se repropone para otra audiencia, o se retira también?) — no se
+  decidió en este paso, es la siguiente conversación.
+
+## GH3.42.37
+Encontrado en vivo, probando el sitio real desplegado en modo oscuro
+(confirmando que GH3.42.34/35 SÍ está desplegado, GH3.42.36 todavía no).
+
+- **FIX nuevo**: `--bg-2` es un token FANTASMA — nunca se definió en
+  ningún archivo CSS del proyecto. Todo lo que lo usaba caía siempre a
+  su valor de fallback fijo (`#f9f9f9`/`#f0f0f0`), ignorando el modo
+  oscuro por completo. Afectaba 4 componentes:
+  - `.exec-empresa-card` ("Cumplimiento por empresa" en Seguimiento y
+    Ejecutivos) — confirmado visualmente: card blanca flotando en una
+    página por lo demás oscura.
+  - `.pipe-bar-wrap` (fondo de las barras del Pipeline REN26, Ejecutivos)
+  - `.risk-row` (filas de Riesgos Ejecutivos)
+  - `.op-empresa-block` (bloque de empresa en Resumen)
+  - Los 4 cambiados a `var(--paper-2, ...)`, que sí tiene valores
+    reales para ambos modos (`#F1F0EC` claro / `#1D1D27` oscuro).
+- Verificado en vivo, en el sitio real desplegado (login con cuenta de
+  Cristian, toggle claro/oscuro real): confirma que los fixes de
+  GH3.42.33 (hero de Por técnico, etiquetas de estadísticas, gauge de
+  Seguimiento) funcionan correctamente. Este nuevo bug (--bg-2) NO
+  estaba corregido — es un hallazgo nuevo de esta sesión de pruebas.
+- Confirmado también: el sitio desplegado tiene GH3.42.35 (REP-01..08
+  reordenados, grid auto-fit sin franja fantasma) pero NO GH3.42.36
+  (Ejecutivos todavía visible en el sidebar) — falta desplegar esa
+  versión o una posterior.

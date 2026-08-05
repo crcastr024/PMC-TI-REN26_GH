@@ -1166,7 +1166,7 @@ body.sb-collapsed #app-footer {
 /* ═══ STAB-v12: Reporte Ejecutivo ═══ */
 .exec-section{background:var(--bg);border-radius:12px;padding:20px 24px;margin-bottom:18px;box-shadow:var(--shadow)}
 .exec-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3);border-bottom:2px solid var(--accent);padding-bottom:8px;margin-bottom:14px;font-family:var(--font-condensed,sans-serif)}
-.exec-empresa-card{background:var(--bg-2,#f9f9f9);border-radius:8px;padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--accent)}
+.exec-empresa-card{background:var(--paper-2,#f9f9f9);border-radius:8px;padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--accent)}
 .exec-empresa-label{font-size:14px;font-weight:800;color:var(--accent);font-family:var(--font-condensed,sans-serif);margin-bottom:8px}
 .exec-empresa-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px}
 .exec-stat-v{font-size:20px;font-weight:900;line-height:1;font-family:var(--font-condensed,sans-serif)}
@@ -1176,14 +1176,14 @@ body.sb-collapsed #app-footer {
 .exec-bar{height:100%;background:var(--green);border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
 .exec-pipeline{display:flex;gap:4px;overflow-x:auto;padding:8px 0 4px}
 .pipe-step{flex:1;min-width:70px;text-align:center}
-.pipe-bar-wrap{height:60px;background:var(--bg-2,#f0f0f0);border-radius:4px;display:flex;align-items:flex-end;overflow:hidden}
+.pipe-bar-wrap{height:60px;background:var(--paper-2,#f0f0f0);border-radius:4px;display:flex;align-items:flex-end;overflow:hidden}
 .pipe-bar{width:0%;height:100%;background:var(--accent-l,#fee);border-radius:4px;transition:width .8s ease}
 .pipe-step.pipe-bottle .pipe-bar{background:var(--accent)}
 .pipe-label{font-size:9px;color:var(--text-3);margin-top:4px;white-space:normal;word-break:break-word}
 .pipe-count{font-size:12px;font-weight:700}
 .pipe-bottle-note{font-size:11px;color:var(--accent);font-weight:700;padding:6px 0}
 .exec-riesgos{display:flex;flex-direction:column;gap:8px}
-.risk-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-2,#f9f9f9);border-radius:6px}
+.risk-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--paper-2,#f9f9f9);border-radius:6px}
 .risk-label{font-size:12px;font-weight:600}
 .risk-sub{display:block;font-size:10px;color:var(--text-3);font-weight:400}
 .risk-count{font-size:20px;font-weight:900;font-family:var(--font-condensed,sans-serif)}
@@ -1195,7 +1195,7 @@ body.sb-collapsed #app-footer {
    ════════════════════════════════════════════════════════ */
 
 /* ── Task 01/02: Empresa compact ── */
-.op-empresa-block{background:var(--bg-2,#f9f9f9);border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--accent)}
+.op-empresa-block{background:var(--paper-2,#f9f9f9);border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--accent)}
 .op-empresa-block:last-child{margin-bottom:0}
 .op-empresa-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
 .op-empresa-name{font-family:'Inter Tight',sans-serif;font-size:16px;font-weight:800;color:var(--accent)}

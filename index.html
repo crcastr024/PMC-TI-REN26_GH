@@ -116,7 +116,11 @@
 <span>Seguimiento</span>
 </div>
 <div class="sb-section-title">Reportes</div>
-<div class="sb-item" data-view="reportes" data-tip="Ejecutivos">
+<!-- GH3.42.36: retirado del menú principal (análisis de redundancia
+     Resumen/Seguimiento/Ejecutivos con Cristian) — la vista sigue viva
+     y se alcanza por clic desde las tarjetas de Seguimiento (GH3.42.26).
+     No se borró nada: solo deja de ser un destino de navegación aparte. -->
+<div class="sb-item" data-view="reportes" id="sb-reportes" data-tip="Ejecutivos" style="display:none">
 <div class="sb-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
 <span>Ejecutivos</span>
 </div>
@@ -258,7 +262,11 @@
           </div>
         </div>
         <div class="cards-grid" id="resumen-cards">
-          <!-- Orden cronológico del flujo operativo REN26 (GH3.42.3 TASK 02) -->
+          <!-- GH3.42.36: reordenado en pirámide invertida (análisis con
+               Cristian) — 7 tarjetas clave primero (definen avance o
+               requieren acción), resto como detalle operativo debajo de
+               un divisor. Nada se eliminó: mismos ids/onclick/data-tip,
+               solo posición y jerarquía visual. -->
 
           <!-- 1. Total equipos -->
           <div class="metric-card" onclick="goView('usuarios')" data-tip="Todos los equipos incluidos en el proyecto (asignados + backup)">
@@ -284,31 +292,7 @@
             <div class="metric-card-sub">Sin iniciar</div>
           </div>
 
-          <!-- 3. En alistamiento -->
-          <div class="metric-card amb" onclick="setStateFilter('Alistamiento')" data-tip="Equipos en preparación previa a la entrega">
-            <div class="metric-card-head">
-              <span class="metric-card-label">En alistamiento</span>
-              <div class="metric-card-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3l3 3-9 9H5.7v-3l9-9z"/><path d="M17.7 4.3a1.4 1.4 0 0 1 2 2l-1 1-2-2 1-1z"/></svg>
-              </div>
-            </div>
-            <div class="metric-card-val" id="k-alistamiento">—</div>
-            <div class="metric-card-sub">En preparación</div>
-          </div>
-
-          <!-- 4. En envío -->
-          <div class="metric-card teal" onclick="setMultiStateFilter(['Programado','En tránsito equipo nuevo'])" data-tip="Equipos programados o en tránsito hacia el usuario">
-            <div class="metric-card-head">
-              <span class="metric-card-label">En envío</span>
-              <div class="metric-card-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h12v9H3zM15 12h4l3 3v2h-7"/><circle cx="7" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg>
-              </div>
-            </div>
-            <div class="metric-card-val" id="k-en-envio">—</div>
-            <div class="metric-card-sub">Programado + tránsito</div>
-          </div>
-
-          <!-- 5. Entregados (hito acumulativo) -->
+          <!-- 3. Entregados (hito acumulativo) -->
           <div class="metric-card grn" onclick="setStateFilter('Entregado')" data-tip="Hito acumulativo: incluye todos los equipos entregados aunque hayan avanzado a estados posteriores">
             <div class="metric-card-head">
               <span class="metric-card-label">Entregados</span>
@@ -320,79 +304,7 @@
             <div class="metric-card-sub"><strong id="k-pct">0%</strong> del proceso</div>
           </div>
 
-          <!-- 6. Pendiente acta — GH3.42.9 -->
-          <div class="metric-card pur" onclick="setStateFilter('Pendiente acta')" data-tip="Equipos entregados esperando firma de acta">
-            <div class="metric-card-head">
-              <span class="metric-card-label">Pendiente acta</span>
-              <div class="metric-card-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 15h6M9 11h4"/></svg>
-              </div>
-            </div>
-            <div class="metric-card-val" id="k-pendiente-acta">—</div>
-            <div class="metric-card-sub">Esperando firma</div>
-          </div>
-
-          <!-- 7. Renovaciones completadas -->
-          <div class="metric-card grn" data-tip="Renovaciones cerradas: Renovación completada + Cerrado">
-            <div class="metric-card-head">
-              <span class="metric-card-label">Renovaciones completadas</span>
-              <div class="metric-card-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M8 13l3 3 5-5" stroke-width="1.8"/></svg>
-              </div>
-            </div>
-            <div class="metric-card-val" id="k-completadas">—</div>
-            <div class="metric-card-sub">Ren. completada + Cerrado</div>
-          </div>
-
-          <!-- 7. Actas firmadas -->
-          <div class="metric-card pur" data-tip="Actas de entrega firmadas digitalmente vía PandaDoc">
-            <div class="metric-card-head">
-              <span class="metric-card-label">Actas firmadas</span>
-              <div class="metric-card-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 13l2 2 4-4"/></svg>
-              </div>
-            </div>
-            <div class="metric-card-val" id="k-actas">—</div>
-            <div class="metric-card-sub">PandaDoc</div>
-          </div>
-
-          <!-- 8. Backups -->
-          <div class="metric-card" id="card-backups" style="border-top-color:var(--text-3,#666)" onclick="goView('backup')" data-tip="Equipos backup disponibles en bodega para asignación">
-            <div class="metric-card-head">
-              <span class="metric-card-label">Backups</span>
-              <div class="metric-card-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg>
-              </div>
-            </div>
-            <div class="metric-card-val" id="k-backup">—</div>
-            <div class="metric-card-sub" id="k-backup-sub">Disponibles en bodega</div>
-          </div>
-
-          <!-- 8b. Torres — GH3.42.20 -->
-          <div class="metric-card" style="border-top-color:var(--text-3,#666)" onclick="openTorresReport()" data-tip="Ver seguimiento: entregadas vs. pendientes">
-            <div class="metric-card-head">
-              <span class="metric-card-label">Torres</span>
-              <div class="metric-card-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="3" width="8" height="18" rx="1"/><circle cx="10" cy="18" r="1"/><path d="M9 6h2"/></svg>
-              </div>
-            </div>
-            <div class="metric-card-val" id="k-torres">—</div>
-            <div class="metric-card-sub">Equipos de escritorio</div>
-          </div>
-
-          <!-- 8c. Portátiles — GH3.42.21 -->
-          <div class="metric-card" style="border-top-color:var(--text-3,#666)" onclick="setTipoFilter('PORTATIL')" data-tip="Equipos tipo portátil en el proyecto">
-            <div class="metric-card-head">
-              <span class="metric-card-label">Portátiles</span>
-              <div class="metric-card-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="10" rx="1"/><path d="M2 18h20l-1.5-3h-17z"/></svg>
-              </div>
-            </div>
-            <div class="metric-card-val" id="k-portatiles">—</div>
-            <div class="metric-card-sub">Equipos portátiles</div>
-          </div>
-
-          <!-- 9. Por aprobar — TASK 01: oculta si 0, compacta si >0 -->
+          <!-- 4. Por aprobar — acción requerida — TASK 01: oculta si 0, compacta si >0 -->
           <div class="metric-card red compact-alert" id="card-por-aprobar" onclick="goView('aprobaciones')" data-hide-if-zero="k-por-aprobar" data-tip="Renovaciones esperando validación gerencial">
             <div class="metric-card-head">
               <span class="metric-card-label">Por aprobar</span>
@@ -404,7 +316,19 @@
             <div class="metric-card-sub">Pendientes validación</div>
           </div>
 
-          <!-- Dev. pendientes — TASK 01: oculta si 0, compacta si >0 -->
+          <!-- 5. Pendiente acta — acción requerida — GH3.42.9 -->
+          <div class="metric-card pur" onclick="setStateFilter('Pendiente acta')" data-tip="Equipos entregados esperando firma de acta">
+            <div class="metric-card-head">
+              <span class="metric-card-label">Pendiente acta</span>
+              <div class="metric-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 15h6M9 11h4"/></svg>
+              </div>
+            </div>
+            <div class="metric-card-val" id="k-pendiente-acta">—</div>
+            <div class="metric-card-sub">Esperando firma</div>
+          </div>
+
+          <!-- 6. Dev. pendientes — acción requerida — TASK 01: oculta si 0, compacta si >0 -->
           <div class="metric-card org compact-alert" id="card-dev-pendientes" onclick="goView('devoluciones')" data-hide-if-zero="k-dev-pendientes" data-tip="Devoluciones en recolección sin recibir en bodega">
             <div class="metric-card-head">
               <span class="metric-card-label">Dev. pendientes</span>
@@ -414,6 +338,95 @@
             </div>
             <div class="metric-card-val" id="k-dev-pendientes">—</div>
             <div class="metric-card-sub">En recolección sin recibir</div>
+          </div>
+
+          <!-- 7. Renovaciones completadas — resultado final -->
+          <div class="metric-card grn" data-tip="Renovaciones cerradas: Renovación completada + Cerrado">
+            <div class="metric-card-head">
+              <span class="metric-card-label">Renovaciones completadas</span>
+              <div class="metric-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M8 13l3 3 5-5" stroke-width="1.8"/></svg>
+              </div>
+            </div>
+            <div class="metric-card-val" id="k-completadas">—</div>
+            <div class="metric-card-sub">Ren. completada + Cerrado</div>
+          </div>
+
+          <!-- Divisor — detalle operativo (GH3.42.36) -->
+          <div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:6px 0 -4px;padding-top:10px;border-top:1px solid var(--border)">
+            <span style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)">Detalle operativo</span>
+          </div>
+
+          <!-- 8. En alistamiento -->
+          <div class="metric-card amb" onclick="setStateFilter('Alistamiento')" data-tip="Equipos en preparación previa a la entrega">
+            <div class="metric-card-head">
+              <span class="metric-card-label">En alistamiento</span>
+              <div class="metric-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3l3 3-9 9H5.7v-3l9-9z"/><path d="M17.7 4.3a1.4 1.4 0 0 1 2 2l-1 1-2-2 1-1z"/></svg>
+              </div>
+            </div>
+            <div class="metric-card-val" id="k-alistamiento">—</div>
+            <div class="metric-card-sub">En preparación</div>
+          </div>
+
+          <!-- 9. En envío -->
+          <div class="metric-card teal" onclick="setMultiStateFilter(['Programado','En tránsito equipo nuevo'])" data-tip="Equipos programados o en tránsito hacia el usuario">
+            <div class="metric-card-head">
+              <span class="metric-card-label">En envío</span>
+              <div class="metric-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h12v9H3zM15 12h4l3 3v2h-7"/><circle cx="7" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg>
+              </div>
+            </div>
+            <div class="metric-card-val" id="k-en-envio">—</div>
+            <div class="metric-card-sub">Programado + tránsito</div>
+          </div>
+
+          <!-- 10. Actas firmadas -->
+          <div class="metric-card pur" data-tip="Actas de entrega firmadas digitalmente vía PandaDoc">
+            <div class="metric-card-head">
+              <span class="metric-card-label">Actas firmadas</span>
+              <div class="metric-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 13l2 2 4-4"/></svg>
+              </div>
+            </div>
+            <div class="metric-card-val" id="k-actas">—</div>
+            <div class="metric-card-sub">PandaDoc</div>
+          </div>
+
+          <!-- 11. Backups -->
+          <div class="metric-card" id="card-backups" style="border-top-color:var(--text-3,#666)" onclick="goView('backup')" data-tip="Equipos backup disponibles en bodega para asignación">
+            <div class="metric-card-head">
+              <span class="metric-card-label">Backups</span>
+              <div class="metric-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg>
+              </div>
+            </div>
+            <div class="metric-card-val" id="k-backup">—</div>
+            <div class="metric-card-sub" id="k-backup-sub">Disponibles en bodega</div>
+          </div>
+
+          <!-- 12. Torres — GH3.42.20 -->
+          <div class="metric-card" style="border-top-color:var(--text-3,#666)" onclick="openTorresReport()" data-tip="Ver seguimiento: entregadas vs. pendientes">
+            <div class="metric-card-head">
+              <span class="metric-card-label">Torres</span>
+              <div class="metric-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="3" width="8" height="18" rx="1"/><circle cx="10" cy="18" r="1"/><path d="M9 6h2"/></svg>
+              </div>
+            </div>
+            <div class="metric-card-val" id="k-torres">—</div>
+            <div class="metric-card-sub">Equipos de escritorio</div>
+          </div>
+
+          <!-- 13. Portátiles — GH3.42.21 -->
+          <div class="metric-card" style="border-top-color:var(--text-3,#666)" onclick="setTipoFilter('PORTATIL')" data-tip="Equipos tipo portátil en el proyecto">
+            <div class="metric-card-head">
+              <span class="metric-card-label">Portátiles</span>
+              <div class="metric-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="10" rx="1"/><path d="M2 18h20l-1.5-3h-17z"/></svg>
+              </div>
+            </div>
+            <div class="metric-card-val" id="k-portatiles">—</div>
+            <div class="metric-card-sub">Equipos portátiles</div>
           </div>
         </div>
       </div>
