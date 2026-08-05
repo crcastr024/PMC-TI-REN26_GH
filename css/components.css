@@ -738,13 +738,40 @@
 .form-section { margin-bottom: 20px; width: 100%; box-sizing: border-box; }
 .form-section:last-child { margin-bottom: 0; }
 .form-section-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+/* GH3.42.47 FIX: el clic en un tab hacía scrollIntoView(), pero el
+   navegador no sabe que .form-nav-tabs es sticky — el salto dejaba el
+   encabezado y las primeras etiquetas de la sección destino tapados
+   detrás de la barra fija (reportado por Cristian con captura: se
+   veían los valores de los campos de la sección 5 sin sus etiquetas
+   ni el título "5 · Estado REN26" encima). scroll-margin-top reserva
+   ese espacio para cualquier salto a una sección, sin importar cómo
+   se dispare (clic en tab, o cualquier scrollIntoView futuro). */
+.form-section { scroll-margin-top: 56px; }
+/* GH3.42.46: nav de secciones del formulario — sticky bajo el Timeline,
+   que se mantiene intacto arriba (pedido explícito de Cristian). Los
+   márgenes negativos compensan el padding de .modal-body para que se
+   pegue al borde real de arriba al hacer scroll, no 22px más abajo. */
+.form-nav-tabs {
+  position: sticky; top: -22px; z-index: 5;
+  display: flex; gap: 6px; overflow-x: auto;
+  margin: 0 -24px 16px; padding: 10px 24px;
+  background: var(--bg-card); border-bottom: 1px solid var(--border);
+}
+.form-nav-tab {
+  white-space: nowrap; flex-shrink: 0;
+  border: none; background: var(--bg-elev); color: var(--text-2);
+  font-size: 11px; font-weight: 600; padding: 6px 12px;
+  border-radius: 14px; cursor: pointer; transition: background .15s, color .15s;
+}
+.form-nav-tab.active { background: var(--accent); color: #fff; }
+.form-nav-tab:hover:not(.active) { background: var(--bg-card-hover); }
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .form-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .form-group { display: flex; flex-direction: column; gap: 5px; min-width: 0; overflow: hidden; }
 .form-group.full { grid-column: 1 / -1; }
 .form-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
 .form-input, .form-select, .form-textarea {
-  padding: 10px 13px; border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+  padding: 10px 13px; border: 1px solid var(--border-strong); border-radius: var(--r-md);
   font-size: 13px; background: var(--bg-elev); color: var(--text-1);
   box-sizing: border-box; width: 100%;
   transition: all 0.15s; font-family: inherit;
@@ -1166,7 +1193,7 @@ body.sb-collapsed #app-footer {
 /* ═══ STAB-v12: Reporte Ejecutivo ═══ */
 .exec-section{background:var(--bg);border-radius:12px;padding:20px 24px;margin-bottom:18px;box-shadow:var(--shadow)}
 .exec-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3);border-bottom:2px solid var(--accent);padding-bottom:8px;margin-bottom:14px;font-family:var(--font-condensed,sans-serif)}
-.exec-empresa-card{background:var(--bg-2,#f9f9f9);border-radius:8px;padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--accent)}
+.exec-empresa-card{background:var(--paper-2,#f9f9f9);border-radius:8px;padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--accent)}
 .exec-empresa-label{font-size:14px;font-weight:800;color:var(--accent);font-family:var(--font-condensed,sans-serif);margin-bottom:8px}
 .exec-empresa-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px}
 .exec-stat-v{font-size:20px;font-weight:900;line-height:1;font-family:var(--font-condensed,sans-serif)}
@@ -1176,14 +1203,14 @@ body.sb-collapsed #app-footer {
 .exec-bar{height:100%;background:var(--green);border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
 .exec-pipeline{display:flex;gap:4px;overflow-x:auto;padding:8px 0 4px}
 .pipe-step{flex:1;min-width:70px;text-align:center}
-.pipe-bar-wrap{height:60px;background:var(--bg-2,#f0f0f0);border-radius:4px;display:flex;align-items:flex-end;overflow:hidden}
+.pipe-bar-wrap{height:60px;background:var(--paper-2,#f0f0f0);border-radius:4px;display:flex;align-items:flex-end;overflow:hidden}
 .pipe-bar{width:0%;height:100%;background:var(--accent-l,#fee);border-radius:4px;transition:width .8s ease}
 .pipe-step.pipe-bottle .pipe-bar{background:var(--accent)}
 .pipe-label{font-size:9px;color:var(--text-3);margin-top:4px;white-space:normal;word-break:break-word}
 .pipe-count{font-size:12px;font-weight:700}
 .pipe-bottle-note{font-size:11px;color:var(--accent);font-weight:700;padding:6px 0}
 .exec-riesgos{display:flex;flex-direction:column;gap:8px}
-.risk-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-2,#f9f9f9);border-radius:6px}
+.risk-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--paper-2,#f9f9f9);border-radius:6px}
 .risk-label{font-size:12px;font-weight:600}
 .risk-sub{display:block;font-size:10px;color:var(--text-3);font-weight:400}
 .risk-count{font-size:20px;font-weight:900;font-family:var(--font-condensed,sans-serif)}
@@ -1195,7 +1222,7 @@ body.sb-collapsed #app-footer {
    ════════════════════════════════════════════════════════ */
 
 /* ── Task 01/02: Empresa compact ── */
-.op-empresa-block{background:var(--bg-2,#f9f9f9);border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--accent)}
+.op-empresa-block{background:var(--paper-2,#f9f9f9);border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--accent)}
 .op-empresa-block:last-child{margin-bottom:0}
 .op-empresa-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
 .op-empresa-name{font-family:'Inter Tight',sans-serif;font-size:16px;font-weight:800;color:var(--accent)}
@@ -1378,96 +1405,4 @@ body.sb-collapsed #app-footer {
   .panel-grid-3{grid-template-columns:1fr}
   .panel-grid-2{grid-template-columns:1fr}
   .exec-emp-grid{grid-template-columns:1fr}
-}
-
-/* ════════════════════════════════════════════════════════════════════
-   GH3.42.31 — Meniscus Dock (acceso rápido curado, animación de bead
-   líquido con física de resorte). Adaptado de meniscus-dock.html.
-   Todas las clases nuevas usan prefijo mdock- para no colisionar con
-   nada existente (verificado antes de escribir: sin colisión).
-   Paleta FIJA, intencional — no usa var(--acc) ni tokens de exec-
-   redesign.css; --mdock-accent es propio del componente, seteado por
-   meniscusDock.js por tab activo (paleta roja REN26, no la original
-   del demo). No se toca ningún [data-theme="dark"] existente: este
-   componente mantiene su propia estética oscura fija, igual en modo
-   claro y oscuro de la app (mismo criterio que los tooltips globales
-   [data-tip], que también son oscuros siempre).
-   ════════════════════════════════════════════════════════════════════ */
-.mdock-wrap {
-  position: fixed;
-  left: 50%;
-  bottom: 20px;
-  transform: translateX(-50%);
-  z-index: 45;
-  width: min(360px, calc(100vw - 32px));
-}
-.mdock {
-  position: relative;
-  height: 60px;
-  width: 100%;
-  background: #181225;
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 30px;
-  box-shadow: 0 20px 40px -18px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05);
-  display: flex;
-  touch-action: none;
-}
-.mdock-tab {
-  position: relative;
-  flex: 1;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px;
-  background: none; border: none; cursor: pointer;
-  color: rgba(245,242,250,.56);
-  padding: 0;
-  font-family: inherit;
-}
-.mdock-tab svg { width: 18px; height: 18px; transition: opacity .25s ease; }
-.mdock-lbl {
-  font-size: 8.5px; font-weight: 650; letter-spacing: .02em;
-  color: rgba(245,242,250,.30);
-  transition: color .3s ease;
-}
-.mdock-tab.is-active .mdock-lbl { color: var(--mdock-accent, #D30034); }
-.mdock-tab.is-active svg { opacity: 0; } /* el ícono se oculta bajo el bead */
-
-.mdock-bead-layer { position: absolute; inset: 0; pointer-events: none; }
-.mdock-goo { position: absolute; inset: 0; filter: url(#meniscus-goo); }
-.mdock-blob {
-  position: absolute; top: 50%; left: 0;
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  background: var(--mdock-accent, #D30034);
-  transform: translate(-50%,-50%);
-  will-change: transform, width, height;
-}
-.mdock-blob.mdock-trail { width: 27px; height: 27px; }
-.mdock-bead-icon {
-  position: absolute; top: 50%; left: 0;
-  width: 17px; height: 17px;
-  transform: translate(-50%,-50%);
-  color: #0d0a17;
-  pointer-events: auto;
-  cursor: grab;
-}
-.mdock-bead-icon svg { width: 100%; height: 100%; display: block; }
-
-.mdock-ripple {
-  position: absolute; width: 9px; height: 9px; border-radius: 50%;
-  background: var(--mdock-accent, #D30034); opacity: .5;
-  transform: translate(-50%,-50%) scale(0);
-  pointer-events: none;
-  animation: mdockRip .5s ease-out forwards;
-}
-@keyframes mdockRip { to { transform: translate(-50%,-50%) scale(5.2); opacity: 0; } }
-
-@media (prefers-reduced-motion: reduce) {
-  .mdock-blob, .mdock-bead-icon { transition-duration: .01ms !important; }
-}
-
-@media (max-width: 480px) {
-  .mdock-wrap { bottom: 12px; }
-  .mdock { height: 54px; border-radius: 27px; }
-  .mdock-tab svg { width: 16px; height: 16px; }
-  .mdock-lbl { font-size: 8px; }
 }

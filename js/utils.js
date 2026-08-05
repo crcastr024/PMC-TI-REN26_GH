@@ -714,8 +714,18 @@ function showToast(n) {
 }
 
 function updateNotifBadge() {
-  const unread = state.notifications.filter(n => !n.read).length;
-  const total = state.notifications.length;
+  // GH3.42.43 FIX: eventos de sistema (sesión iniciada, sistema cargado)
+  // contaban igual que eventos de negocio (cambio de estado, acta
+  // firmada, etc.) en el badge de Actividad — cada login o recarga de
+  // página subía el número, sin que hubiera nada que revisar. Riesgo:
+  // fatiga de alertas — si el badge siempre está alto por ruido, deja
+  // de significar algo. Se excluyen del CONTEO, no del registro: el
+  // historial completo de Actividad sigue mostrando todo, para
+  // trazabilidad/auditoría — solo el badge ignora lo que no es
+  // accionable.
+  var relevantes = state.notifications.filter(function(n){ return n.category !== 'system'; });
+  const unread = relevantes.filter(n => !n.read).length;
+  const total = relevantes.length;
   const dot = $('notif-dot'); if (dot) dot.style.display = unread > 0 ? 'block' : 'none';
   const badge = $('b-actividad');
   if (badge) { badge.textContent = total > 99 ? '99+' : total; badge.classList.toggle('alert', unread > 0); }
@@ -902,9 +912,6 @@ function goView(id) {
   state.view = id;
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + id));
   $$('.sb-item').forEach(t => t.classList.toggle('active', t.dataset.view === id));
-  // GH3.42.31: sincronizar el bead del meniscus-dock si la navegación
-  // vino de otro lado (sidebar) — no es un router nuevo, solo se avisa.
-  if (window.MeniscusDock && MeniscusDock.setActiveByView) MeniscusDock.setActiveByView(id);
   $('crumb-view').textContent = VIEW_TITLES[id];
   scrollMainTop();
   renderView(id);
@@ -935,8 +942,17 @@ function renderView(id) {
 }
 
 function scrollMainTop() {
+  // GH3.42.48 FIX: confirmado en vivo — el scroll real de la página
+  // vive en <html>/document, no en #main-scroll. scrollMainTop()
+  // reseteaba el elemento equivocado: quien navegaba desde una vista
+  // scrolleada hacia abajo llegaba a la vista nueva con ese mismo
+  // desplazamiento heredado (hueco en blanco arriba, contenido
+  // empezando a mitad de página). Se resetean ambos — el original
+  // (#main-scroll, por si en algún layout sí es el que scrollea) y el
+  // real (window/document).
   const main = $('main-scroll');
   if (main && typeof main.scrollTo === 'function') main.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 window.scrollMainTop = scrollMainTop;
 

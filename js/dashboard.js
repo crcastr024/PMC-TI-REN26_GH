@@ -327,6 +327,33 @@ function _computeProductividad(activos, entregados) {
   };
 }
 
+// GH3.42.42 AUTORIZADO — fecha_entrega (y campos de fecha similares)
+// puede llegar del Excel como número serial crudo (ej. "46220") en vez
+// de una fecha reconocible por new Date(). new Date("46220") lo
+// interpreta como el AÑO 46220, no como una fecha de 2026 — confirmado
+// en datos reales del Excel Maestro (46220 en serial de Excel = 17 jul
+// 2026, dentro del rango del proyecto). Afectaba _histogramaEntregas()
+// y _computeBurnDown() en silencio, desde antes de este cambio — ambas
+// comparaban con new Date(u.fecha_entrega) directo, así que la
+// comparación de fecha nunca daba verdadero para ningún registro con
+// esa fecha en formato serial.
+function _parseFechaExcel(v) {
+  if (!v) return null;
+  var s = String(v).trim();
+  if (/^\d+(\.\d+)?$/.test(s)) {
+    var serial = parseFloat(s);
+    // Rango razonable para seriales de Excel de fechas ~2009-2036 —
+    // fuera de este rango, un número puro probablemente no es una
+    // fecha serial (evita falsos positivos con otros campos numéricos).
+    if (serial > 20000 && serial < 60000) {
+      var epoch = new Date(1899, 11, 30); // epoch de Excel (incluye el bug del año bisiesto 1900)
+      return new Date(epoch.getTime() + serial * 86400000);
+    }
+  }
+  var d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function _histogramaEntregas(activos, dias) {
   var out = [];
   var hoy = new Date(); hoy.setHours(0,0,0,0);
@@ -334,8 +361,8 @@ function _histogramaEntregas(activos, dias) {
     var d = new Date(hoy); d.setDate(d.getDate() - i);
     var dNext = new Date(d); dNext.setDate(dNext.getDate() + 1);
     var c = activos.filter(function(u) {
-      if (!u.fecha_entrega) return false;
-      var fe = new Date(u.fecha_entrega);
+      var fe = _parseFechaExcel(u.fecha_entrega);
+      if (!fe) return false;
       return fe >= d && fe < dNext;
     }).length;
     out.push({ fecha: _fmtDateShort(d), count: c });
@@ -344,7 +371,14 @@ function _histogramaEntregas(activos, dias) {
 }
 
 function _computeBurnDown(activos) {
-  // Serie temporal semanal: 01 Jul → 15 Ago
+  // GH3.42.41 AUTORIZADO — Cristian aceptó la recomendación explícita de
+  // invertir el eje: antes esta función devolvía "equipos pendientes"
+  // (bajando = bien), la única métrica de todo el dashboard donde ir
+  // bien se veía como una línea que baja — inconsistente con "Avance
+  // global 65%"/"Entregados 93" (subir = bien) en todo el resto de la
+  // app. Ahora devuelve "% avance acumulado" (subiendo = bien), mismos
+  // nombres de campo (esperado/real) para no romper el único consumidor
+  // (_renderBurnDownChart, ui.js) más de lo necesario.
   var meta       = REN26_META;
   var diasTotal  = Math.ceil((REN26_FIN - REN26_INICIO) / 86400000);
   var hoy        = new Date(); hoy.setHours(23,59,59,999);
@@ -353,20 +387,21 @@ function _computeBurnDown(activos) {
   for (var d = 0; d <= diasTotal; d += step) {
     var fecha    = new Date(REN26_INICIO); fecha.setDate(fecha.getDate() + d);
     var esperadoEntregados = Math.round(meta * (d / diasTotal));
-    var esperadoRest       = meta - esperadoEntregados;
-    var realRest = null;
+    var esperadoPct        = meta > 0 ? Math.round((esperadoEntregados / meta) * 100) : 0;
+    var realPct = null;
     if (fecha <= hoy) {
       var entregadosHastaFecha = activos.filter(function(u) {
         if (!u.fecha_entrega && !_hitoEntregado(u.estado)) return false;
         if (!u.fecha_entrega) return true; // si hito pero sin fecha, contar hasta hoy
-        return new Date(u.fecha_entrega) <= fecha;
+        var fe = _parseFechaExcel(u.fecha_entrega);
+        return fe ? fe <= fecha : false;
       }).length;
-      realRest = meta - entregadosHastaFecha;
+      realPct = meta > 0 ? Math.round((entregadosHastaFecha / meta) * 100) : 0;
     }
     puntos.push({
       fecha:        _fmtDateShort(fecha),
-      esperado:     esperadoRest,
-      real:         realRest,
+      esperado:     esperadoPct,
+      real:         realPct,
       esFuturo:     fecha > hoy
     });
   }

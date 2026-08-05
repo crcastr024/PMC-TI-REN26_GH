@@ -384,3 +384,57 @@
   .fnl-split { padding-left: 0; border-left: 0; border-top: 1px solid var(--rule); padding-top: 8px; width: 100%; }
   .fnl-total-num { font-size: 26px; }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   GH3.42.44 — Grilla de anillos de actividad para "Por técnico"
+   (renderTecnicos → _renderTecnicoGrid, js/ui.js). Reemplaza el
+   carrusel SOLO aquí — Seguimiento sigue usando .rc-* sin cambios.
+   Estética Apple Watch/Fitness: fondo oscuro fijo (no depende del
+   tema claro/oscuro de la app, igual criterio que heroes/tooltips),
+   anillo grueso con animación de llenado, número que cuenta al mismo
+   ritmo. Prefijo tg- para no colisionar con .rc-* del carrusel.
+   ════════════════════════════════════════════════════════════════════ */
+.tg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  background: #000;
+  padding: 20px;
+  border-radius: 16px;
+}
+.tg-card {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  background: #1C1C1E;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .5s ease-out, transform .5s ease-out;
+}
+.tg-card.tg-in { opacity: 1; transform: translateY(0); }
+.tg-head { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+.tg-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 12px; flex-shrink: 0;
+}
+.tg-name { font-size: 13px; font-weight: 600; color: #fff; letter-spacing: -.01em; }
+.tg-ring-wrap { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+.tg-stats { display: flex; flex-direction: column; gap: 9px; }
+.tg-stat-row { display: flex; align-items: center; justify-content: space-between; font-size: 11px; }
+.tg-stat-row span { color: #8E8E93; }
+.tg-stat-row strong { font-size: 13px; font-weight: 600; color: #fff; }
+.tg-stat-last { border-top: 1px solid #2C2C2E; padding-top: 9px; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* GH3.42.45 FIX (auditoría review-animations): antes solo se
+     desactivaba la animación del anillo/número — la tarjeta seguía
+     desplazándose (translateY) igual bajo esta preferencia. La regla
+     es "más suave, no cero": la opacidad puede quedarse, el
+     desplazamiento espacial no debería sobrevivir a reduced-motion. */
+  .tg-card { transition: opacity .5s ease-out; transform: none; }
+}
+@media (max-width: 640px) {
+  .tg-grid { grid-template-columns: 1fr; padding: 14px; }
+}

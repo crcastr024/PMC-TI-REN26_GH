@@ -683,3 +683,350 @@ A pedido de Cristian, sobre la vista Ejecutivos/Reportes y Seguimiento.
   solo posición en el grid y el texto "REP-XX" mostrado/interno.
 - Verificado: `node --check`, conteo de tarjetas (8, sin duplicados ni
   huecos en REP-01..08).
+
+## GH3.42.36
+Primer paso de la consolidación Resumen/Seguimiento/Ejecutivos
+(análisis de redundancia con Cristian, enfoque de presentación de
+datos — pirámide invertida). Cambios seguros y reversibles; nada se
+eliminó.
+
+- **Resumen reordenado**: 7 tarjetas clave primero (Total equipos,
+  Pendientes, Entregados, Por aprobar, Pendiente acta, Dev. pendientes,
+  Renovaciones completadas — las que definen avance o requieren acción),
+  divisor "Detalle operativo", luego las 6 restantes (En alistamiento,
+  En envío, Actas firmadas, Backups, Torres, Portátiles). Mismos ids/
+  onclick/data-tip en las 13 — solo posición y jerarquía visual.
+- **"Ejecutivos" retirado del menú principal** — `display:none` en el
+  `.sb-item`, la vista sigue funcionando y se alcanza por clic desde
+  las 8 tarjetas de Seguimiento (enlace ya construido en GH3.42.26).
+  Verificado que RBAC (boot.js) no tiene ninguna referencia que
+  reactive este ítem para algún rol.
+- Verificado: `node --check`, conteo de `.sb-item` (13) y `.metric-card`
+  (13) sin cambios — confirma que no se perdió ningún elemento.
+
+### Pendiente, sin resolver
+- La pregunta del Council anterior sigue sin respuesta explícita: si
+  alguna de las 3 vistas se usa para exportar/imprimir a un
+  stakeholder externo. Se procedió asumiendo que no, dado que "retirar
+  del menú" es 100% reversible (una línea de CSS) si resulta que sí.
+- Destino final de "Resumen" como vista propia (¿se queda tal cual,
+  se repropone para otra audiencia, o se retira también?) — no se
+  decidió en este paso, es la siguiente conversación.
+
+## GH3.42.37
+Encontrado en vivo, probando el sitio real desplegado en modo oscuro
+(confirmando que GH3.42.34/35 SÍ está desplegado, GH3.42.36 todavía no).
+
+- **FIX nuevo**: `--bg-2` es un token FANTASMA — nunca se definió en
+  ningún archivo CSS del proyecto. Todo lo que lo usaba caía siempre a
+  su valor de fallback fijo (`#f9f9f9`/`#f0f0f0`), ignorando el modo
+  oscuro por completo. Afectaba 4 componentes:
+  - `.exec-empresa-card` ("Cumplimiento por empresa" en Seguimiento y
+    Ejecutivos) — confirmado visualmente: card blanca flotando en una
+    página por lo demás oscura.
+  - `.pipe-bar-wrap` (fondo de las barras del Pipeline REN26, Ejecutivos)
+  - `.risk-row` (filas de Riesgos Ejecutivos)
+  - `.op-empresa-block` (bloque de empresa en Resumen)
+  - Los 4 cambiados a `var(--paper-2, ...)`, que sí tiene valores
+    reales para ambos modos (`#F1F0EC` claro / `#1D1D27` oscuro).
+- Verificado en vivo, en el sitio real desplegado (login con cuenta de
+  Cristian, toggle claro/oscuro real): confirma que los fixes de
+  GH3.42.33 (hero de Por técnico, etiquetas de estadísticas, gauge de
+  Seguimiento) funcionan correctamente. Este nuevo bug (--bg-2) NO
+  estaba corregido — es un hallazgo nuevo de esta sesión de pruebas.
+- Confirmado también: el sitio desplegado tiene GH3.42.35 (REP-01..08
+  reordenados, grid auto-fit sin franja fantasma) pero NO GH3.42.36
+  (Ejecutivos todavía visible en el sidebar) — falta desplegar esa
+  versión o una posterior.
+
+## GH3.42.38
+- Retirado por completo el Meniscus Dock (GH3.42.31) — a pedido de
+  Cristian. Duplicaba navegación ya cubierta por el sidebar
+  (Resumen/Usuarios/Seguimiento/Actividad/Ajustes en ambos lados) sin
+  aportar algo que el sidebar no tuviera ya.
+- Eliminado: markup + filtro SVG goo (index.html), bloque CSS completo
+  (`.mdock-*`, components.css), archivo js/meniscusDock.js, gancho de
+  sincronización en goView() (utils.js).
+- Verificado: sin referencias residuales a mdock/meniscus en ningún
+  archivo. `node --check` en todo el proyecto. Balance de llaves en
+  7 CSS sin discrepancias.
+
+## GH3.42.39
+Continuación de la revisión "mirada de gerente" — a pedido de Cristian.
+
+- **Reordenado**: "Cuello de botella" y "Riesgos activos" ahora viven
+  justo después del hero/filtros en Seguimiento, antes de Gauge/
+  Productividad/Burndown. Antes vivían al final de la página (FILA 5,
+  después de Cumplimiento/Leaderboard/Ciudades/Devoluciones/Destino) —
+  un director veía el badge "RIESGO" del hero sin su "por qué" a la
+  vista, a menos que bajara 4 pantallas completas.
+- Contenido sin cambios — mismos ids (`#pe-botella`, `#pe-riesgos-list`),
+  solo posición.
+- **Decisión revisada, no ejecutada**: NO se migra el mapa de ciudades
+  de Resumen a Seguimiento (propuesta de GH3.42 anterior). Seguimiento
+  ya tiene la sección "Ciudades" (20+ tarjetas) más la vista dedicada
+  "Por ciudad" — el mapa muestra la misma información en otra forma
+  visual. Migrarlo habría reintroducido la misma duplicación que esta
+  consolidación busca eliminar.
+- Verificado: sin ids duplicados (`#pe-botella`/`#pe-riesgos-list`
+  aparecen exactamente 1 vez cada uno — dos copias hubieran hecho que
+  `renderPanelEjecutivo()` solo actualizara la primera, dejando la
+  segunda siempre vacía). Balance global de `<div>` (631=631).
+  `node --check` en todo el proyecto.
+
+## GH3.42.40
+- Retirado "Por ciudad" del sidebar — a mi criterio (Cristian lo dejó
+  abierto), continuando la revisión "mirada de gerente". Misma
+  información que ya muestra la sección "Ciudades" de Seguimiento (23
+  ciudades, mismo desglose entregados/pendientes/%) — sin un modo de
+  consumo distinto que lo justifique como destino de navegación
+  aparte. A diferencia de "Por técnico" (carrusel de una tarjeta a la
+  vez, sí distinto del Leaderboard continuo), esto es la misma grilla
+  completa con tarjetas más grandes — no un caso de uso diferente.
+- Mismo tratamiento reversible que "Ejecutivos" (GH3.42.36):
+  `display:none`, nada se borró, la vista sigue funcionando.
+- Verificado: rol "visitante" tiene 'ciudades' en su whitelist RBAC,
+  pero también 'panel' (Seguimiento) — que ya muestra la misma
+  información. Ocultar el ítem no quita acceso a ningún dato.
+  Confirmado que ningún RBAC en boot.js reactiva este ítem para
+  ningún rol. `node --check` en todo el proyecto. Conteo de
+  `.sb-item`: 13, sin cambios.
+
+## GH3.42.41
+A pedido de Cristian ("no la he entendido") — evaluación del gráfico
+Burn Down en Seguimiento.
+
+- **Diagnóstico**: medía "equipos pendientes" (bajando = bien) — la
+  única métrica de todo el dashboard donde ir bien se ve como una
+  línea que BAJA. Todo el resto usa "subir = bien" (Avance global 65%,
+  Entregados 93). Además usaba terminología agile ("Burn Down") ajena
+  al resto de la app. Se detectó también superposición conceptual con
+  el gauge "Avance esperado vs real" — mismo concepto (ritmo real vs
+  ideal), pero el gauge es una foto de hoy y el burndown es la
+  trayectoria completa en el tiempo — no son redundantes, son
+  complementarios (foto vs. película).
+- **Decisión (Cristian aceptó la recomendación)**: resignificar, no
+  eliminar. Cambios:
+  - `_computeBurnDown()` (dashboard.js — **AUTORIZADO**, aceptación
+    explícita de la recomendación de invertir el eje): ahora devuelve
+    "% avance acumulado" ascendente en vez de "equipos pendientes"
+    descendente. Mismos nombres de campo (esperado/real) — único
+    consumidor (`_renderBurnDownChart`) verificado antes del cambio.
+  - `_renderBurnDownChart()` (ui.js): etiquetas "Meta ideal"/"Real
+    (pendientes)" → "Esperado"/"Real" (mismo lenguaje que el gauge).
+    Línea "Real" de rojo a verde (es el avance real, no una alerta —
+    el rojo queda para la desviación, igual criterio que el gauge).
+    Eje Y en % (0-100) en vez de conteo abierto.
+  - Título de la tarjeta: "Burn Down" → "Avance en el tiempo".
+- Verificado: `node --check`. Simulación con dataset sintético (93
+  entregados repartidos en el tiempo) — ambas series ascienden
+  correctamente, fechas futuras devuelven `real:null` como se espera.
+
+## GH3.42.42
+FIX crítico de datos — encontrado mientras verificaba GH3.42.41 en
+producción (Cristian autorizó extender el fix a la segunda función).
+
+- **Causa raíz confirmada con datos reales**: `fecha_entrega` llega del
+  Excel como número serial crudo (ej. "46220") en vez de una fecha
+  reconocible por `new Date()`. `new Date("46220")` lo interpreta como
+  el AÑO 46220, no como una fecha de 2026 — confirmado vía consola en
+  el sitio real desplegado: 46220 en serial de Excel = 17 jul 2026,
+  fecha perfectamente válida dentro del proyecto.
+- Afectaba EN SILENCIO, desde antes de esta sesión:
+  - `_histogramaEntregas()` — alimenta el histograma de "Productividad"
+    en Seguimiento. Nunca contaba ningún registro con fecha en formato
+    serial — devolvía conteos artificialmente bajos/vacíos.
+  - `_computeBurnDown()` (recién resignificada en GH3.42.41) — por esto
+    la línea "Real" se veía plana cerca de 10% en vez de acercarse al
+    65% real: casi todos los registros con `fecha_entrega` poblada
+    (79 de 146) nunca pasaban la comparación de fecha.
+- **Fix**: helper compartido `_parseFechaExcel()` — detecta si el valor
+  es un número serial de Excel (rango 20000-60000, fechas ~2009-2036) y
+  lo convierte correctamente vía el epoch de Excel (1899-12-30);
+  si no, usa `new Date()` normal. Usado en ambas funciones.
+- Verificado: helper probado contra los 5 valores reales extraídos en
+  vivo del sitio desplegado (46220/46209/46225/46226/46227) — los 5
+  convierten a las fechas correctas (jul 2026, dentro del rango del
+  proyecto). También probado con fecha ISO normal y valores vacíos/null.
+  `node --check` en todo el proyecto.
+
+## GH3.42.43
+Dos correcciones puntuales a pedido de Cristian.
+
+- **FIX — badge de Actividad inflado por ruido de sistema**:
+  `updateNotifBadge()` contaba TODAS las notificaciones, incluidas
+  "Sesión iniciada"/"Sistema cargado" (category:'system') — cada login
+  o recarga subía el número sin que hubiera nada que revisar. Se
+  excluyen del CONTEO (badge, punto rojo, subtítulo del centro de
+  notificaciones) — el registro completo de Actividad sigue mostrando
+  todo, sin perder trazabilidad de auditoría.
+- **FIX — encabezado "Acciones" fuera de la tabla de Usuarios**:
+  etiqueta HTML mal cerrada (`</tr<th...`, faltaba el `>`) hacía que el
+  navegador sacara esa celda de la fila de encabezados, mostrándola
+  como texto flotante encima de la tabla en vez de como última columna
+  alineada con los íconos de acción. Corregido: la celda ahora vive
+  dentro de la misma `<tr>` que el resto de encabezados.
+- Verificado: `node --check`. Sin ocurrencias restantes de `</tr<` en
+  el proyecto.
+
+## GH3.42.44
+Reemplazado el carrusel de "Por técnico" por una grilla de tarjetas
+con anillo de actividad (estética Apple Watch/Fitness) — a pedido de
+Cristian, evaluado en el chat con maquetas antes de implementar.
+
+- **Nueva función `_renderTecnicoGrid()`** (js/ui.js) — grilla
+  responsive (`repeat(auto-fit, minmax(220px,1fr))`, se adapta si hay
+  más de 3 técnicos en el futuro), tarjetas con fondo oscuro fijo
+  (mismo criterio que heroes/tooltips — no depende del tema
+  claro/oscuro de la app), anillo SVG grueso con animación de llenado,
+  número que cuenta al mismo ritmo, entrada en cascada (150ms entre
+  tarjeta y tarjeta), respeta `prefers-reduced-motion`.
+- **Colores por desempeño**, no arbitrarios por persona — mismos
+  umbrales que ya usaba el carrusel viejo: verde ≥70%, ámbar 30-69%,
+  rojo <30%.
+- **Alcance deliberadamente acotado**: solo cambia `renderTecnicos()`
+  ("Por técnico"). El Leaderboard de Seguimiento (`pe-tecnico-new`)
+  sigue usando `_renderTecnicoCarousel()` sin ningún cambio — no era
+  parte de este pedido, y es un componente compartido que no se debía
+  tocar sin que se pidiera explícitamente.
+- CSS nuevo con prefijo `tg-` (tecnico-funnel.css, bloque nuevo al
+  final) para no colisionar con las clases `.rc-*` del carrusel.
+- Verificado: `node --check`, balance de llaves en 7 CSS, simulación
+  con los 3 técnicos reales (colores e iniciales correctos).
+
+## GH3.42.45
+Auditoría propia de GH3.42.44 con las skills `emil-design-eng` y
+`review-animations` — a pedido de Cristian ("¿es lo mejor que puedes
+hacer?"). 2 fallas reales encontradas y corregidas.
+
+- **FIX — la animación se repetía en cada visita**: entrar a "Por
+  técnico" varias veces al día repetía completa la secuencia de 2+
+  segundos cada vez. Regla de frecuencia de `emil-design-eng`: algo
+  visto ocasionalmente puede tener animación completa, pero algo visto
+  varias veces al día no debería sentirse lento por repetición. Fix:
+  flag `window._tgHasAnimated` — solo la primera vez por sesión anima;
+  después, valores finales al instante (mismo camino que ya existía
+  para `prefers-reduced-motion`).
+- **FIX — reduced-motion no era realmente "más suave, no cero"**: la
+  tarjeta seguía desplazándose (`translateY`) bajo esa preferencia,
+  solo se desactivaba el anillo/número. Regla explícita de
+  `review-animations`: reduced-motion debe conservar opacidad, quitar
+  movimiento espacial. Fix: `@media (prefers-reduced-motion: reduce)`
+  ahora también anula el `transform` de la tarjeta.
+- **Verificado, no corregido (transparencia)**: `stroke-dashoffset` no
+  es una propiedad 100% GPU como `transform`/`opacity` — hallazgo
+  técnicamente válido, pero para un solo círculo (no una lista
+  repetida) el costo real es insignificante. Se documenta, no se
+  cambia.
+- Verificado: `node --check` en todo el proyecto, balance de llaves en
+  7 CSS.
+
+## GH3.42.46
+Navegación por secciones en el formulario de edición — evaluado y
+mostrado en el chat antes de implementar, a pedido de Cristian ("me
+gusta, sin embargo mantengamos el timeline").
+
+- **Timeline REN26 sin tocar** — el nav nuevo vive aparte, debajo,
+  como pidió explícitamente Cristian.
+- **`buildFormSectionNav()`** (js/ui.js) — construye los 7 tabs leyendo
+  el DOM real (`.form-section` visibles, excluyendo Timeline y
+  Auditoría) en vez de una lista fija. Si alguna sección se oculta por
+  reglas de estado (`updateSectionVisibility`), su tab desaparece con
+  ella automáticamente — se llama después de fijar visibilidad, tanto
+  al abrir el modal como al cambiar el estado en vivo.
+- Clic en un tab hace scroll suave a la sección; el tab activo se
+  resalta solo mientras se hace scroll manual (tracking por posición).
+- **Corrección sobre mi propia maqueta anterior**: al revisar el
+  código real encontré 2 nombres de sección que había aproximado mal
+  ("Equipo actual" → en realidad "Equipo anterior") y una sección
+  completa que no había visto (5 · Estado REN26, entre "Equipo nuevo
+  asignado" y "Devolución"). El nav final usa los 7 nombres reales.
+- CSS nuevo (`.form-nav-tabs`, `.form-nav-tab`) con tokens existentes
+  (`--accent`, `--bg-elev`, `--bg-card`, `--text-2`, `--bg-card-hover`)
+  verificados uno por uno antes de usarlos — no repetir el bug de
+  `--bg-2` (GH3.42.37).
+- Sticky bajo el Timeline, con márgenes negativos para pegarse al
+  borde real de scroll del modal, no 22px más abajo por el padding del
+  contenedor.
+- Verificado: `node --check`, balance de llaves en 7 CSS, simulación
+  de generación de etiquetas con los 7 textos reales exactos.
+
+## GH3.42.47
+Dos correcciones al formulario, reportadas por Cristian con captura.
+
+- **FIX real (no cosmético)**: el clic en un tab de sección hacía
+  `scrollIntoView()`, pero el navegador no sabe que `.form-nav-tabs` es
+  sticky — el salto dejaba el encabezado y las primeras etiquetas de
+  la sección destino tapados detrás de la barra fija. Se veía "5 ·
+  Estado REN26" y las etiquetas TÉCNICO/ESTADO desaparecidas, solo los
+  valores de los campos sueltos. Fix: `scroll-margin-top: 56px` en
+  `.form-section` — el navegador ahora reserva ese espacio en
+  cualquier salto a una sección, sin tocar la lógica de scroll en JS.
+- Campos del formulario (`.form-input`, `.form-select`,
+  `.form-textarea`) con esquinas más redondeadas — `var(--r-sm)` (6px)
+  → `var(--r-md)` (10px).
+- Verificado: balance de llaves en 7 CSS, `node --check`.
+
+## GH3.42.48
+Bug crítico encontrado y corregido — reportado por Cristian ("da clic
+sobre la tarjeta de los técnicos y mira lo que sucede"). No era menor:
+la vista completa "Por técnico → detalle" probablemente nunca funcionó
+para nadie, en ningún navegador, desde que existe.
+
+- **Causa raíz**: `</div>` duplicado en index.html (línea 943) cerraba
+  `<main id="main-scroll">` prematuramente. Todo lo que venía después
+  en el HTML (`#view-tecnico-detail`, `#view-home-tecnico`, y
+  potencialmente otras vistas) terminaba como hijo directo de `<body>`
+  en vez de vivir dentro de `#main-scroll` — el contenido SÍ se
+  renderizaba (confirmado: 30871 caracteres en el DOM, sin errores de
+  consola) pero aparecía empujado una pantalla completa hacia abajo,
+  invisible sin scroll manual. Encontrado inspeccionando el DOM en
+  vivo (`parentElement.id`, balance de `<div>` línea por línea) —
+  balance global de 631 aperturas/630 cierres delató la causa exacta.
+- **Fix**: eliminado el `</div>` sobrante. Verificado en vivo
+  (inyectado directo en el sitio desplegado antes de esperar
+  redeploy): SANTIAGO detalle ahora muestra hero, 6 KPIs y tabla de 48
+  usuarios asignados — completo.
+- **De paso, mismo patrón de bug que ya until esta sesión ha corregido
+  3 veces**: `.hero-sub strong` (número de equipos, ciudad principal)
+  usaba `var(--text-1)`, invisible en modo claro contra el fondo
+  oscuro fijo de este hero — mismo tipo de colisión que GH3.42.14/33.
+  Se agregó el override que faltaba (`.view .hero.compact .hero-sub
+  strong { color: #fff }`), siguiendo el mismo patrón ya establecido
+  para `.hero-title strong`.
+- **También corregido en la misma sesión**: `scrollMainTop()`
+  reseteaba `#main-scroll`, pero el scroll real de la página vive en
+  `<html>`/document — confirmado con `document.scrollingElement` en
+  vivo. Ahora resetea ambos.
+- **Pendiente, sin impacto visible conocido**: balance global de
+  `<div>` en index.html quedó en 631/630 (un div sin cerrar en algún
+  otro punto del archivo, no identificado con precisión). No causa
+  síntoma visible — los navegadores cierran divs huérfanos al final
+  del documento sin romper el layout. Se documenta para no perderlo
+  de vista, no se persiguió exhaustivamente dado el bajo riesgo.
+- Verificado: `node --check`, balance de llaves en 7 CSS, balance
+  local del bloque view-panel (167=167, antes 167/168).
+
+## GH3.42.49
+Continuación de la prueba de GH3.42.48 — Chrome se desconectó a media
+verificación. Confirmado en vivo (antes del corte): NICOLAS y SANTIAGO
+renderizan completo, el fix estructural de GH3.42.48 está desplegado y
+funciona. CRISTIAN seguía en blanco — causa DISTINTA, no la misma.
+
+- **Hallazgo, sin confirmar en vivo (Chrome se desconectó)**: 2
+  lugares en ui.js hacían `u.empresa.toLowerCase()` sin verificar que
+  `empresa` exista — si algún registro asignado a un técnico tiene el
+  campo vacío, esto lanza un error que `renderView()` atrapa
+  (`console.error`) pero deja el render de esa vista a medias
+  (confirmado que el catch existe; no confirmado que sea la causa
+  exacta de lo que le pasa a CRISTIAN, por el corte de conexión).
+  Afectaba `renderUsuarios()` (línea 549) y `renderTecnicoDetail()`
+  (línea 767).
+- **Fix aplicado de todas formas**: es una fragilidad real
+  independiente de si es la causa exacta — `(u.empresa || '')` en
+  ambos lugares, con fallback `'—'` en el texto mostrado.
+- **Pendiente de verificación en vivo** — no se pudo confirmar si esto
+  resuelve el caso específico de CRISTIAN antes de que se cortara la
+  conexión con Chrome. Necesita reconfirmación tras el próximo push.
+- Verificado: `node --check`. Sin otras ocurrencias del mismo patrón
+  sin protección en el archivo.
