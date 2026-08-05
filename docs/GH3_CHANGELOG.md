@@ -821,3 +821,132 @@ Burn Down en Seguimiento.
 - Verificado: `node --check`. Simulación con dataset sintético (93
   entregados repartidos en el tiempo) — ambas series ascienden
   correctamente, fechas futuras devuelven `real:null` como se espera.
+
+## GH3.42.42
+FIX crítico de datos — encontrado mientras verificaba GH3.42.41 en
+producción (Cristian autorizó extender el fix a la segunda función).
+
+- **Causa raíz confirmada con datos reales**: `fecha_entrega` llega del
+  Excel como número serial crudo (ej. "46220") en vez de una fecha
+  reconocible por `new Date()`. `new Date("46220")` lo interpreta como
+  el AÑO 46220, no como una fecha de 2026 — confirmado vía consola en
+  el sitio real desplegado: 46220 en serial de Excel = 17 jul 2026,
+  fecha perfectamente válida dentro del proyecto.
+- Afectaba EN SILENCIO, desde antes de esta sesión:
+  - `_histogramaEntregas()` — alimenta el histograma de "Productividad"
+    en Seguimiento. Nunca contaba ningún registro con fecha en formato
+    serial — devolvía conteos artificialmente bajos/vacíos.
+  - `_computeBurnDown()` (recién resignificada en GH3.42.41) — por esto
+    la línea "Real" se veía plana cerca de 10% en vez de acercarse al
+    65% real: casi todos los registros con `fecha_entrega` poblada
+    (79 de 146) nunca pasaban la comparación de fecha.
+- **Fix**: helper compartido `_parseFechaExcel()` — detecta si el valor
+  es un número serial de Excel (rango 20000-60000, fechas ~2009-2036) y
+  lo convierte correctamente vía el epoch de Excel (1899-12-30);
+  si no, usa `new Date()` normal. Usado en ambas funciones.
+- Verificado: helper probado contra los 5 valores reales extraídos en
+  vivo del sitio desplegado (46220/46209/46225/46226/46227) — los 5
+  convierten a las fechas correctas (jul 2026, dentro del rango del
+  proyecto). También probado con fecha ISO normal y valores vacíos/null.
+  `node --check` en todo el proyecto.
+
+## GH3.42.43
+Dos correcciones puntuales a pedido de Cristian.
+
+- **FIX — badge de Actividad inflado por ruido de sistema**:
+  `updateNotifBadge()` contaba TODAS las notificaciones, incluidas
+  "Sesión iniciada"/"Sistema cargado" (category:'system') — cada login
+  o recarga subía el número sin que hubiera nada que revisar. Se
+  excluyen del CONTEO (badge, punto rojo, subtítulo del centro de
+  notificaciones) — el registro completo de Actividad sigue mostrando
+  todo, sin perder trazabilidad de auditoría.
+- **FIX — encabezado "Acciones" fuera de la tabla de Usuarios**:
+  etiqueta HTML mal cerrada (`</tr<th...`, faltaba el `>`) hacía que el
+  navegador sacara esa celda de la fila de encabezados, mostrándola
+  como texto flotante encima de la tabla en vez de como última columna
+  alineada con los íconos de acción. Corregido: la celda ahora vive
+  dentro de la misma `<tr>` que el resto de encabezados.
+- Verificado: `node --check`. Sin ocurrencias restantes de `</tr<` en
+  el proyecto.
+
+## GH3.42.44
+Reemplazado el carrusel de "Por técnico" por una grilla de tarjetas
+con anillo de actividad (estética Apple Watch/Fitness) — a pedido de
+Cristian, evaluado en el chat con maquetas antes de implementar.
+
+- **Nueva función `_renderTecnicoGrid()`** (js/ui.js) — grilla
+  responsive (`repeat(auto-fit, minmax(220px,1fr))`, se adapta si hay
+  más de 3 técnicos en el futuro), tarjetas con fondo oscuro fijo
+  (mismo criterio que heroes/tooltips — no depende del tema
+  claro/oscuro de la app), anillo SVG grueso con animación de llenado,
+  número que cuenta al mismo ritmo, entrada en cascada (150ms entre
+  tarjeta y tarjeta), respeta `prefers-reduced-motion`.
+- **Colores por desempeño**, no arbitrarios por persona — mismos
+  umbrales que ya usaba el carrusel viejo: verde ≥70%, ámbar 30-69%,
+  rojo <30%.
+- **Alcance deliberadamente acotado**: solo cambia `renderTecnicos()`
+  ("Por técnico"). El Leaderboard de Seguimiento (`pe-tecnico-new`)
+  sigue usando `_renderTecnicoCarousel()` sin ningún cambio — no era
+  parte de este pedido, y es un componente compartido que no se debía
+  tocar sin que se pidiera explícitamente.
+- CSS nuevo con prefijo `tg-` (tecnico-funnel.css, bloque nuevo al
+  final) para no colisionar con las clases `.rc-*` del carrusel.
+- Verificado: `node --check`, balance de llaves en 7 CSS, simulación
+  con los 3 técnicos reales (colores e iniciales correctos).
+
+## GH3.42.45
+Auditoría propia de GH3.42.44 con las skills `emil-design-eng` y
+`review-animations` — a pedido de Cristian ("¿es lo mejor que puedes
+hacer?"). 2 fallas reales encontradas y corregidas.
+
+- **FIX — la animación se repetía en cada visita**: entrar a "Por
+  técnico" varias veces al día repetía completa la secuencia de 2+
+  segundos cada vez. Regla de frecuencia de `emil-design-eng`: algo
+  visto ocasionalmente puede tener animación completa, pero algo visto
+  varias veces al día no debería sentirse lento por repetición. Fix:
+  flag `window._tgHasAnimated` — solo la primera vez por sesión anima;
+  después, valores finales al instante (mismo camino que ya existía
+  para `prefers-reduced-motion`).
+- **FIX — reduced-motion no era realmente "más suave, no cero"**: la
+  tarjeta seguía desplazándose (`translateY`) bajo esa preferencia,
+  solo se desactivaba el anillo/número. Regla explícita de
+  `review-animations`: reduced-motion debe conservar opacidad, quitar
+  movimiento espacial. Fix: `@media (prefers-reduced-motion: reduce)`
+  ahora también anula el `transform` de la tarjeta.
+- **Verificado, no corregido (transparencia)**: `stroke-dashoffset` no
+  es una propiedad 100% GPU como `transform`/`opacity` — hallazgo
+  técnicamente válido, pero para un solo círculo (no una lista
+  repetida) el costo real es insignificante. Se documenta, no se
+  cambia.
+- Verificado: `node --check` en todo el proyecto, balance de llaves en
+  7 CSS.
+
+## GH3.42.46
+Navegación por secciones en el formulario de edición — evaluado y
+mostrado en el chat antes de implementar, a pedido de Cristian ("me
+gusta, sin embargo mantengamos el timeline").
+
+- **Timeline REN26 sin tocar** — el nav nuevo vive aparte, debajo,
+  como pidió explícitamente Cristian.
+- **`buildFormSectionNav()`** (js/ui.js) — construye los 7 tabs leyendo
+  el DOM real (`.form-section` visibles, excluyendo Timeline y
+  Auditoría) en vez de una lista fija. Si alguna sección se oculta por
+  reglas de estado (`updateSectionVisibility`), su tab desaparece con
+  ella automáticamente — se llama después de fijar visibilidad, tanto
+  al abrir el modal como al cambiar el estado en vivo.
+- Clic en un tab hace scroll suave a la sección; el tab activo se
+  resalta solo mientras se hace scroll manual (tracking por posición).
+- **Corrección sobre mi propia maqueta anterior**: al revisar el
+  código real encontré 2 nombres de sección que había aproximado mal
+  ("Equipo actual" → en realidad "Equipo anterior") y una sección
+  completa que no había visto (5 · Estado REN26, entre "Equipo nuevo
+  asignado" y "Devolución"). El nav final usa los 7 nombres reales.
+- CSS nuevo (`.form-nav-tabs`, `.form-nav-tab`) con tokens existentes
+  (`--accent`, `--bg-elev`, `--bg-card`, `--text-2`, `--bg-card-hover`)
+  verificados uno por uno antes de usarlos — no repetir el bug de
+  `--bg-2` (GH3.42.37).
+- Sticky bajo el Timeline, con márgenes negativos para pegarse al
+  borde real de scroll del modal, no 22px más abajo por el padding del
+  contenedor.
+- Verificado: `node --check`, balance de llaves en 7 CSS, simulación
+  de generación de etiquetas con los 7 textos reales exactos.

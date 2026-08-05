@@ -714,8 +714,18 @@ function showToast(n) {
 }
 
 function updateNotifBadge() {
-  const unread = state.notifications.filter(n => !n.read).length;
-  const total = state.notifications.length;
+  // GH3.42.43 FIX: eventos de sistema (sesión iniciada, sistema cargado)
+  // contaban igual que eventos de negocio (cambio de estado, acta
+  // firmada, etc.) en el badge de Actividad — cada login o recarga de
+  // página subía el número, sin que hubiera nada que revisar. Riesgo:
+  // fatiga de alertas — si el badge siempre está alto por ruido, deja
+  // de significar algo. Se excluyen del CONTEO, no del registro: el
+  // historial completo de Actividad sigue mostrando todo, para
+  // trazabilidad/auditoría — solo el badge ignora lo que no es
+  // accionable.
+  var relevantes = state.notifications.filter(function(n){ return n.category !== 'system'; });
+  const unread = relevantes.filter(n => !n.read).length;
+  const total = relevantes.length;
   const dot = $('notif-dot'); if (dot) dot.style.display = unread > 0 ? 'block' : 'none';
   const badge = $('b-actividad');
   if (badge) { badge.textContent = total > 99 ? '99+' : total; badge.classList.toggle('alert', unread > 0); }

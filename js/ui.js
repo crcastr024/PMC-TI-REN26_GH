@@ -568,6 +568,90 @@ function renderUsuarios() {
 }
 
 // ═══ TÉCNICOS ═══
+// GH3.42.44: grilla de tarjetas con anillo de actividad — reemplaza el
+// carrusel SOLO en 'Por técnico' (renderTecnicos), a pedido de Cristian.
+// Seguimiento (Leaderboard, pe-tecnico-new) sigue usando
+// _renderTecnicoCarousel sin cambios — no era parte de este pedido.
+// Con 3 técnicos, un carrusel obliga a comparar de uno en uno; esta
+// grilla muestra a todos a la vez, sin clics. Colores por desempeño
+// (mismos umbrales que ya usaba el carrusel: verde ≥70%, ámbar 30-69%,
+// rojo <30%) — no colores arbitrarios por persona.
+function _renderTecnicoGrid(container, tecList) {
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // GH3.42.45 FIX (auditoría review-animations): animar el conteo/anillo
+  // solo la primera vez por sesión — antes se repetía completo cada vez
+  // que se entraba a "Por técnico". Con 2+ segundos de animación, una
+  // vista revisada varias veces al día se sentía lenta en vez de pulida.
+  var firstPlay = !window._tgHasAnimated;
+  window._tgHasAnimated = true;
+  container.classList.add('tg-wrap');
+
+  function _color(pct) {
+    return pct >= 70 ? '#2FBF6E' : pct >= 30 ? '#E8A33D' : '#FF5A5A';
+  }
+
+  function _cardHTML(d, i) {
+    var initials = (d.tec || '?').split(/\s+/).map(function(w){ return w.charAt(0); }).join('').slice(0,2).toUpperCase();
+    var color = _color(d.pct);
+    var r = 47, c = 2 * Math.PI * r;
+    return '<div class="tg-card" data-idx="' + i + '">' +
+        '<div class="tg-head">' +
+          '<div class="tg-avatar" style="background:#2C2C2E;color:' + color + '">' + esc(initials) + '</div>' +
+          '<div class="tg-name">' + esc(d.tec) + '</div>' +
+        '</div>' +
+        '<div class="tg-ring-wrap">' +
+          '<svg viewBox="0 0 112 112" width="112" height="112" aria-hidden="true">' +
+            '<circle cx="56" cy="56" r="' + r + '" fill="none" stroke="#2C2C2E" stroke-width="11"/>' +
+            '<circle class="tg-ring" cx="56" cy="56" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="11" stroke-linecap="round" ' +
+              'stroke-dasharray="' + c.toFixed(2) + '" stroke-dashoffset="' + c.toFixed(2) + '" transform="rotate(-90 56 56)" ' +
+              'data-target-offset="' + (c * (1 - d.pct / 100)).toFixed(2) + '"/>' +
+            '<text class="tg-pct" x="56" y="52" text-anchor="middle" font-size="24" font-weight="700" fill="#fff" letter-spacing="-1">0%</text>' +
+            '<text x="56" y="69" text-anchor="middle" font-size="8.5" font-weight="500" fill="#8E8E93" letter-spacing=".3">AVANCE</text>' +
+          '</svg>' +
+        '</div>' +
+        '<div class="tg-stats">' +
+          '<div class="tg-stat-row"><span>Asignados</span><strong>' + d.asignados + '</strong></div>' +
+          '<div class="tg-stat-row"><span>Pendientes</span><strong style="color:#FF5A5A">' + d.pendientes + '</strong></div>' +
+          '<div class="tg-stat-row"><span>En proceso</span><strong>' + d.proceso + '</strong></div>' +
+          '<div class="tg-stat-row"><span>Entregados</span><strong>' + d.entregados + '</strong></div>' +
+          '<div class="tg-stat-row tg-stat-last"><span>Finalizados</span><strong style="color:#2FBF6E">' + (d.finalizados || 0) + '</strong></div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  container.innerHTML = '<div class="tg-grid">' + tecList.map(_cardHTML).join('') + '</div>';
+
+  var cards = container.querySelectorAll('.tg-card');
+  cards.forEach(function(card, i) {
+    var ring = card.querySelector('.tg-ring');
+    var pctText = card.querySelector('.tg-pct');
+    var targetOffset = parseFloat(ring.dataset.targetOffset);
+    var targetPct = tecList[i].pct || 0;
+    var skipAnim = reduced || !firstPlay;
+    var delay = skipAnim ? 0 : i * 150;
+    setTimeout(function() {
+      card.classList.add('tg-in');
+      if (skipAnim) {
+        ring.style.transition = 'none';
+        ring.setAttribute('stroke-dashoffset', targetOffset);
+        pctText.textContent = Math.round(targetPct) + '%';
+        return;
+      }
+      ring.style.transition = 'stroke-dashoffset 1.3s cubic-bezier(.16,1,.3,1)';
+      ring.setAttribute('stroke-dashoffset', targetOffset);
+      var start = null, duration = 1300;
+      function step(ts) {
+        if (!start) start = ts;
+        var p = Math.min((ts - start) / duration, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        pctText.textContent = Math.round(eased * targetPct) + '%';
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }, delay);
+  });
+}
+
 function renderTecnicos() {
   const techs = window.CONFIG.technicians;
   const real = getReal();
@@ -595,18 +679,14 @@ function renderTecnicos() {
     container.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--muted,#6B6660);font-family:var(--font-body);font-size:13px">Sin técnicos con equipos asignados</div>';
     return;
   }
-  // Al hacer click en la card se navega al detalle
-  if (typeof _renderTecnicoCarousel === 'function') {
-    _renderTecnicoCarousel(container, tecList);
-    // Agregar click handler en cada card para openTecnicoDetail
+  // GH3.42.44: grilla de anillos de actividad en vez del carrusel
+  // compartido — solo aquí, Seguimiento sigue con _renderTecnicoCarousel.
+  if (typeof _renderTecnicoGrid === 'function') {
+    _renderTecnicoGrid(container, tecList);
     setTimeout(function(){
-      container.querySelectorAll('.rc-card').forEach(function(card, i) {
+      container.querySelectorAll('.tg-card').forEach(function(card, i) {
         card.style.cursor = 'pointer';
-        card.onclick = function(e){
-          // no hacer nada si el click fue en un botón/dot de navegación
-          if (e.target.closest('.rc-nav') || e.target.closest('.rc-arrow') || e.target.closest('.rc-dot')) return;
-          openTecnicoDetail(tecList[i].tec);
-        };
+        card.onclick = function(){ openTecnicoDetail(tecList[i].tec); };
       });
     }, 50);
   }
@@ -1112,6 +1192,13 @@ function openEditModal(id) {
 '<div class="form-section" id="seccion-timeline"><div class="form-section-head">Timeline REN26</div>' +
       '<div id="m-timeline-container">' + renderTimelineHTML(u) + '</div>' +
     '</div>' +
+    // GH3.42.46: nav de secciones — a pedido de Cristian, el Timeline
+    // arriba se mantiene intacto, esto es un elemento aparte. Los
+    // botones se rellenan con JS (buildFormSectionNav) leyendo las
+    // secciones REALMENTE visibles del formulario, no una lista fija —
+    // si alguna sección se oculta por reglas de estado, su tab
+    // desaparece con ella en vez de quedar apuntando a algo invisible.
+    '<div class="form-nav-tabs" id="form-nav-tabs"></div>' +
 '<div class="form-section"><div class="form-section-head">1 · Datos del usuario</div><div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Empresa</label><select class="form-select" id="m-empresa"><option' + (u.empresa === 'HBT' ? ' selected' : '') + '>HBT</option><option' + (u.empresa === 'HGS' ? ' selected' : '') + '>HGS</option></select></div>' +
       '<div class="form-group"><label class="form-label">Nivel del usuario</label><select class="form-select" id="m-nivel_usuario">' + nivelOpts + '</select></div>' +
@@ -1295,6 +1382,46 @@ function openEditModal(id) {
   '</div>';
 
 // QA-05 Task 2 — Progressive disclosure: secciones por estado
+// GH3.42.46: navegación por secciones del formulario de edición — a
+// pedido de Cristian, evaluado y aprobado en el chat antes de
+// implementar. El Timeline arriba NO se toca, esto vive aparte, debajo.
+// Construye los tabs leyendo el DOM real (querySelectorAll sobre
+// .form-section visibles) en vez de una lista fija de 7 nombres — si
+// alguna sección se oculta por reglas de estado (updateSectionVisibility,
+// justo abajo), su tab desaparece con ella automáticamente en vez de
+// quedar apuntando a algo invisible.
+function buildFormSectionNav() {
+  var navEl = document.getElementById('form-nav-tabs');
+  var modalBody = document.getElementById('modal-body');
+  if (!navEl || !modalBody) return;
+  var sections = Array.prototype.slice.call(modalBody.querySelectorAll('.form-section')).filter(function(sec) {
+    if (sec.id === 'seccion-timeline' || sec.id === 'audit-section') return false;
+    return sec.style.display !== 'none';
+  });
+  if (sections.length < 2) { navEl.innerHTML = ''; return; }
+  navEl.innerHTML = sections.map(function(sec, i) {
+    var head = sec.querySelector('.form-section-head');
+    var raw = head ? head.textContent.trim() : ('Sección ' + (i + 1));
+    var parts = raw.split('·');
+    var label = parts.length > 1 ? (parts[0].trim() + ' ' + parts[1].trim()) : raw;
+    return '<button type="button" class="form-nav-tab' + (i === 0 ? ' active' : '') + '" data-i="' + i + '">' + esc(label) + '</button>';
+  }).join('');
+  var tabs = navEl.querySelectorAll('.form-nav-tab');
+  tabs.forEach(function(tab, i) {
+    tab.onclick = function() { sections[i].scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  });
+  modalBody.onscroll = function() {
+    var top = modalBody.scrollTop + navEl.offsetHeight + 8;
+    var closest = 0, best = Infinity;
+    sections.forEach(function(sec, i) {
+      var d = Math.abs(sec.offsetTop - top);
+      if (d < best) { best = d; closest = i; }
+    });
+    tabs.forEach(function(t, i) { t.classList.toggle('active', i === closest); });
+  };
+}
+window.buildFormSectionNav = buildFormSectionNav;
+
 function updateSectionVisibility(estado) {
   // Índice en el flow de estados
   var FLOW = ['Pendiente','Alistamiento','Programado',
@@ -1422,6 +1549,7 @@ window.updateSectionVisibility = updateSectionVisibility;
       estadoEl.addEventListener('change', function() {
           updateNotasAlist(this.value);
           if (window.updateSectionVisibility) updateSectionVisibility(this.value);
+          if (window.buildFormSectionNav) buildFormSectionNav();
         });
     }
 
@@ -1475,6 +1603,9 @@ window.updateSectionVisibility = updateSectionVisibility;
 
     // Task 2: initial visibility
     if (window.updateSectionVisibility && $('m-estado')) updateSectionVisibility($('m-estado').value);
+    // GH3.42.46: construir el nav DESPUÉS de fijar visibilidad — así
+    // solo entran las secciones que realmente se ven para este registro.
+    if (window.buildFormSectionNav) buildFormSectionNav();
   })();
 
   // QA-03: Datalist RAM para autocompletado DDR4/DDR5/LPDDR4/LPDDR5
