@@ -902,9 +902,6 @@ function goView(id) {
   state.view = id;
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + id));
   $$('.sb-item').forEach(t => t.classList.toggle('active', t.dataset.view === id));
-  // GH3.42.31: sincronizar el bead del meniscus-dock si la navegación
-  // vino de otro lado (sidebar) — no es un router nuevo, solo se avisa.
-  if (window.MeniscusDock && MeniscusDock.setActiveByView) MeniscusDock.setActiveByView(id);
   $('crumb-view').textContent = VIEW_TITLES[id];
   scrollMainTop();
   renderView(id);

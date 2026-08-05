@@ -29,16 +29,6 @@
 <link rel="manifest" href="manifest.json">
 </head>
 <body>
-<!-- GH3.42.31: filtro SVG "goo" del meniscus-dock — una sola definición,
-     oculta, referenciada por css/components.css (.mdock-goo). -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <filter id="meniscus-goo">
-    <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/>
-    <feColorMatrix in="b" mode="matrix"
-      values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10" result="g"/>
-    <feComposite in="SourceGraphic" in2="g" operator="atop"/>
-  </filter>
-</svg>
 <!-- ════════════════════════ LANDING SCREEN ════════════════════════ -->
 <div id="landing">
   <div class="landing-header">
@@ -848,6 +838,15 @@
         <button class="panel-filter-clear" onclick="clearPanelFilters()">Limpiar filtros</button>
         <span class="panel-filter-count" id="pf-count"></span>
       </div>
+      <!-- GH3.42.39: 'Cuello de botella' y 'Riesgos activos' subidos aquí,
+           justo después del hero/filtros — a pedido de Cristian. Antes
+           vivían en la FILA 5, al final de una página muy larga; el
+           badge "RIESGO" del hero no tenía su "por qué" a la vista sin
+           bajar 4 pantallas. Contenido sin cambios, solo posición. -->
+      <div class="panel-grid-2" style="margin-top:14px">
+        <div class="panel-card"><div class="panel-card-title">Cuello de botella</div><div id="pe-botella"></div></div>
+        <div class="panel-card"><div class="panel-card-title">Riesgos activos</div><div id="pe-riesgos-list" class="exec-risks"></div></div>
+      </div>
       <!-- FILA 1: Gauge · Productividad · Burn Down -->
       <div class="panel-grid-3" style="margin-top:14px">
         <div class="panel-card exec-gauge-card">
@@ -909,11 +908,12 @@
         <!-- Distribución de estados ocultada — se muestra ya en Pipeline Funnel -->
         <div id="pe-estados-list" style="display:none"></div>
       </div>
-      <!-- FILA 5: Cuello de botella · Riesgos -->
-      <div class="panel-grid-2" style="margin-top:14px">
-        <div class="panel-card"><div class="panel-card-title">Cuello de botella</div><div id="pe-botella"></div></div>
-        <div class="panel-card"><div class="panel-card-title">Riesgos activos</div><div id="pe-riesgos-list" class="exec-risks"></div></div>
-      </div>
+      <!-- GH3.42.39: bloque duplicado retirado de aquí — 'Cuello de
+           botella'/'Riesgos activos' ahora vive justo después del hero
+           (ver arriba). Los ids (#pe-botella, #pe-riesgos-list) deben
+           ser únicos en el documento — dos copias hubieran hecho que
+           renderPanelEjecutivo() solo actualizara la primera que
+           encuentra, dejando la segunda siempre vacía. -->
       <!-- FILA 6: Novedades · Aprobaciones -->
       <div class="panel-grid-2" style="margin-top:14px">
         <div class="panel-card">
@@ -1282,43 +1282,5 @@
 </div>
 
 
-<!-- GH3.42.31: Meniscus dock — acceso rápido curado (5 vistas), animación
-     de "bead" líquido con física de resorte. Solo la animación, sin las
-     "faces" de texto del demo original (no aplican a una app real con
-     contenido propio en cada vista). Navega con goView() existente — no
-     es un segundo router. -->
-<div class="mdock-wrap" id="mdock-wrap" data-tip="Acceso rápido">
-  <div class="mdock" id="mdock">
-    <button type="button" class="mdock-tab is-active" data-view="resumen" aria-label="Resumen">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="3" y="14" width="7" height="7"/><rect x="12" y="3" width="9" height="5"/><rect x="12" y="10" width="9" height="11"/></svg>
-      <span class="mdock-lbl">Resumen</span>
-    </button>
-    <button type="button" class="mdock-tab" data-view="usuarios" aria-label="Usuarios">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span class="mdock-lbl">Usuarios</span>
-    </button>
-    <button type="button" class="mdock-tab" data-view="panel" aria-label="Seguimiento">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      <span class="mdock-lbl">Seguimiento</span>
-    </button>
-    <button type="button" class="mdock-tab" data-view="actividad" aria-label="Actividad">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-      <span class="mdock-lbl">Actividad</span>
-    </button>
-    <button type="button" class="mdock-tab" data-view="ajustes" aria-label="Ajustes">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span class="mdock-lbl">Ajustes</span>
-    </button>
-    <div class="mdock-bead-layer">
-      <div class="mdock-goo">
-        <div class="mdock-blob mdock-trail" id="mdock-trail"></div>
-        <div class="mdock-blob" id="mdock-bead"></div>
-      </div>
-      <div class="mdock-bead-icon" id="mdock-bead-icon"></div>
-    </div>
-  </div>
-</div>
-
-<script src="js/meniscusDock.js"></script>
 </body>
 </html>

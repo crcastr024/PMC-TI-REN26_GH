@@ -738,3 +738,38 @@ Encontrado en vivo, probando el sitio real desplegado en modo oscuro
   reordenados, grid auto-fit sin franja fantasma) pero NO GH3.42.36
   (Ejecutivos todavía visible en el sidebar) — falta desplegar esa
   versión o una posterior.
+
+## GH3.42.38
+- Retirado por completo el Meniscus Dock (GH3.42.31) — a pedido de
+  Cristian. Duplicaba navegación ya cubierta por el sidebar
+  (Resumen/Usuarios/Seguimiento/Actividad/Ajustes en ambos lados) sin
+  aportar algo que el sidebar no tuviera ya.
+- Eliminado: markup + filtro SVG goo (index.html), bloque CSS completo
+  (`.mdock-*`, components.css), archivo js/meniscusDock.js, gancho de
+  sincronización en goView() (utils.js).
+- Verificado: sin referencias residuales a mdock/meniscus en ningún
+  archivo. `node --check` en todo el proyecto. Balance de llaves en
+  7 CSS sin discrepancias.
+
+## GH3.42.39
+Continuación de la revisión "mirada de gerente" — a pedido de Cristian.
+
+- **Reordenado**: "Cuello de botella" y "Riesgos activos" ahora viven
+  justo después del hero/filtros en Seguimiento, antes de Gauge/
+  Productividad/Burndown. Antes vivían al final de la página (FILA 5,
+  después de Cumplimiento/Leaderboard/Ciudades/Devoluciones/Destino) —
+  un director veía el badge "RIESGO" del hero sin su "por qué" a la
+  vista, a menos que bajara 4 pantallas completas.
+- Contenido sin cambios — mismos ids (`#pe-botella`, `#pe-riesgos-list`),
+  solo posición.
+- **Decisión revisada, no ejecutada**: NO se migra el mapa de ciudades
+  de Resumen a Seguimiento (propuesta de GH3.42 anterior). Seguimiento
+  ya tiene la sección "Ciudades" (20+ tarjetas) más la vista dedicada
+  "Por ciudad" — el mapa muestra la misma información en otra forma
+  visual. Migrarlo habría reintroducido la misma duplicación que esta
+  consolidación busca eliminar.
+- Verificado: sin ids duplicados (`#pe-botella`/`#pe-riesgos-list`
+  aparecen exactamente 1 vez cada uno — dos copias hubieran hecho que
+  `renderPanelEjecutivo()` solo actualizara la primera, dejando la
+  segunda siempre vacía). Balance global de `<div>` (631=631).
+  `node --check` en todo el proyecto.
