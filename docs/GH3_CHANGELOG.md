@@ -773,3 +773,51 @@ Continuación de la revisión "mirada de gerente" — a pedido de Cristian.
   `renderPanelEjecutivo()` solo actualizara la primera, dejando la
   segunda siempre vacía). Balance global de `<div>` (631=631).
   `node --check` en todo el proyecto.
+
+## GH3.42.40
+- Retirado "Por ciudad" del sidebar — a mi criterio (Cristian lo dejó
+  abierto), continuando la revisión "mirada de gerente". Misma
+  información que ya muestra la sección "Ciudades" de Seguimiento (23
+  ciudades, mismo desglose entregados/pendientes/%) — sin un modo de
+  consumo distinto que lo justifique como destino de navegación
+  aparte. A diferencia de "Por técnico" (carrusel de una tarjeta a la
+  vez, sí distinto del Leaderboard continuo), esto es la misma grilla
+  completa con tarjetas más grandes — no un caso de uso diferente.
+- Mismo tratamiento reversible que "Ejecutivos" (GH3.42.36):
+  `display:none`, nada se borró, la vista sigue funcionando.
+- Verificado: rol "visitante" tiene 'ciudades' en su whitelist RBAC,
+  pero también 'panel' (Seguimiento) — que ya muestra la misma
+  información. Ocultar el ítem no quita acceso a ningún dato.
+  Confirmado que ningún RBAC en boot.js reactiva este ítem para
+  ningún rol. `node --check` en todo el proyecto. Conteo de
+  `.sb-item`: 13, sin cambios.
+
+## GH3.42.41
+A pedido de Cristian ("no la he entendido") — evaluación del gráfico
+Burn Down en Seguimiento.
+
+- **Diagnóstico**: medía "equipos pendientes" (bajando = bien) — la
+  única métrica de todo el dashboard donde ir bien se ve como una
+  línea que BAJA. Todo el resto usa "subir = bien" (Avance global 65%,
+  Entregados 93). Además usaba terminología agile ("Burn Down") ajena
+  al resto de la app. Se detectó también superposición conceptual con
+  el gauge "Avance esperado vs real" — mismo concepto (ritmo real vs
+  ideal), pero el gauge es una foto de hoy y el burndown es la
+  trayectoria completa en el tiempo — no son redundantes, son
+  complementarios (foto vs. película).
+- **Decisión (Cristian aceptó la recomendación)**: resignificar, no
+  eliminar. Cambios:
+  - `_computeBurnDown()` (dashboard.js — **AUTORIZADO**, aceptación
+    explícita de la recomendación de invertir el eje): ahora devuelve
+    "% avance acumulado" ascendente en vez de "equipos pendientes"
+    descendente. Mismos nombres de campo (esperado/real) — único
+    consumidor (`_renderBurnDownChart`) verificado antes del cambio.
+  - `_renderBurnDownChart()` (ui.js): etiquetas "Meta ideal"/"Real
+    (pendientes)" → "Esperado"/"Real" (mismo lenguaje que el gauge).
+    Línea "Real" de rojo a verde (es el avance real, no una alerta —
+    el rojo queda para la desviación, igual criterio que el gauge).
+    Eje Y en % (0-100) en vez de conteo abierto.
+  - Título de la tarjeta: "Burn Down" → "Avance en el tiempo".
+- Verificado: `node --check`. Simulación con dataset sintético (93
+  entregados repartidos en el tiempo) — ambas series ascienden
+  correctamente, fechas futuras devuelven `real:null` como se espera.

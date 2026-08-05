@@ -344,7 +344,14 @@ function _histogramaEntregas(activos, dias) {
 }
 
 function _computeBurnDown(activos) {
-  // Serie temporal semanal: 01 Jul → 15 Ago
+  // GH3.42.41 AUTORIZADO — Cristian aceptó la recomendación explícita de
+  // invertir el eje: antes esta función devolvía "equipos pendientes"
+  // (bajando = bien), la única métrica de todo el dashboard donde ir
+  // bien se veía como una línea que baja — inconsistente con "Avance
+  // global 65%"/"Entregados 93" (subir = bien) en todo el resto de la
+  // app. Ahora devuelve "% avance acumulado" (subiendo = bien), mismos
+  // nombres de campo (esperado/real) para no romper el único consumidor
+  // (_renderBurnDownChart, ui.js) más de lo necesario.
   var meta       = REN26_META;
   var diasTotal  = Math.ceil((REN26_FIN - REN26_INICIO) / 86400000);
   var hoy        = new Date(); hoy.setHours(23,59,59,999);
@@ -353,20 +360,20 @@ function _computeBurnDown(activos) {
   for (var d = 0; d <= diasTotal; d += step) {
     var fecha    = new Date(REN26_INICIO); fecha.setDate(fecha.getDate() + d);
     var esperadoEntregados = Math.round(meta * (d / diasTotal));
-    var esperadoRest       = meta - esperadoEntregados;
-    var realRest = null;
+    var esperadoPct        = meta > 0 ? Math.round((esperadoEntregados / meta) * 100) : 0;
+    var realPct = null;
     if (fecha <= hoy) {
       var entregadosHastaFecha = activos.filter(function(u) {
         if (!u.fecha_entrega && !_hitoEntregado(u.estado)) return false;
         if (!u.fecha_entrega) return true; // si hito pero sin fecha, contar hasta hoy
         return new Date(u.fecha_entrega) <= fecha;
       }).length;
-      realRest = meta - entregadosHastaFecha;
+      realPct = meta > 0 ? Math.round((entregadosHastaFecha / meta) * 100) : 0;
     }
     puntos.push({
       fecha:        _fmtDateShort(fecha),
-      esperado:     esperadoRest,
-      real:         realRest,
+      esperado:     esperadoPct,
+      real:         realPct,
       esFuturo:     fecha > hoy
     });
   }

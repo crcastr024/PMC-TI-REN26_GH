@@ -2036,13 +2036,18 @@ function _renderBurnDownChart(puntos) {
   var labels    = puntos.map(function(p){ return p.fecha; });
   var esperados = puntos.map(function(p){ return p.esperado; });
   var reales    = puntos.map(function(p){ return p.real; });
+  // GH3.42.41: 'Meta ideal'/'Real (pendientes)' → 'Esperado'/'Real',
+  // mismos nombres que usa el gauge "Avance esperado vs real" — mismo
+  // lenguaje en las dos tarjetas. Real ahora en verde (antes rojo):
+  // esto es el avance real, no una alerta; el rojo se reserva para la
+  // desviación, igual que en el gauge.
   cv._chart = new Chart(cv, {
     type: 'line',
     data: {
       labels: labels,
       datasets: [
-        { label: 'Meta ideal', data: esperados, borderColor: '#94A3B8', borderDash:[5,4], borderWidth:2, pointRadius:0, tension:0.1, fill:false },
-        { label: 'Real (pendientes)', data: reales, borderColor: '#A51C2B', backgroundColor:'rgba(165,28,43,.1)', borderWidth:2.5, pointRadius:2.5, tension:0.2, fill:true, spanGaps:false }
+        { label: 'Esperado', data: esperados, borderColor: '#94A3B8', borderDash:[5,4], borderWidth:2, pointRadius:0, tension:0.1, fill:false },
+        { label: 'Real', data: reales, borderColor: '#16A34A', backgroundColor:'rgba(22,163,74,.1)', borderWidth:2.5, pointRadius:2.5, tension:0.2, fill:true, spanGaps:false }
       ]
     },
     options: {
@@ -2050,7 +2055,7 @@ function _renderBurnDownChart(puntos) {
       plugins: { legend: { position:'bottom', labels:{ font:{size:10}, boxWidth:10, padding:6 } } },
       scales: {
         x: { ticks:{ font:{size:8}, maxRotation:0, autoSkip:true, maxTicksLimit:8 }, grid:{ display:false } },
-        y: { beginAtZero:true, ticks:{ font:{size:9} }, grid:{ color:'#F3F4F6' }, title:{ display:true, text:'Equipos pendientes', font:{size:9} } }
+        y: { beginAtZero:true, max:100, ticks:{ font:{size:9}, callback:function(v){ return v+'%'; } }, grid:{ color:'#F3F4F6' }, title:{ display:true, text:'% avance acumulado', font:{size:9} } }
       },
       animation: { duration:1200, easing:'easeOutQuart' }
     }
