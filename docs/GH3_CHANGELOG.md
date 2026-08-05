@@ -1030,3 +1030,27 @@ funciona. CRISTIAN seguía en blanco — causa DISTINTA, no la misma.
   conexión con Chrome. Necesita reconfirmación tras el próximo push.
 - Verificado: `node --check`. Sin otras ocurrencias del mismo patrón
   sin protección en el archivo.
+
+## GH3.42.50
+FIX real sobre GH3.42.47 — Cristian reportó con captura que el
+problema seguía pasando "scroleando", no haciendo clic en un tab.
+
+- **Causa exacta**: `scroll-margin-top` (GH3.42.47) solo protege el
+  salto disparado por `scrollIntoView()` — es decir, únicamente
+  cuando se hace CLIC en un tab. Al scrollear manualmente (rueda del
+  mouse, barra de scroll), esa propiedad no interviene en absoluto. El
+  margen real entre secciones (`.form-section`, 20px) era menor que la
+  altura de la barra sticky de tabs (~56px) — al pasar de una sección
+  a otra scrolleando, el encabezado de la siguiente quedaba tapado
+  antes de que el margen terminara de liberar espacio.
+- **Fix**: `.form-section` margin-bottom de 20px → 60px — mayor que la
+  barra sticky, así el hueco entre secciones siempre "absorbe" la
+  altura de la barra antes de que aparezca cualquier encabezado o
+  etiqueta, sin importar cómo se llegue ahí (clic o scroll manual).
+- Verificado en vivo (inyectado antes de escribir el reporte, en
+  PC-Oficina): scrolleado manualmente el formulario completo de
+  "Juan Pablo Lopez Gutierrez" — secciones 4 y 7 confirmadas sin
+  ningún solapamiento, encabezados y etiquetas siempre visibles.
+- De paso confirmado en la misma prueba: esquinas redondeadas de
+  GH3.42.47 y encabezado "Acciones" corregido de GH3.42.43, ambos
+  funcionando en producción.

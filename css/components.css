@@ -735,7 +735,18 @@
 }
 .modal-foot { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; background: var(--bg-subtle);   flex-shrink: 0; /* GH3.39.1 P4 */
 }
-.form-section { margin-bottom: 20px; width: 100%; box-sizing: border-box; }
+.form-section {
+  margin-bottom: 60px; width: 100%; box-sizing: border-box;
+  /* GH3.42.50 FIX: era 20px — menos que la altura real de la barra
+     sticky de tabs (~56px). scroll-margin-top (GH3.42.47) solo protege
+     el salto al hacer clic en un tab; al scrollear manualmente (sin
+     clic) esa propiedad no aplica — el encabezado de la sección
+     siguiente quedaba tapado por la barra antes de que el margen
+     terminara de liberar espacio. Con 60px el hueco entre secciones
+     ya es mayor que la barra, así que siempre termina de "pasar" por
+     detrás de ella antes de que aparezca cualquier encabezado o
+     etiqueta. Reportado por Cristian con captura, scrolleando manual. */
+}
 .form-section:last-child { margin-bottom: 0; }
 .form-section-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 /* GH3.42.47 FIX: el clic en un tab hacía scrollIntoView(), pero el
