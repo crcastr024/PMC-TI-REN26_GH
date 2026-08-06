@@ -1141,3 +1141,17 @@ domingos ni festivos nacionales), no días calendario.
   no un error.
 - Verificado: `node --check` en todo el proyecto. Sin llaves CSS
   tocadas (cambio 100% en JS).
+
+## GH3.42.53
+Solo bump de versión visible en la app (footer y pantalla de carga) —
+GH3.42.52 no tenía ningún cambio de contenido pendiente de subir, y
+GitHub Desktop no detectaba ninguna diferencia contra el commit
+anterior. Necesario para generar un commit real y disparar una corrida
+nueva de despliegue, dado el incidente de GitHub Actions/Pages del 6
+de agosto (ver conversación — corrida #98 quedó atascada 5+ horas).
+
+- Footer: "v8.4.4 (F3.5 reorden de secciones)" → "v8.4.6 (F3.7 días
+  hábiles Colombia)" — refleja el cambio funcional real más reciente.
+- Pantalla de carga: "v8.8.4-MVP-1.0" → "v8.8.5-MVP-1.0".
+- Sin cambios de lógica — `node --check` y balance de llaves sin
+  diferencias respecto a GH3.42.52.
