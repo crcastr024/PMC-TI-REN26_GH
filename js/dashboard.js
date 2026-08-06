@@ -250,10 +250,72 @@ var REN26_INICIO = new Date('2026-07-01T00:00:00');
 var REN26_FIN    = new Date('2026-08-15T23:59:59');
 var REN26_META   = 146;
 
+// GH3.42.52 AUTORIZADO — Cristian pidió explícitamente que todos los
+// cálculos de días del proyecto (transcurridos, restantes, ritmo,
+// fecha estimada, burndown) cuenten SOLO días hábiles en Colombia
+// (sin sábados, domingos ni festivos nacionales), no días calendario.
+// Festivos 2026 confirmados con búsqueda web (fuentes: Pulzo, Semana,
+// RCN, calendario-colombia.com, festivos.com.co — todas coinciden en
+// las 4 fechas dentro/cerca de la ventana del proyecto). Incluye el
+// festivo nuevo de la Virgen de Chiquinquirá (Ley 2578 de 2026,
+// trasladado al lunes 13 jul por Ley Emiliani).
+var COLOMBIA_FESTIVOS_2026 = [
+  '2026-01-01', // Año Nuevo
+  '2026-01-12', // Reyes Magos (trasladado)
+  '2026-03-23', // San José (trasladado)
+  '2026-04-02', // Jueves Santo
+  '2026-04-03', // Viernes Santo
+  '2026-05-01', // Día del Trabajo
+  '2026-05-18', // Ascensión (trasladado)
+  '2026-06-08', // Corpus Christi (trasladado)
+  '2026-06-15', // Sagrado Corazón (trasladado)
+  '2026-06-29', // San Pedro y San Pablo (trasladado)
+  '2026-07-13', // Virgen de Chiquinquirá — NUEVO 2026, trasladado de jul 9
+  '2026-07-20', // Día de la Independencia (fecha fija, cae lunes)
+  '2026-08-07', // Batalla de Boyacá (fecha fija, no se traslada)
+  '2026-08-17', // Asunción de la Virgen (trasladado de ago 15)
+  '2026-10-12', // Día de la Raza (trasladado)
+  '2026-11-02', // Todos los Santos (trasladado de nov 1)
+  '2026-11-11', // Independencia de Cartagena (fecha fija)
+  '2026-12-08', // Inmaculada Concepción
+  '2026-12-25', // Navidad
+];
+function _isoDate(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function _esDiaHabilCO(d) {
+  var dow = d.getDay(); // 0=domingo, 6=sábado
+  if (dow === 0 || dow === 6) return false;
+  return COLOMBIA_FESTIVOS_2026.indexOf(_isoDate(d)) < 0;
+}
+// Cuenta días hábiles en [desde, hasta) — incluye 'desde', excluye 'hasta'.
+function _diasHabilesEntre(desde, hasta) {
+  var d = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate());
+  var fin = new Date(hasta.getFullYear(), hasta.getMonth(), hasta.getDate());
+  var count = 0;
+  while (d < fin) {
+    if (_esDiaHabilCO(d)) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+// Avanza N días hábiles desde una fecha (para proyecciones — "fecha estimada").
+function _sumarDiasHabilesCO(desde, n) {
+  var d = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate());
+  var restantes = Math.max(0, n);
+  while (restantes > 0) {
+    d.setDate(d.getDate() + 1);
+    if (_esDiaHabilCO(d)) restantes--;
+  }
+  return d;
+}
+// REN26_FIN + 1 día, para poder contar el rango [INICIO, FIN] con FIN incluido.
+var _REN26_FIN_EXCL = (function() { var f = new Date(REN26_FIN); f.setDate(f.getDate() + 1); return f; })();
+
 function _computeProyecto(activos, all) {
   var hoy         = new Date();
-  var diasTotal   = Math.ceil((REN26_FIN - REN26_INICIO) / 86400000);
-  var diasTrans   = Math.max(0, Math.min(diasTotal, Math.floor((hoy - REN26_INICIO) / 86400000)));
+  var diasTotal   = _diasHabilesEntre(REN26_INICIO, _REN26_FIN_EXCL);
+  var diasTrans   = Math.max(0, Math.min(diasTotal, _diasHabilesEntre(REN26_INICIO, hoy)));
   var diasRest    = Math.max(0, diasTotal - diasTrans);
   var pctTiempo   = diasTotal > 0 ? Math.round(diasTrans / diasTotal * 100) : 0;
   // Semáforo por desviación
@@ -287,8 +349,8 @@ function _hitoEntregado(estado) {
 
 function _computeGauge(activos, entregados) {
   var hoy = new Date();
-  var diasTotal = Math.ceil((REN26_FIN - REN26_INICIO) / 86400000);
-  var diasTrans = Math.max(0, Math.min(diasTotal, Math.floor((hoy - REN26_INICIO) / 86400000)));
+  var diasTotal = _diasHabilesEntre(REN26_INICIO, _REN26_FIN_EXCL);
+  var diasTrans = Math.max(0, Math.min(diasTotal, _diasHabilesEntre(REN26_INICIO, hoy)));
   var esperado = diasTotal > 0 ? Math.round(diasTrans / diasTotal * 100) : 0;
   var totalOp  = activos.length || 1;
   var real     = Math.round(entregados / totalOp * 100);
@@ -304,14 +366,15 @@ function _computeGauge(activos, entregados) {
 
 function _computeProductividad(activos, entregados) {
   var hoy = new Date();
-  var diasTotal = Math.ceil((REN26_FIN - REN26_INICIO) / 86400000);
-  var diasTrans = Math.max(1, Math.min(diasTotal, Math.floor((hoy - REN26_INICIO) / 86400000)));
+  var diasTotal = _diasHabilesEntre(REN26_INICIO, _REN26_FIN_EXCL);
+  var diasTrans = Math.max(1, Math.min(diasTotal, _diasHabilesEntre(REN26_INICIO, hoy)));
   var diasRest  = Math.max(1, diasTotal - diasTrans);
   var totalOp   = activos.length || 1;
   var restantes = Math.max(0, totalOp - entregados);
   var promedioGlobal  = +(entregados / diasTrans).toFixed(2);
-  // Promedio semanal: mismos entregados / semanas (aproximación conservadora)
-  var semanas         = Math.max(1, diasTrans / 7);
+  // Promedio semanal: diasTrans ya son días HÁBILES — una semana laboral
+  // colombiana típica son 5, no 7 (GH3.42.52).
+  var semanas         = Math.max(1, diasTrans / 5);
   var promedioSemanal = +(entregados / semanas).toFixed(1);
   var ritmoNecesario  = +(restantes / diasRest).toFixed(2);
   // Entregados por día (histograma últimos 14 días)
@@ -380,13 +443,18 @@ function _computeBurnDown(activos) {
   // nombres de campo (esperado/real) para no romper el único consumidor
   // (_renderBurnDownChart, ui.js) más de lo necesario.
   var meta       = REN26_META;
-  var diasTotal  = Math.ceil((REN26_FIN - REN26_INICIO) / 86400000);
+  var diasTotalHabiles = _diasHabilesEntre(REN26_INICIO, _REN26_FIN_EXCL);
+  var diasTotal  = Math.ceil((REN26_FIN - REN26_INICIO) / 86400000); // rango calendario, solo para recorrer el eje X
   var hoy        = new Date(); hoy.setHours(23,59,59,999);
   var puntos     = [];
-  var step       = 3; // cada 3 días
+  var step       = 3; // cada 3 días calendario (misma densidad visual de siempre)
   for (var d = 0; d <= diasTotal; d += step) {
     var fecha    = new Date(REN26_INICIO); fecha.setDate(fecha.getDate() + d);
-    var esperadoEntregados = Math.round(meta * (d / diasTotal));
+    // GH3.42.52 AUTORIZADO: % esperado sobre días HÁBILES transcurridos
+    // hasta esta fecha, no sobre la fracción de días calendario — la
+    // línea se aplana en fin de semana/festivo, no sigue subiendo.
+    var diasHabilesHasta = _diasHabilesEntre(REN26_INICIO, fecha);
+    var esperadoEntregados = diasTotalHabiles > 0 ? Math.round(meta * (diasHabilesHasta / diasTotalHabiles)) : 0;
     var esperadoPct        = meta > 0 ? Math.round((esperadoEntregados / meta) * 100) : 0;
     var realPct = null;
     if (fecha <= hoy) {
@@ -410,10 +478,10 @@ function _computeBurnDown(activos) {
 
 function _computeProyeccion(activos, entregados) {
   var hoy = new Date();
-  var diasTrans = Math.max(1, Math.floor((hoy - REN26_INICIO) / 86400000));
+  var diasTrans = Math.max(1, _diasHabilesEntre(REN26_INICIO, hoy));
   var totalOp   = activos.length || 1;
   var restantes = Math.max(0, totalOp - entregados);
-  var velocidad = entregados / diasTrans;
+  var velocidad = entregados / diasTrans; // equipos por día HÁBIL
   if (velocidad <= 0.05) return {
     fechaEstimada: null,
     fechaEstimadaTxt: 'Sin datos',
@@ -421,9 +489,11 @@ function _computeProyeccion(activos, entregados) {
     tipo:          'unknown'
   };
   var diasNecesarios = Math.ceil(restantes / velocidad);
-  var fechaEstimada  = new Date(hoy); fechaEstimada.setDate(fechaEstimada.getDate() + diasNecesarios);
-  var diffMs = fechaEstimada - REN26_FIN;
-  var diasVsMeta = Math.round(diffMs / 86400000);
+  // GH3.42.52 AUTORIZADO: avanzar diasNecesarios en días HÁBILES reales
+  // (nunca cae en sábado/domingo/festivo) en vez de días calendario.
+  var fechaEstimada  = _sumarDiasHabilesCO(hoy, diasNecesarios);
+  var diasVsMeta = _diasHabilesEntre(REN26_FIN < fechaEstimada ? REN26_FIN : fechaEstimada, REN26_FIN < fechaEstimada ? fechaEstimada : REN26_FIN);
+  if (fechaEstimada < REN26_FIN) diasVsMeta = -diasVsMeta; // estimada antes de la meta = adelanto (negativo)
   return {
     fechaEstimada:     fechaEstimada,
     fechaEstimadaTxt:  _fmtDateShort(fechaEstimada),

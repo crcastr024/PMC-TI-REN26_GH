@@ -613,7 +613,7 @@ function _renderTecnicoGrid(container, tecList) {
           '<div class="tg-stat-row"><span>Asignados</span><strong>' + d.asignados + '</strong></div>' +
           '<div class="tg-stat-row"><span>Pendientes</span><strong style="color:#FF5A5A">' + d.pendientes + '</strong></div>' +
           '<div class="tg-stat-row"><span>En proceso</span><strong>' + d.proceso + '</strong></div>' +
-          '<div class="tg-stat-row"><span>Entregados</span><strong>' + d.entregados + '</strong></div>' +
+          '<div class="tg-stat-nested">└ Entregados: <strong>' + d.entregados + '</strong></div>' +
           '<div class="tg-stat-row tg-stat-last"><span>Finalizados</span><strong style="color:#2FBF6E">' + (d.finalizados || 0) + '</strong></div>' +
         '</div>' +
       '</div>';
@@ -914,8 +914,7 @@ function renderReportesEjecutivos() {
       '<div><div class="exec-stat-v">' + d.backup + '</div><div class="exec-stat-l">Backup</div></div>' +
       '<div><div class="exec-stat-v" style="color:var(--r);font-weight:900">' + d.total + '</div><div class="exec-stat-l"><strong>Total</strong></div></div>' +
       '<div><div class="exec-stat-v acc">' + d.pendientes + '</div><div class="exec-stat-l">Pendientes</div></div>' +
-      '<div><div class="exec-stat-v amb">' + d.proceso + '</div><div class="exec-stat-l">Proceso</div></div>' +
-      '<div><div class="exec-stat-v grn">' + d.entregados + '</div><div class="exec-stat-l">Entregados</div></div>' +
+      '<div><div class="exec-stat-v amb">' + d.proceso + '</div><div class="exec-stat-l">Proceso</div><div class="exec-stat-nested">└ ' + d.entregados + ' entreg.</div></div>' +
       '<div><div class="exec-stat-v">' + d.actas + '</div><div class="exec-stat-l">Actas</div></div>' +
       '<div><div class="exec-stat-v">' + d.cerrados + '</div><div class="exec-stat-l">Cerrados</div></div>' +
       '<div><div class="exec-stat-v grn" style="font-size:18px">' + d.pct + '%</div><div class="exec-stat-l">Avance</div></div>' +
@@ -2007,8 +2006,7 @@ function renderPanelEjecutivo() {
         '<div><div class="exec-stat-v">' + d.backup + '</div><div class="exec-stat-l">Backup</div></div>' +
         '<div><div class="exec-stat-v" style="color:var(--accent);font-weight:900">' + d.total + '</div><div class="exec-stat-l"><strong>Total</strong></div></div>' +
         '<div><div class="exec-stat-v acc">' + d.pendientes + '</div><div class="exec-stat-l">Pendientes</div></div>' +
-        '<div><div class="exec-stat-v amb">' + d.proceso + '</div><div class="exec-stat-l">Proceso</div></div>' +
-        '<div><div class="exec-stat-v grn">' + d.entregados + '</div><div class="exec-stat-l">Entregados</div></div>' +
+        '<div><div class="exec-stat-v amb">' + d.proceso + '</div><div class="exec-stat-l">Proceso</div><div class="exec-stat-nested">└ ' + d.entregados + ' entreg.</div></div>' +
         '<div><div class="exec-stat-v">' + (d.actas||0) + '</div><div class="exec-stat-l">Actas</div></div>' +
         '<div><div class="exec-stat-v">' + (d.cerrados||0) + '</div><div class="exec-stat-l">Cerrados</div></div>' +
         '<div><div class="exec-stat-v grn" style="font-size:18px">' + d.pct + '%</div><div class="exec-stat-l">Avance</div></div>' +
@@ -2482,8 +2480,7 @@ function _renderTecnicoCarousel(container, tecList) {
           '<div class="rc-stats-grid">' +
             '<div class="rc-stat"><span class="rc-stat-v">' + d.asignados + '</span><span class="rc-stat-l">Asignados</span></div>' +
             '<div class="rc-stat"><span class="rc-stat-v accent">' + d.pendientes + '</span><span class="rc-stat-l">Pendientes</span></div>' +
-            '<div class="rc-stat"><span class="rc-stat-v amb">' + d.proceso + '</span><span class="rc-stat-l">En proceso</span></div>' +
-            '<div class="rc-stat"><span class="rc-stat-v grn">' + d.entregados + '</span><span class="rc-stat-l">Entregados</span></div>' +
+            '<div class="rc-stat"><span class="rc-stat-v amb">' + d.proceso + '</span><span class="rc-stat-l">En proceso</span><span class="rc-stat-nested">└ ' + d.entregados + ' entreg.</span></div>' +
             '<div class="rc-stat"><span class="rc-stat-v">' + (d.actas || 0) + '</span><span class="rc-stat-l">Actas</span></div>' +
             '<div class="rc-stat"><span class="rc-stat-v grn">' + d.finalizados + '</span><span class="rc-stat-l">Finalizados</span></div>' +
           '</div>' +

@@ -438,3 +438,15 @@
 @media (max-width: 640px) {
   .tg-grid { grid-template-columns: 1fr; padding: 14px; }
 }
+
+/* GH3.42.51: "Entregados" anidado bajo "En proceso" (rc-stat, carrusel
+   viejo del Leaderboard) — mismo motivo que exec-stat-nested: es un
+   hito acumulativo que se superpone, no una categoría paralela. */
+.rc-stat-nested { font-size: 8.5px; color: var(--text-3, #8A8A93); margin-top: 2px; opacity: .85; }
+
+/* GH3.42.51: "Entregados" anidado bajo "En proceso" en la grilla de
+   anillos de actividad (tg-*, Por técnico) — mismo motivo. */
+.tg-stat-nested {
+  font-size: 10px; color: #8E8E93;
+  padding-left: 14px; margin-top: -3px; opacity: .85;
+}

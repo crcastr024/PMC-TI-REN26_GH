@@ -1054,3 +1054,90 @@ problema seguía pasando "scroleando", no haciendo clic en un tab.
 - De paso confirmado en la misma prueba: esquinas redondeadas de
   GH3.42.47 y encabezado "Acciones" corregido de GH3.42.43, ambos
   funcionando en producción.
+
+## GH3.42.51
+Aplicado en TODOS los lugares donde aparecen Pendientes/Proceso/
+Entregados juntos — a pedido de Cristian, extendiendo el análisis de
+la tarjeta de técnico a toda la app.
+
+- **Causa de fondo (recordatorio)**: "Entregados" es un hito
+  acumulativo (`fecha_entrega` o estado ∈ ENTREGADO_ST) que se
+  superpone con "En proceso" (estado ∈ PROC_ST) — 5 de los 9 estados
+  de PROC_ST también están en ENTREGADO_ST. No son categorías
+  paralelas; "Entregados" es un corte transversal DENTRO de "En
+  proceso". Mostrarlos como cajas hermanas del mismo peso visual
+  sugiere que deberían sumar al total y no lo hacen — de ahí la
+  confusión que señaló Cristian.
+- **Fix — mismo criterio en los 4 lugares**: "Entregados" fusionado
+  como sub-línea anidada (└, más chico, color discreto) dentro de la
+  celda/fila de "En proceso", en vez de celda/fila hermana:
+  - `_renderTecnicoGrid()` — grilla de anillos de actividad, "Por
+    técnico" (`.tg-stat-nested`).
+  - `.exec-empresa-card` — "Cumplimiento por empresa", **2 copias**
+    (Ejecutivos y Seguimiento, unificadas desde GH3.42.28) —
+    `.exec-stat-nested`.
+  - `.rc-stat` — carrusel compartido, Leaderboard de Seguimiento
+    (`_renderTecnicoCarousel`, sin tocar en GH3.42.44 por alcance —
+    esta corrección sí aplica porque el pedido ahora es "donde se
+    muestren estos datos") — `.rc-stat-nested`.
+  - Hero de Resumen — eliminada la caja "Entregados" independiente,
+    fusionada en la caja de "En proceso". De paso corregido el
+    subtítulo "Alistamiento + envío", que era inexacto (el dato real
+    de `m.proceso` llega hasta "Pendiente aprobación", no solo esos 2
+    estados).
+- **No tocado, decisión explícita**: la tabla "Cumplimiento por
+  técnico" (columnas Asignados/Pendientes/Proceso/Envío/Entregados/
+  Actas/Cerrados/%) — es tabular, cada columna ya tiene su propio
+  encabezado individual; el problema de "cajas hermanas iguales" no
+  aplica al mismo formato. La fila 7 de "metric-card" de Resumen
+  tampoco — ahí "Entregados" no tiene una caja "Proceso" al lado (esa
+  vive en "Detalle operativo" como "En alistamiento"/"En envío"
+  separados), y ya tenía tooltip explicando la naturaleza acumulativa.
+- Verificado en vivo (inyectado antes de empaquetar): "Cumplimiento
+  por empresa" en Seguimiento — "64 Proceso" con "└ 65 entreg."
+  debajo, más chico y discreto, tal como se diseñó. `node --check` en
+  todo el proyecto, balance de llaves en 7 CSS.
+
+## GH3.42.52
+AUTORIZADO — Cristian pidió explícitamente que todos los cálculos de
+fecha del proyecto cuenten solo días hábiles en Colombia (sin sábados,
+domingos ni festivos nacionales), no días calendario.
+
+- **Festivos 2026 confirmados con búsqueda web** (no inventados de
+  memoria) — fuentes: Pulzo, Semana, RCN, calendario-colombia.com,
+  festivos.com.co, todas coinciden en las fechas dentro/cerca de la
+  ventana del proyecto: 13 jul (Virgen de Chiquinquirá, festivo NUEVO
+  2026 por Ley 2578), 20 jul (Independencia), 7 ago (Batalla de
+  Boyacá), 17 ago (Asunción de la Virgen, trasladada de 15 ago).
+  Lista completa de 19 festivos 2026 incluida para cálculos que se
+  extiendan más allá de agosto.
+- **Motor nuevo**: `_esDiaHabilCO()`, `_diasHabilesEntre()`,
+  `_sumarDiasHabilesCO()` (dashboard.js) — excluyen sábado/domingo y
+  los festivos de la lista.
+- **6 cálculos reemplazados**, todos en dashboard.js:
+  - `_computeProyecto()` — días transcurridos/restantes/% tiempo.
+  - `_computeGauge()` — % esperado del gauge "Avance esperado vs real".
+  - `_computeProductividad()` — ritmo necesario; además el divisor de
+    "promedio semanal" pasó de 7 a 5 (una semana laboral son 5 días
+    hábiles, no 7 días calendario).
+  - `_computeBurnDown()` — el eje sigue recorriendo fechas calendario
+    (misma densidad visual de siempre, cada 3 días) pero el % esperado
+    se calcula sobre días hábiles transcurridos hasta cada fecha — la
+    línea se aplana en fin de semana/festivo en vez de seguir subiendo.
+  - `_computeProyeccion()` — "fecha estimada de finalización" ahora
+    avanza en días hábiles reales (nunca cae en sábado/domingo/festivo).
+- Verificado en vivo con la fecha real de hoy (6 ago 2026, inyectado
+  antes de empaquetar): 30 días hábiles totales del proyecto (vs 46
+  calendario), 24 transcurridos hasta hoy (vs 35 calendario). También
+  verificado con simulación en Node: los 3 festivos julio-agosto se
+  excluyen correctamente, un lunes normal cuenta como hábil, un sábado
+  no, y la proyección de fecha salta correctamente fin de semana y
+  festivo (10 días hábiles desde el 4 ago aterrizan en el 20 ago,
+  verificado a mano día por día).
+- **Aviso importante**: esto cambia los números mostrados (días
+  transcurridos, restantes, fecha estimada, ritmo necesario) aunque
+  los datos del proyecto no cambiaron — solo cambia cómo se mide el
+  tiempo. Es un cambio de metodología esperado y pedido explícitamente,
+  no un error.
+- Verificado: `node --check` en todo el proyecto. Sin llaves CSS
+  tocadas (cambio 100% en JS).

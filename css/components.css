@@ -1210,6 +1210,12 @@ body.sb-collapsed #app-footer {
 .exec-stat-v{font-size:20px;font-weight:900;line-height:1;font-family:var(--font-condensed,sans-serif)}
 .exec-stat-v.grn{color:var(--green)}.exec-stat-v.amb{color:var(--amber)}.exec-stat-v.acc{color:var(--accent)}
 .exec-stat-l{font-size:9px;color:var(--text-3);text-transform:uppercase;margin-top:2px}
+/* GH3.42.51: Entregados anidado dentro de la celda de Proceso — es un
+   hito acumulativo que se superpone con "en proceso" (Entregado
+   equipo nuevo, Pendiente devolución, etc. cuentan para ambos), no una
+   categoría paralela. Mostrarlo como sub-línea más chica y discreta
+   en vez de celda hermana del mismo peso visual comunica esa relación. */
+.exec-stat-nested{font-size:8px;color:var(--text-3);margin-top:2px;opacity:.85}
 .exec-bar-wrap{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
 .exec-bar{height:100%;background:var(--green);border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
 .exec-pipeline{display:flex;gap:4px;overflow-x:auto;padding:8px 0 4px}
