@@ -592,30 +592,46 @@ function _renderTecnicoGrid(container, tecList) {
 
   function _cardHTML(d, i) {
     var initials = (d.tec || '?').split(/\s+/).map(function(w){ return w.charAt(0); }).join('').slice(0,2).toUpperCase();
-    var color = _color(d.pct);
+    // GH3.42.54: el anillo ahora representa "Renovación completa" (los
+    // 3 objetivos que aplican a cada equipo, todos cumplidos) — no el
+    // hito acumulativo de "entregados" de antes. Es el indicador
+    // general que pidió Cristian, combinando ambas pistas.
+    var pctCompleta = d.pctCompleta || 0;
+    var color = _color(pctCompleta);
     var r = 47, c = 2 * Math.PI * r;
+    var aplicaDev = (d.aplicaDevolucion || 0) > 0;
     return '<div class="tg-card" data-idx="' + i + '">' +
         '<div class="tg-head">' +
           '<div class="tg-avatar" style="background:#2C2C2E;color:' + color + '">' + esc(initials) + '</div>' +
-          '<div class="tg-name">' + esc(d.tec) + '</div>' +
+          '<div><div class="tg-name">' + esc(d.tec) + '</div><div class="tg-sub">' + d.asignados + ' equipos asignados</div></div>' +
         '</div>' +
         '<div class="tg-ring-wrap">' +
           '<svg viewBox="0 0 112 112" width="112" height="112" aria-hidden="true">' +
             '<circle cx="56" cy="56" r="' + r + '" fill="none" stroke="#2C2C2E" stroke-width="11"/>' +
             '<circle class="tg-ring" cx="56" cy="56" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="11" stroke-linecap="round" ' +
               'stroke-dasharray="' + c.toFixed(2) + '" stroke-dashoffset="' + c.toFixed(2) + '" transform="rotate(-90 56 56)" ' +
-              'data-target-offset="' + (c * (1 - d.pct / 100)).toFixed(2) + '"/>' +
-            '<text class="tg-pct" x="56" y="52" text-anchor="middle" font-size="24" font-weight="700" fill="#fff" letter-spacing="-1">0%</text>' +
-            '<text x="56" y="69" text-anchor="middle" font-size="8.5" font-weight="500" fill="#8E8E93" letter-spacing=".3">AVANCE</text>' +
+              'data-target-offset="' + (c * (1 - pctCompleta / 100)).toFixed(2) + '"/>' +
+            '<text class="tg-pct" x="56" y="49" text-anchor="middle" font-size="21" font-weight="700" fill="#fff" letter-spacing="-1">0%</text>' +
+            '<text x="56" y="63" text-anchor="middle" font-size="7" font-weight="500" fill="#8E8E93" letter-spacing=".2">RENOVACIÓN</text>' +
+            '<text x="56" y="73" text-anchor="middle" font-size="7" font-weight="500" fill="#8E8E93" letter-spacing=".2">COMPLETA</text>' +
           '</svg>' +
         '</div>' +
-        '<div class="tg-stats">' +
-          '<div class="tg-stat-row"><span>Asignados</span><strong>' + d.asignados + '</strong></div>' +
-          '<div class="tg-stat-row"><span>Pendientes</span><strong style="color:#FF5A5A">' + d.pendientes + '</strong></div>' +
-          '<div class="tg-stat-row"><span>En proceso</span><strong>' + d.proceso + '</strong></div>' +
-          '<div class="tg-stat-nested">└ Entregados: <strong>' + d.entregados + '</strong></div>' +
-          '<div class="tg-stat-row tg-stat-last"><span>Finalizados</span><strong style="color:#2FBF6E">' + (d.finalizados || 0) + '</strong></div>' +
+        '<div class="tg-track">' +
+          '<div class="tg-track-label">Equipo nuevo</div>' +
+          '<div class="tg-stat-row"><span>Alistamiento</span><strong>' + (d.alistamiento || 0) + '</strong></div>' +
+          '<div class="tg-stat-row"><span>En progreso</span><strong>' + (d.progresoNuevo || 0) + '</strong></div>' +
+          '<div class="tg-stat-row"><span>Entregados</span><strong style="color:#2FBF6E">' + (d.entregados || 0) + '</strong></div>' +
+          '<div class="tg-stat-nested">└ Actas firmadas: <strong>' + (d.actas || 0) + '</strong></div>' +
         '</div>' +
+        (aplicaDev ?
+        '<div class="tg-track">' +
+          '<div class="tg-track-label">Equipo anterior</div>' +
+          '<div class="tg-stat-row"><span>Pendientes</span><strong style="color:#FF5A5A">' + (d.devPendientes || 0) + '</strong></div>' +
+          '<div class="tg-stat-row"><span>En progreso</span><strong>' + (d.devProgreso || 0) + '</strong></div>' +
+          '<div class="tg-stat-row"><span>Recibidos</span><strong style="color:#2FBF6E">' + (d.devRecibidos || 0) + '</strong></div>' +
+        '</div>'
+        : '<div class="tg-track"><div class="tg-track-label">Equipo anterior</div><div class="tg-track-empty">No aplica para ningún equipo de este técnico</div></div>') +
+        '<div class="tg-footer">Renovación completa: <strong>' + (d.renovacionCompleta || 0) + ' de ' + d.asignados + '</strong></div>' +
       '</div>';
   }
 
@@ -626,7 +642,7 @@ function _renderTecnicoGrid(container, tecList) {
     var ring = card.querySelector('.tg-ring');
     var pctText = card.querySelector('.tg-pct');
     var targetOffset = parseFloat(ring.dataset.targetOffset);
-    var targetPct = tecList[i].pct || 0;
+    var targetPct = tecList[i].pctCompleta || 0;
     var skipAnim = reduced || !firstPlay;
     var delay = skipAnim ? 0 : i * 150;
     setTimeout(function() {
@@ -671,7 +687,7 @@ function renderTecnicos() {
     var _d = _ptAll[_tKey] || { asignados:0, pendientes:0, proceso:0, entregados:0, actas:0, finalizados:0, pct:0 };
     return Object.assign({ tec: t }, _d);
   }).filter(function(d){ return d.asignados > 0; })
-    .sort(function(a,b){ return b.entregados - a.entregados; });
+    .sort(function(a,b){ return (b.renovacionCompleta||0) - (a.renovacionCompleta||0); });
 
   var container = document.getElementById('tec-grid');
   if (!container) return;

@@ -1155,3 +1155,41 @@ de agosto (ver conversación — corrida #98 quedó atascada 5+ horas).
 - Pantalla de carga: "v8.8.4-MVP-1.0" → "v8.8.5-MVP-1.0".
 - Sin cambios de lógica — `node --check` y balance de llaves sin
   diferencias respecto a GH3.42.52.
+
+## GH3.42.54
+AUTORIZADO — rediseño de "Por técnico" en 2 pistas (equipo nuevo /
+equipo anterior, solo si aplica) + indicador general "Renovación
+completa", a pedido explícito de Cristian con análisis previo en el
+chat (enfoque de científico de datos presentando a gerencia).
+
+- **`porTecnico` (dashboard.js) extendido** con: `alistamiento`,
+  `progresoNuevo` (equipo nuevo); `aplicaDevolucion`, `devPendientes`,
+  `devProgreso`, `devRecibidos` (equipo anterior, solo cuando
+  `eq_ant_tipo` está lleno y `estado_devolucion !== 'No aplica'`);
+  `renovacionCompleta`/`pctCompleta` (objetivos que aplican a CADA
+  registro, todos cumplidos).
+- **Lectura de datos reales confirmada con Cristian**: `estado_devolucion`
+  tiene un valor literal `"NO"` en 71 registros (67 con equipo anterior
+  real cargado) — se lee como "pendiente sin iniciar trámite", igual
+  que `'Pendiente'`. Solo `'No aplica'` explícito (o `eq_ant_tipo`
+  vacío) excluye un registro de la pista de equipo anterior.
+- **Anillo redefinido**: ahora representa `pctCompleta` (Renovación
+  completa), no el hito acumulativo de "entregados" — es el indicador
+  general que combina ambas pistas, tal como se pidió.
+- **Tarjeta rediseñada** (`_renderTecnicoGrid`, ui.js): 2 secciones
+  ("Equipo nuevo": Alistamiento/En progreso/Entregados └ Actas;
+  "Equipo anterior": Pendientes/En progreso/Recibidos, oculta por
+  completo si no aplica a ningún equipo del técnico) + footer
+  "Renovación completa: X de Y". Orden de tarjetas actualizado a
+  `renovacionCompleta` (antes `entregados`).
+- **Alcance acotado, igual criterio que GH3.42.44**: solo "Por
+  técnico". El Leaderboard de Seguimiento sigue con el carrusel
+  compartido — no se tocó.
+- Verificado en vivo con los 3 técnicos reales (inyectado antes de
+  empaquetar): SANTIAGO — 34 entregados, **0 actas firmadas**, 0 de 48
+  con Renovación completa. Hallazgo real, no simulado: el cuello de
+  botella de Santiago es firma de actas, no entrega — invisible en el
+  modelo anterior, visible de inmediato en este.
+- Verificado: simulación en Node contra 10 registros sintéticos
+  (verificación manual registro por registro, coincide exacto).
+  `node --check`, balance de llaves en 7 CSS.

@@ -450,3 +450,21 @@
   font-size: 10px; color: #8E8E93;
   padding-left: 14px; margin-top: -3px; opacity: .85;
 }
+
+/* GH3.42.54 — 2 pistas (equipo nuevo / equipo anterior) + Renovación
+   completa como indicador general. Cristian pidió desglosar los
+   indicadores de "Por técnico" en estas 2 pistas, con equipo anterior
+   visible solo cuando aplica. */
+.tg-sub { font-size: 10px; color: #8E8E93; margin-top: 1px; }
+.tg-track { margin-top: 4px; padding-top: 10px; border-top: 1px solid #2C2C2E; }
+.tg-track:first-of-type { border-top: none; padding-top: 0; }
+.tg-track-label {
+  font-size: 9px; font-weight: 700; color: #6E6E76; text-transform: uppercase;
+  letter-spacing: .06em; margin-bottom: 7px;
+}
+.tg-track-empty { font-size: 10px; color: #6E6E76; font-style: italic; padding: 2px 0 4px; }
+.tg-footer {
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid #2C2C2E;
+  font-size: 10.5px; color: #8E8E93; text-align: center;
+}
+.tg-footer strong { color: #fff; }

@@ -105,19 +105,50 @@ function buildDashboardStats(users) {
   var porTecnico = {};
   activos.forEach(function(u) {
     var t = u.tecnico || 'Sin asignar';
-    if (!porTecnico[t]) porTecnico[t] = { asignados:0, pendientes:0, proceso:0, enEnvio:0, entregados:0, actas:0, finalizados:0, pct:0 };
+    if (!porTecnico[t]) porTecnico[t] = {
+      asignados:0, pendientes:0, proceso:0, enEnvio:0, entregados:0, actas:0, finalizados:0, pct:0,
+      // GH3.42.54 AUTORIZADO: desglose por pista + Renovación completa
+      alistamiento:0, progresoNuevo:0,
+      aplicaDevolucion:0, devPendientes:0, devProgreso:0, devRecibidos:0,
+      renovacionCompleta:0, pctCompleta:0
+    };
     var d = porTecnico[t];
     d.asignados++;
     if (u.estado === 'Pendiente') d.pendientes++;
     if (u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo') d.enEnvio++;
+    if (u.estado === 'Alistamiento') d.alistamiento++;
+    if (u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo') d.progresoNuevo++;
     if (PROC_ST.indexOf(u.estado) >= 0) d.proceso++;
-    if (u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0) d.entregados++;
-    if (!!u.fecha_firma_acta) d.actas++;
+    var yaEntregado = !!(u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0);
+    if (yaEntregado) d.entregados++;
+    var actaFirmada = !!u.fecha_firma_acta;
+    if (actaFirmada) d.actas++;
     if (u.estado === 'Renovación completada' || u.estado === 'Cerrado' || u.estado === 'Finalizado' || u.estado === 'Completado') d.finalizados++;
+
+    // Pista "equipo anterior" — solo si aplica. eq_ant_tipo vacío o
+    // estado_devolucion === 'No aplica' → se excluye del todo. 'NO'
+    // (valor literal, dato heredado del Excel) y 'Pendiente' se leen
+    // igual: pendiente sin iniciar trámite — confirmado con Cristian
+    // sobre los datos reales (71 registros con 'NO' literal, 67 de
+    // ellos con equipo anterior real cargado).
+    var tieneEqAnterior = !!(u.eq_ant_tipo && String(u.eq_ant_tipo).trim());
+    var noAplicaDevolucion = u.estado_devolucion === 'No aplica' || !tieneEqAnterior;
+    var yaRecibido = false;
+    if (!noAplicaDevolucion) {
+      d.aplicaDevolucion++;
+      if (u.estado_devolucion === 'Recibida en bodega') { d.devRecibidos++; yaRecibido = true; }
+      else if (u.estado_devolucion === 'Solicitada' || u.estado_devolucion === 'En tránsito') d.devProgreso++;
+      else d.devPendientes++; // cubre 'NO', 'Pendiente', vacío
+    }
+
+    // Renovación completa: los 3 objetivos que aplican a ESTE registro,
+    // todos cumplidos (si no aplica devolución, solo entrega + acta).
+    if (yaEntregado && actaFirmada && (noAplicaDevolucion || yaRecibido)) d.renovacionCompleta++;
   });
   Object.keys(porTecnico).forEach(function(t) {
     var d = porTecnico[t];
     d.pct = d.asignados ? Math.round(d.entregados / d.asignados * 100) : 0;
+    d.pctCompleta = d.asignados ? Math.round(d.renovacionCompleta / d.asignados * 100) : 0;
   });
 
   // Por ciudad
