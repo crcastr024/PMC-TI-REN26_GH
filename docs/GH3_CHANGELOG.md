@@ -1193,3 +1193,22 @@ chat (enfoque de científico de datos presentando a gerencia).
 - Verificado: simulación en Node contra 10 registros sintéticos
   (verificación manual registro por registro, coincide exacto).
   `node --check`, balance de llaves en 7 CSS.
+
+## GH3.42.55
+Ajuste sobre GH3.42.54, tras revisión visual — Cristian eligió opción
+2: sacar "Actas firmadas" del anidado.
+
+- "Actas firmadas" vuelve a ser fila hermana de Alistamiento/En
+  progreso/Entregados, mismo peso visual — antes era una sub-línea
+  chica y apagada, y en el caso de Santiago (0 actas) esa era
+  justamente la causa raíz del 0% de Renovación completa, escondida
+  en el texto más pequeño de toda la tarjeta.
+- **Agregado por mi cuenta, no pedido explícitamente**: si Actas=0
+  Y Entregados>0 (hay algo por firmar y no se ha firmado nada), el
+  número se pinta en rojo — mismo criterio que ya usa "Pendientes".
+  Si Entregados también es 0, no hay nada que firmar aún, así que no
+  se marca en rojo (no sería una alerta real).
+- No verificado en vivo esta vez — la conexión con Chrome se cortó a
+  media prueba. Verificado por lectura de código y consistencia con
+  el patrón ya confirmado en GH3.42.54.
+- `node --check` OK.

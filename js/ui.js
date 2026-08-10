@@ -621,7 +621,7 @@ function _renderTecnicoGrid(container, tecList) {
           '<div class="tg-stat-row"><span>Alistamiento</span><strong>' + (d.alistamiento || 0) + '</strong></div>' +
           '<div class="tg-stat-row"><span>En progreso</span><strong>' + (d.progresoNuevo || 0) + '</strong></div>' +
           '<div class="tg-stat-row"><span>Entregados</span><strong style="color:#2FBF6E">' + (d.entregados || 0) + '</strong></div>' +
-          '<div class="tg-stat-nested">└ Actas firmadas: <strong>' + (d.actas || 0) + '</strong></div>' +
+          '<div class="tg-stat-row"><span>Actas firmadas</span><strong style="color:' + ((d.actas||0) === 0 && (d.entregados||0) > 0 ? '#FF5A5A' : '#fff') + '">' + (d.actas || 0) + '</strong></div>' +
         '</div>' +
         (aplicaDev ?
         '<div class="tg-track">' +
