@@ -1212,3 +1212,30 @@ Ajuste sobre GH3.42.54, tras revisión visual — Cristian eligió opción
   media prueba. Verificado por lectura de código y consistencia con
   el patrón ya confirmado en GH3.42.54.
 - `node --check` OK.
+
+## GH3.42.56
+FIX real, reportado por Cristian con captura — cambió el estado de un
+equipo a "BACKUP" y el registro se quedó en Usuarios en vez de pasar
+a Equipos Backup.
+
+- **Causa exacta**: `isBackup()` (utils.js) solo revisaba el campo
+  `nombre` (empieza con "BACKUP") — nunca revisaba `estado`, aunque
+  "BACKUP" es una opción válida y ofrecida en el desplegable de
+  estado (confirmado: aparece en las listas de estados de ui.js).
+  La app ofrece una opción que no hacía lo que prometía.
+- **Fix**: `isBackup()` ahora también es verdadero si
+  `estado === 'BACKUP'` (además de la condición de `nombre` que ya
+  existía, sin quitarla).
+- Verificado antes de tocar: la tabla de Equipos Backup ya tenía
+  lógica de respaldo (`eq_nvo_marca || eq_ant_marca`, etc.) —
+  anticipaba que un registro pudiera llegar sin datos de "equipo
+  anterior". El fix no deja columnas vacías ni confusas.
+- Verificado en vivo: registro real con estado simulado a 'BACKUP' →
+  `isBackup()` pasa de `false` a `true` con el fix.
+- **Nota para Cristian**: el registro 42 real está ahora en
+  "Alistamiento", no "BACKUP" — el cambio de la captura no quedó
+  guardado. Hay que volver a marcarlo tras subir este fix.
+- `isBackup()` se usa en muchos lugares (filtros de Usuarios, stats
+  de dashboard, Equipos Backup) — el fix se propaga automáticamente
+  a todos sin tocar cada lugar por separado.
+- Verificado: `node --check`.

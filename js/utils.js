@@ -39,7 +39,16 @@ const cap = (s) => {
 };
 
 // QA-03.1: Backup se detecta únicamente por nombre (sin columna ES_BACKUP)
-const isBackup = (r) => !!(r && r.nombre && String(r.nombre).trim().toUpperCase().startsWith('BACKUP'));
+// GH3.42.56 FIX: 'BACKUP' es una opción válida y ofrecida en el
+// desplegable de estado (ver listas de estados en ui.js), pero esta
+// función nunca la revisaba — solo miraba 'nombre'. Un registro con
+// estado='BACKUP' se quedaba en Usuarios en vez de pasar a Equipos
+// Backup, porque isBackup() devolvía false. Reportado por Cristian
+// con captura: cambió el estado a BACKUP y el registro no se movió.
+const isBackup = (r) => !!(r && (
+  (r.nombre && String(r.nombre).trim().toUpperCase().startsWith('BACKUP')) ||
+  (r.estado && String(r.estado).trim().toUpperCase() === 'BACKUP')
+));
 window.isBackup = isBackup;
 
 const getReal = () => {
