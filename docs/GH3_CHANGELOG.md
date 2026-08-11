@@ -1246,3 +1246,44 @@ Confirmado con Cristian — "Funcional" en el texto de SharePoint
 GH3.42.30 sin confirmación. Etiqueta corregida: "♦ Funcional:" →
 "♦ Teclado:". Mismo dato (eval_teclado), sin cambios de lógica.
 Verificado: `node --check`.
+
+## GH3.42.58
+FIX real, reportado por Cristian con captura — etiquetas de campo
+desaparecidas y fragmentos de texto sueltos al scrollear en el
+formulario.
+
+- **Causa confirmada y reproducida en vivo**: el clic en un tab hacía
+  `scrollIntoView({behavior:'smooth'})` — si el usuario scrolleaba
+  manualmente MIENTRAS esa animación seguía corriendo, los dos scrolls
+  competían y terminaban en una posición distinta a la esperada, con
+  el tab "activo" desincronizado del contenido realmente visible.
+- **Fix**: `behavior: 'smooth'` → `'auto'` (instantáneo) — sin ventana
+  de animación, no hay nada con qué competir.
+- **Segunda hipótesis, sin confirmar por reproducción directa**: el
+  modal tiene su propia animación de entrada de 0.35s (`transform:
+  scale()+translateY()`) — mientras corre, cualquier elemento sticky
+  dentro (la barra de tabs) puede calcular mal su posición, por una
+  limitación conocida de CSS (un transform en un ancestro rompe el
+  contexto de position:sticky). Ventana de riesgo: 0.35s justo al
+  abrir el modal. No corregido — arreglarlo bien sacrifica la
+  animación de entrada actual. Pendiente de confirmar con Cristian si
+  el glitch ocurrió justo al abrir el modal o durante scroll normal.
+- Verificado: `node --check`.
+
+## GH3.42.59
+"Caso envío (Mensajería)" ahora solo acepta dígitos o la palabra
+"OFICINA" (forzada a mayúsculas mientras se escribe) — pedido de
+Cristian, cuidando no romper la lógica existente (GH3.24) que
+deshabilita "F. Envío" cuando el valor es "Oficina".
+
+- Validación en tiempo real (evento `input`): dígitos puros se dejan
+  igual; cualquier prefijo válido de "OFICINA" se normaliza a
+  mayúsculas; cualquier otra cosa revierte al último valor válido.
+- **Corregido antes de empaquetar**: `lastValid` se inicializa con el
+  valor YA GUARDADO del campo al abrir el formulario — sin esto, la
+  primera corrección en un registro existente revertía a vacío en vez
+  de al valor guardado (encontrado en mi propia implementación antes
+  de entregarlo).
+- Verificado: `node --check`. Simulación de 6 casos (valor existente +
+  tecla inválida, dígitos, "oficina" minúscula, "OFICINA" mayúscula,
+  basura, mezcla número+letra) — los 6 se comportan correcto.

@@ -1421,7 +1421,7 @@ function buildFormSectionNav() {
   }).join('');
   var tabs = navEl.querySelectorAll('.form-nav-tab');
   tabs.forEach(function(tab, i) {
-    tab.onclick = function() { sections[i].scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+    tab.onclick = function() { sections[i].scrollIntoView({ behavior: 'auto', block: 'start' }); };
   });
   modalBody.onscroll = function() {
     var top = modalBody.scrollTop + navEl.offsetHeight + 8;
@@ -1657,6 +1657,30 @@ window.updateSectionVisibility = updateSectionVisibility;
     const _casoEl  = $('m-caso_envio');
     const _fechaEl = $('m-fecha_envio');
     if (!_casoEl || !_fechaEl) return;
+
+    // GH3.42.59: 'Caso envío' solo acepta dígitos o la palabra "OFICINA"
+    // (forzada a mayúsculas mientras se escribe) — pedido de Cristian.
+    // Se registra ANTES del listener de _toggleFechaEnvio para que ese
+    // lea el valor ya saneado, no el crudo. Inicializar lastValid con
+    // el valor actual — si no, la primera corrección revierte a vacío
+    // en vez de al valor ya guardado del registro.
+    _casoEl.dataset.lastValid = _casoEl.value || '';
+    _casoEl.addEventListener('input', function() {
+      var v = this.value;
+      var upper = v.toUpperCase();
+      if (/^\d*$/.test(v)) {
+        // solo dígitos (o vacío) — se deja igual
+      } else if ('OFICINA'.indexOf(upper) === 0) {
+        // prefijo válido de OFICINA (o la palabra completa) — normalizar a mayúsculas
+        this.value = upper;
+      } else {
+        // cualquier otra cosa: revertir al último valor válido
+        this.value = this.dataset.lastValid || '';
+        return;
+      }
+      this.dataset.lastValid = this.value;
+    });
+
     const _toggleFechaEnvio = function() {
       const isOficina = (_casoEl.value || '').trim().toLowerCase() === 'oficina';
       _fechaEl.disabled = isOficina;
