@@ -1239,3 +1239,10 @@ a Equipos Backup.
   de dashboard, Equipos Backup) — el fix se propaga automáticamente
   a todos sin tocar cada lugar por separado.
 - Verificado: `node --check`.
+
+## GH3.42.57
+Confirmado con Cristian — "Funcional" en el texto de SharePoint
+(Recolecciones) sí era el teclado, tal como había asumido en
+GH3.42.30 sin confirmación. Etiqueta corregida: "♦ Funcional:" →
+"♦ Teclado:". Mismo dato (eval_teclado), sin cambios de lógica.
+Verificado: `node --check`.

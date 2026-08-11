@@ -345,10 +345,8 @@ function openSharePointCopyPanel() {
     ? _reconciliarMotorRAEE(RAEEEngine.calcular(bat, tec, tou, est), u.estado_eq_ant, bat, tec, tou, est)
     : null;
 
-  // GH3.42.30: formato exacto pedido por Cristian. Asunción: "Funcional"
-  // = estado teclado (eval_teclado) — es el único de los 4 campos que
-  // alimentan RAEEEngine.calcular() que no tenía un rótulo explícito en
-  // la lista que compartió. Corregir si el rótulo se refería a otra cosa.
+  // GH3.42.57: 'Funcional' → 'Teclado' — mismo dato (eval_teclado),
+  // etiqueta más clara. Confirmado con Cristian: sí era el teclado.
   var texto =
     'Recomendacion RAEE: ' + (raee ? raee.recomendacion : 'Evaluación física incompleta') + '\n' +
     '♦ Usuario: ' + (u.nombre || '—') + '\n' +
@@ -362,7 +360,7 @@ function openSharePointCopyPanel() {
     '♦ Bateria: ' + (bat || '—') + '\n' +
     '♦ Estetico: ' + (est || '—') + '\n' +
     '♦ Touchpad: ' + (tou || '—') + '\n' +
-    '♦ Funcional: ' + (tec || '—');
+    '♦ Teclado: ' + (tec || '—');
 
   document.getElementById('sp-copy-text').value = texto;
   document.getElementById('sp-copy-modal-bg').classList.add('active');
