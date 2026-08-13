@@ -13,6 +13,14 @@
   /* Operations theme (light) */
   --bg: #F7F7F8;
   --bg-elev: #FFFFFF;
+  /* GH3.42.62 FIX: --paper-2 nunca estaba definido — .risk-row lo usaba
+     con fallback #f9f9f9 fijo, sin síntoma visible mientras esa
+     tarjeta solo vivía sobre fondo claro. Al moverla dentro del hero
+     oscuro (Cuello de botella/Riesgos) se hizo visible: caja clara
+     flotando en tarjeta oscura. Mismo patrón que el bug de --bg-2
+     (GH3.42.37) — token fantasma nunca detectado por falta de caso
+     que lo expusiera. */
+  --paper-2: #F7F7F8;
   --bg-card: #FFFFFF;
   --bg-card-hover: #FAFAFC;
   --bg-subtle: #F0F0F2;
@@ -89,6 +97,7 @@
      el resto de colores de marca/estado quedan igual que antes. */
   --bg: #08080B;
   --bg-elev: #13131A;
+  --paper-2: #1D1D27;
   --bg-card: #191922;
   --bg-card-hover: #21212E;
   --bg-subtle: #1D1D27;

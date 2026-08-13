@@ -830,19 +830,24 @@
             <div class="panel-progress-track"><div class="panel-progress-fill" id="pe-prog-fill" style="width:0%"></div></div>
             <span class="panel-progress-pct" id="pe-prog-pct">0%</span>
           </div>
+          <!-- GH3.42.61/62 AUTORIZADO: el toggle de tipo y el bloque de
+               Cuello de botella/Riesgos activos se movieron DENTRO del
+               cierre de panel-hero-inner/panel-hero (antes cerraban
+               justo arriba, dejando este contenido como hermano de la
+               vista completa, que SÍ cambia con el tema — en modo
+               claro se habría visto con texto claro sobre fondo claro,
+               bajo contraste). Encontrado al revisar la estructura real
+               antes de dar por bueno el cambio aprobado en el chat. -->
+          <div class="panel-tipo-toggle" id="panel-tipo-toggle">
+            <button type="button" class="ptt-btn active" data-tipo="" onclick="_setTipoToggle('')">Vista general</button>
+            <button type="button" class="ptt-btn" data-tipo="PORTATIL" onclick="_setTipoToggle('PORTATIL')">Portátiles</button>
+            <button type="button" class="ptt-btn" data-tipo="TORRE" onclick="_setTipoToggle('TORRE')">Torres</button>
+          </div>
+          <div class="panel-grid-2 panel-hero-embed" style="margin-top:14px">
+            <div class="panel-card panel-hero-card"><div class="panel-card-title">Cuello de botella</div><div id="pe-botella"></div></div>
+            <div class="panel-card panel-hero-card"><div class="panel-card-title">Riesgos activos</div><div id="pe-riesgos-list" class="exec-risks"></div></div>
+          </div>
         </div>
-      </div>
-      <!-- GH3.42.61: toggle de tipo de equipo, prominente — a pedido de
-           Cristian ("ver a nivel general y luego a nivel de portátil y
-           de torre"). Reutiliza applyPanelFilter('tipo', ...), que ya
-           existía y ya recalculaba todo Seguimiento correctamente (el
-           filtro 'Todos los tipos' de la barra de abajo) — esto no es
-           un cálculo nuevo, es el mismo filtro con un lugar más visible
-           que un desplegable perdido entre otros 6. -->
-      <div class="panel-tipo-toggle" id="panel-tipo-toggle">
-        <button type="button" class="ptt-btn active" data-tipo="" onclick="_setTipoToggle('')">Vista general</button>
-        <button type="button" class="ptt-btn" data-tipo="PORTATIL" onclick="_setTipoToggle('PORTATIL')">Portátiles</button>
-        <button type="button" class="ptt-btn" data-tipo="TORRE" onclick="_setTipoToggle('TORRE')">Torres</button>
       </div>
       <div class="panel-filter-bar" id="panel-filter-bar">
         <div class="panel-filter-title">Filtros</div>
@@ -855,15 +860,6 @@
         <select class="panel-filter-sel" id="pf-feedback" onchange="applyPanelFilter('feedback',this.value)"><option value="">Cualquier feedback</option><option value="1">★ 1+</option><option value="2">★★ 2+</option><option value="3">★★★ 3+</option><option value="4">★★★★ 4+</option><option value="5">★★★★★ 5</option></select>
         <button class="panel-filter-clear" onclick="clearPanelFilters()">Limpiar filtros</button>
         <span class="panel-filter-count" id="pf-count"></span>
-      </div>
-      <!-- GH3.42.39: 'Cuello de botella' y 'Riesgos activos' subidos aquí,
-           justo después del hero/filtros — a pedido de Cristian. Antes
-           vivían en la FILA 5, al final de una página muy larga; el
-           badge "RIESGO" del hero no tenía su "por qué" a la vista sin
-           bajar 4 pantallas. Contenido sin cambios, solo posición. -->
-      <div class="panel-grid-2" style="margin-top:14px">
-        <div class="panel-card"><div class="panel-card-title">Cuello de botella</div><div id="pe-botella"></div></div>
-        <div class="panel-card"><div class="panel-card-title">Riesgos activos</div><div id="pe-riesgos-list" class="exec-risks"></div></div>
       </div>
       <!-- FILA 1: Gauge · Productividad · Burn Down -->
       <div class="panel-grid-3" style="margin-top:14px">

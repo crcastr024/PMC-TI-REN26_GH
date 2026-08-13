@@ -1349,3 +1349,41 @@ nivel de Portátil y de Torre".
 - `node --check`, balance de llaves en 7 CSS, balance del bloque HTML
   nuevo confirmado (el desbalance de 1 en todo el archivo es el mismo
   hueco preexistente, sin síntoma visible, ya documentado desde antes).
+
+## GH3.42.62
+AUTORIZADO — "Cuello de botella" y "Riesgos activos" movidos DENTRO
+del hero oscuro fijo de Seguimiento, antes de la barra de filtros.
+Aprobado por Cristian tras ver la maqueta en el chat.
+
+- **Por qué**: antes vivían después de los 7 filtros (GH3.42.39) — un
+  director tenía que cruzar esa fila para llegar al "por qué". Ahora
+  el "qué" (KPIs) y el "por qué" quedan juntos en el hero, sin la fila
+  de filtros en medio. Los filtros son herramienta de exploración, no
+  parte del vistazo inicial.
+- **Encontrado al implementar, no al adivinar**: mi primer intento
+  dejó el bloque técnicamente FUERA de `.panel-hero` (como hermano de
+  toda la vista, que sí cambia con el tema) — en modo claro se habría
+  visto con texto claro sobre fondo claro. Corregido moviendo el
+  cierre real de `panel-hero-inner`/`panel-hero` para que el toggle y
+  el bloque nuevo queden genuinamente dentro.
+- **Segundo hallazgo real, mismo patrón que `--bg-2` (GH3.42.37)**:
+  `--paper-2` nunca estaba definido en ningún tema — `.risk-item:hover`
+  y otro selector muerto lo usaban con fallback fijo, sin síntoma
+  visible mientras esa tarjeta solo vivía sobre fondo claro. Corregido
+  definiéndolo en ambos temas (claro: `#F7F7F8`, oscuro: `#1D1D27`).
+- **Tercer hallazgo — clases muertas encontradas por error**: al
+  buscar en el CSS en vez del DOM real, encontré `.risk-row`/
+  `.risk-label`/`.risk-sub`/`.risk-count` — una implementación vieja,
+  nunca usada (el HTML real usa `.risk-item`/`.ri-l`/`.ri-d`/`.ri-v`).
+  Mis primeros overrides apuntaban a las clases muertas y no hacían
+  nada visible — corregido apuntando a las clases reales. Las clases
+  muertas no se eliminaron (no rompen nada, no valía la pena el
+  riesgo de tocar código no relacionado en este cambio).
+- Colores de las 2 tarjetas dentro del hero fijados con `rgba(255,255,255,..)`
+  literal, no tokens de tema — independientes del modo claro/oscuro
+  por diseño, igual criterio que el resto del hero (GH3.42.14).
+- Verificado en vivo: `.bot-estado`, `.ri-l strong`, `.ri-d` — los 3
+  confirmados con zoom antes y después del fix, texto claramente
+  legible. Balance de divs sin cambios respecto al hueco preexistente
+  (631/630, documentado desde antes, sin síntoma). `node --check`,
+  balance de llaves en 7 CSS.

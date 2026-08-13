@@ -668,3 +668,26 @@
 #panel-tipo-toggle .ptt-btn.active {
   background: var(--brand); border-color: var(--brand); color: #fff;
 }
+
+/* GH3.42.62 — Cuello de botella/Riesgos activos movidos dentro del
+   hero de fondo oscuro fijo (#0A0E14) — necesitan su propia variante
+   de .panel-card, ya que la base usa var(--bg-card)/var(--text-3)
+   (cambian con el tema). Colores de acento puestos inline en el JS
+   (impacto, números de riesgo) siguen ganando por especificidad. */
+#view-panel .panel-hero-embed { position: relative; z-index: 1; }
+#view-panel .panel-hero-card {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px; padding: 16px 18px; box-shadow: none;
+  color: rgba(255,255,255,.85);
+}
+#view-panel .panel-hero-card .panel-card-title { color: rgba(255,255,255,.5); }
+#view-panel .panel-hero-card .bot-estado { color: #fff; }
+#view-panel .panel-hero-card .bot-row { color: rgba(255,255,255,.7); }
+/* GH3.42.62 FIX: las clases reales del DOM de Riesgos activos son
+   .risk-item/.ri-l/.ri-d (no .risk-row/.risk-label/.risk-sub — esas
+   son clases muertas de una versión anterior, nunca usadas, que
+   encontré por error al buscar en el CSS en vez del DOM real). */
+#view-panel .panel-hero-card .risk-item { border-top-color: rgba(255,255,255,.1); }
+#view-panel .panel-hero-card .risk-item:first-child { border-top: 0; }
+#view-panel .panel-hero-card .ri-l strong { color: #fff; }
+#view-panel .panel-hero-card .ri-d { color: rgba(255,255,255,.5); }
