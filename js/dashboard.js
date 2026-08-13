@@ -45,12 +45,20 @@ function buildDashboardStats(users) {
   var finalizados  = activos.filter(function(u){
     return u.estado === 'Renovación completada' || u.estado === 'Cerrado' || u.estado === 'Finalizado' || u.estado === 'Completado';
   }).length;
-  var devoluciones = activos.filter(function(u){ return !!u.fecha_solicitud_devolucion; }).length;
+  // GH3.42.60 AUTORIZADO: las 3 cifras de la tarjeta Devoluciones,
+  // dentro del MISMO universo por construcción — encontré 2 registros
+  // con fecha de recepción pero SIN fecha de solicitud (hueco de
+  // captura), así que 'Total' ahora es solicitud O recepción. Con eso,
+  // Pendientes = Total - Recibidas siempre, sin excepciones. Antes:
+  // Total solo miraba solicitud, Pendientes usaba una condición OR
+  // distinta (lista_recoleccion) — la suma no coincidía (67+33=100≠75).
+  var devolucionesRecibidas = activos.filter(function(u){ return !!u.fecha_recepcion_bodega; }).length;
+  var devoluciones = activos.filter(function(u){ return !!u.fecha_solicitud_devolucion || !!u.fecha_recepcion_bodega; }).length;
+  var devolucionesPendientes = devoluciones - devolucionesRecibidas;
   // STAB-v10.1 P1: nuevos KPIs operativos
   var enEnvio = activos.filter(function(u){ return u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo'; }).length;
   // GH3.42.9: nuevo KPI Pendiente acta (estado intermedio antes de Renovación completada)
   var pendienteActa = activos.filter(function(u){ return u.estado === 'Pendiente acta'; }).length;
-  var devolucionesPendientes = activos.filter(function(u){ return (u.lista_recoleccion || !!u.fecha_solicitud_devolucion) && !u.fecha_recepcion_bodega; }).length;
   var raee         = activos.filter(function(u){ return u.recomendacion_raee === 'RAEE'; }).length;
   var reasignables = activos.filter(function(u){
     return u.recomendacion_raee === 'Reasignable' || u.recomendacion_raee === 'Reasignación interna';
@@ -136,7 +144,10 @@ function buildDashboardStats(users) {
     var yaRecibido = false;
     if (!noAplicaDevolucion) {
       d.aplicaDevolucion++;
-      if (u.estado_devolucion === 'Recibida en bodega') { d.devRecibidos++; yaRecibido = true; }
+      // GH3.42.60 AUTORIZADO: fecha_recepcion_bodega como fuente única
+      // de verdad — más completa que estado_devolucion (confirmado con
+      // datos reales: 67 vs 62, sin ningún caso al revés).
+      if (u.fecha_recepcion_bodega) { d.devRecibidos++; yaRecibido = true; }
       else if (u.estado_devolucion === 'Solicitada' || u.estado_devolucion === 'En tránsito') d.devProgreso++;
       else d.devPendientes++; // cubre 'NO', 'Pendiente', vacío
     }
@@ -235,9 +246,10 @@ function buildDashboardStats(users) {
     finalizados:  finalizados,
     backup:       backups.length,
     devoluciones: devoluciones,
+    devolucionesRecibidas: devolucionesRecibidas, // GH3.42.60: conteo directo, fuente única de verdad
     enEnvio: enEnvio,                           // P1: Programado + En tránsito equipo nuevo
     pendienteActa: pendienteActa,               // GH3.42.9: nuevo KPI Pendiente acta
-    devolucionesPendientes: devolucionesPendientes, // P1: en lista recolección sin recibir
+    devolucionesPendientes: devolucionesPendientes, // GH3.42.60: solicitud iniciada, sin recibir aún — mismo universo que 'devoluciones' (total)
     raee:         raee,
     reasignables: reasignables,
     // Breakdowns

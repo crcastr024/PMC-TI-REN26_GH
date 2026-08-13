@@ -2093,7 +2093,7 @@ function renderPanelEjecutivo() {
   // ─── Devoluciones (donut + resumen) ───────────────────────────────
   var devPend = _stats.devolucionesPendientes || 0;
   var devTotal = _stats.devoluciones || 0;
-  var devRec   = Math.max(0, devTotal - devPend);
+  var devRec   = _stats.devolucionesRecibidas || 0; // GH3.42.60: conteo directo, no por resta
   _renderDevolucionesDonut(devPend, devRec);
   var devEl = document.getElementById('pe-devoluciones-list');
   if (devEl) {
@@ -2631,10 +2631,11 @@ function _renderCuelloBotella(_stats) {
   var impColor = impacto === 'ALTO' ? 'var(--accent)' : impacto === 'MEDIO' ? 'var(--amber,#D97706)' : 'var(--green,#16A34A)';
   botEl.innerHTML =
     '<div class="bot-main">' +
-      '<div class="bot-estado">'+esc(top.estado)+'</div>' +
+      '<div class="bot-estado">Atascados en: '+esc(top.estado)+'</div>' +
       '<div class="bot-nums"><span class="bot-count">'+top.count+'</span><span class="bot-pct">'+topPct+'% del total</span></div>' +
       '<div class="bot-impact" style="color:'+impColor+'">Impacto '+impacto+'</div>' +
       '<div class="op-bar"><div class="op-bar-fill" data-pct="'+topPct+'" style="width:0%;background:'+impColor+'"></div></div>' +
+      '<div class="bot-hint">Cuántos están parados exactamente en este paso ahora mismo — no es un acumulado histórico.</div>' +
     '</div>' +
     '<div class="bot-others">' +
     sorted.slice(1,5).map(function(p){
@@ -3018,6 +3019,28 @@ window.F7_resolveRole = F7_resolveRole;
 
 // applyPanelFilter / clearPanelFilters
 window.PANEL_FILTERS = {};
+// GH3.42.61: sincroniza el toggle prominente de tipo con el
+// desplegable pf-tipo existente, y llama a la MISMA applyPanelFilter
+// que ya funcionaba — sin lógica de cálculo nueva.
+function _setTipoToggle(tipo) {
+  var sel = document.getElementById('pf-tipo');
+  if (sel) sel.value = tipo;
+  document.querySelectorAll('#panel-tipo-toggle .ptt-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.tipo === tipo);
+  });
+  applyPanelFilter('tipo', tipo);
+}
+window._setTipoToggle = _setTipoToggle;
+
+// Cuando se usa el desplegable viejo directamente, sincroniza el toggle.
+function _onTipoSelectChange(tipo) {
+  document.querySelectorAll('#panel-tipo-toggle .ptt-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.tipo === tipo);
+  });
+  applyPanelFilter('tipo', tipo);
+}
+window._onTipoSelectChange = _onTipoSelectChange;
+
 function applyPanelFilter(field, value) {
   window.PANEL_FILTERS = window.PANEL_FILTERS || {};
   if (value) { window.PANEL_FILTERS[field] = value; }

@@ -832,13 +832,25 @@
           </div>
         </div>
       </div>
+      <!-- GH3.42.61: toggle de tipo de equipo, prominente — a pedido de
+           Cristian ("ver a nivel general y luego a nivel de portátil y
+           de torre"). Reutiliza applyPanelFilter('tipo', ...), que ya
+           existía y ya recalculaba todo Seguimiento correctamente (el
+           filtro 'Todos los tipos' de la barra de abajo) — esto no es
+           un cálculo nuevo, es el mismo filtro con un lugar más visible
+           que un desplegable perdido entre otros 6. -->
+      <div class="panel-tipo-toggle" id="panel-tipo-toggle">
+        <button type="button" class="ptt-btn active" data-tipo="" onclick="_setTipoToggle('')">Vista general</button>
+        <button type="button" class="ptt-btn" data-tipo="PORTATIL" onclick="_setTipoToggle('PORTATIL')">Portátiles</button>
+        <button type="button" class="ptt-btn" data-tipo="TORRE" onclick="_setTipoToggle('TORRE')">Torres</button>
+      </div>
       <div class="panel-filter-bar" id="panel-filter-bar">
         <div class="panel-filter-title">Filtros</div>
         <select class="panel-filter-sel" id="pf-empresa" onchange="applyPanelFilter('empresa',this.value)"><option value="">Todas las empresas</option></select>
         <select class="panel-filter-sel" id="pf-ciudad" onchange="applyPanelFilter('ciudad',this.value)"><option value="">Todas las ciudades</option></select>
         <select class="panel-filter-sel" id="pf-proyecto" onchange="applyPanelFilter('proyecto',this.value)"><option value="">Todos los proyectos</option></select>
         <select class="panel-filter-sel" id="pf-tecnico" onchange="applyPanelFilter('tecnico',this.value)"><option value="">Todos los técnicos</option></select>
-        <select class="panel-filter-sel" id="pf-tipo" onchange="applyPanelFilter('tipo',this.value)"><option value="">Todos los tipos</option></select>
+        <select class="panel-filter-sel" id="pf-tipo" onchange="_onTipoSelectChange(this.value)"><option value="">Todos los tipos</option></select>
         <select class="panel-filter-sel" id="pf-estado" onchange="applyPanelFilter('estado',this.value)"><option value="">Todos los estados</option></select>
         <select class="panel-filter-sel" id="pf-feedback" onchange="applyPanelFilter('feedback',this.value)"><option value="">Cualquier feedback</option><option value="1">★ 1+</option><option value="2">★★ 2+</option><option value="3">★★★ 3+</option><option value="4">★★★★ 4+</option><option value="5">★★★★★ 5</option></select>
         <button class="panel-filter-clear" onclick="clearPanelFilters()">Limpiar filtros</button>

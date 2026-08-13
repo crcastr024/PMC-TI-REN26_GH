@@ -649,3 +649,22 @@
 @media (max-width: 640px) {
   .exec-empresa-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* GH3.42.61 — toggle prominente de tipo de equipo, dentro del hero
+   oscuro fijo de Seguimiento (misma paleta rgba(255,255,255,..) que
+   el resto de este bloque, no tokens de tema — este hero es siempre
+   oscuro, sin importar el tema claro/oscuro de la app). */
+#panel-tipo-toggle {
+  display: flex; gap: 6px; padding-top: var(--sp-4);
+  border-top: 1px solid rgba(255,255,255,.08); margin-top: var(--sp-4);
+}
+#panel-tipo-toggle .ptt-btn {
+  font-family: var(--font-data); font-size: 11px; font-weight: 700;
+  letter-spacing: .04em; padding: 7px 16px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.15); background: transparent;
+  color: rgba(255,255,255,.6); cursor: pointer; transition: all .15s;
+}
+#panel-tipo-toggle .ptt-btn:hover { border-color: rgba(255,255,255,.3); color: #fff; }
+#panel-tipo-toggle .ptt-btn.active {
+  background: var(--brand); border-color: var(--brand); color: #fff;
+}

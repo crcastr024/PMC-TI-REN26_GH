@@ -1287,3 +1287,65 @@ deshabilita "F. Envío" cuando el valor es "Oficina".
 - Verificado: `node --check`. Simulación de 6 casos (valor existente +
   tecla inválida, dígitos, "oficina" minúscula, "OFICINA" mayúscula,
   basura, mezcla número+letra) — los 6 se comportan correcto.
+
+## GH3.42.60
+AUTORIZADO — fuente única de verdad para "equipo anterior recibido",
+tras auditoría pedida por Cristian ("un director debe entender la
+información, y que no se contradiga en ninguna parte").
+
+- **Contradicción original confirmada**: 3 campos distintos
+  rastreaban el mismo hecho — `estado==='Equipo anterior recibido'`
+  (31, snapshot), `estado_devolucion==='Recibida en bodega'` (62,
+  incompleto), `fecha_recepcion_bodega` (67, el más confiable).
+- **Reencuadre importante**: "Cuello de botella" y "Devoluciones" NO
+  estaban midiendo lo mismo, y eso está bien — uno mide "atascados
+  ahora en este paso" (snapshot), el otro "recibidos en total"
+  (acumulado). El problema real no era que debieran ser el mismo
+  número, sino que (a) uno de los mecanismos estaba genuinamente
+  incompleto, y (b) las etiquetas no aclaraban que eran preguntas
+  distintas.
+- **Fix**: `fecha_recepcion_bodega` como fuente única para "recibido"
+  en `devolucionesRecibidas`, `devoluciones` (total), `devolucionesPendientes`
+  (dashboard.js) y `porTecnico.devRecibidos` (GH3.42.54).
+- **Segunda grieta encontrada al verificar (no al adivinar)**: 2
+  registros tienen `fecha_recepcion_bodega` pero nunca tuvieron
+  `fecha_solicitud_devolucion` (hueco de captura). Esto hacía que
+  "Total" (solo solicitud) se quedara corto — "Total" ahora es
+  solicitud O recepción, garantizando Recibidas + Pendientes = Total
+  siempre, por construcción, no por coincidencia.
+- "Cuello de botella" relabeled: "Atascados en: [estado]" + nota
+  aclaratoria, para que no se lea como un acumulado.
+- **Hallazgo retirado tras verificación más profunda**: pensé que las
+  Torres nunca tenían evaluación física completa por un desajuste de
+  tipo de equipo en el formulario. Error mío — revisé `tipo` (equipo
+  nuevo) en vez de `eq_ant_tipo` (equipo evaluado). En los datos
+  reales, `eq_ant_tipo` solo tiene valores "PORTATIL" y "N/A" — cero
+  Torres como equipo anterior en toda la base. La razón real de 0/18
+  evaluaciones: esos 18 registros simplemente no han llegado todavía
+  a la etapa de evaluación (equipo viejo sin recibir). No es un bug,
+  no se tocó el formulario.
+- Verificado en vivo, con datos reales, en cada paso: 67 recibidas,
+  77 total, 10 pendientes, suma exacta. `node --check`.
+
+## GH3.42.61
+Toggle prominente de tipo de equipo en Seguimiento — responde al
+pedido explícito de Cristian de "revisar a nivel general y luego a
+nivel de Portátil y de Torre".
+
+- **Descubrimiento antes de construir nada**: el filtro "Todos los
+  tipos" YA EXISTÍA y ya recalculaba correctamente TODO Seguimiento
+  (KPIs del hero, Cuello de botella, Riesgos activos, etc.) — solo
+  estaba escondido entre otros 6 filtros, poco visible para un
+  director que quiere algo directo. No se construyó ningún cálculo
+  nuevo — se reutilizó `applyPanelFilter('tipo', ...)` tal cual.
+- **Nuevo**: 3 botones grandes ("Vista general", "Portátiles",
+  "Torres") justo debajo de "Avance global", antes de la barra de
+  filtros — sincronizados en ambas direcciones con el desplegable
+  `pf-tipo` existente (`_setTipoToggle()`, `_onTipoSelectChange()`).
+- Verificado en vivo: Portátiles → Total 140→122, Entregados 129→114,
+  Cuello de botella 44→35 (y de "Impacto ALTO" a "MEDIO"), Riesgos
+  activos "Pend. devolución" 32→24 — cascada completa y correcta en
+  toda la vista, confirmada con clic real en el botón.
+- `node --check`, balance de llaves en 7 CSS, balance del bloque HTML
+  nuevo confirmado (el desbalance de 1 en todo el archivo es el mismo
+  hueco preexistente, sin síntoma visible, ya documentado desde antes).
