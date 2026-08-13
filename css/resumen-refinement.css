@@ -258,3 +258,20 @@ input[data-tip]::after, select[data-tip]::after { display: none; }
   #view-resumen .metric-card-val { font-size: 26px !important; }
   [data-tip]::after { max-width: 180px; font-size: 10px; }
 }
+
+/* GH3.42.63 — badge de estado del cronograma en el hero de Resumen.
+   El hero es oscuro fijo (--hero-bg, sin variante clara), así que se
+   usan colores fijos, mismo criterio que el resto de heroes siempre
+   oscuros de la app. */
+#view-resumen .hero-top-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+#view-resumen .hero-status-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; padding: 5px 12px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.15); color: rgba(255,255,255,.8);
+}
+#view-resumen .hero-status-badge.sem-verde    { color: #4ADE80; border-color: rgba(74,222,128,.4); }
+#view-resumen .hero-status-badge.sem-amarillo { color: #FBBF24; border-color: rgba(251,191,36,.4); }
+#view-resumen .hero-status-badge.sem-rojo     { color: #F87171; border-color: rgba(248,113,113,.5); }

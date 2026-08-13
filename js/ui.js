@@ -46,6 +46,24 @@ function renderResumen() {
   var _enEnvio = m.enEnvio || 0;
   var _devPend = m.devolucionesPendientes || 0;
   var _porApr  = window.ApprovalService ? ApprovalService.getQueue().length : 0;
+
+  // GH3.42.63 AUTORIZADO: badge de estado del cronograma en el hero de
+  // Resumen — hallazgo original nunca corregido (un director veía "94%
+  // avance" sin saber si eso es bueno o va retrasado). Mismo campo
+  // (m.proyecto.semaforo) y mismo mapeo de texto que ya usa el badge
+  // de Seguimiento (línea ~1964) — no se introduce un semáforo nuevo.
+  var _P = m.proyecto || {};
+  var _badgeEl = document.getElementById('h-status-badge');
+  if (_badgeEl && _P.semaforo) {
+    var _semTxt = { verde: 'A tiempo', amarillo: 'Riesgo', rojo: 'Crítico' }[_P.semaforo] || '—';
+    _badgeEl.className = 'hero-status-badge sem-' + _P.semaforo;
+    _badgeEl.textContent = '● ' + _semTxt;
+    _badgeEl.style.display = '';
+  }
+  _setText('h-dias-restantes', _P.diasRestantes != null ? _P.diasRestantes : '—');
+  var _proy = m.proyeccion || {};
+  var _fesEl = document.getElementById('h-fecha-estimada-sub');
+  if (_fesEl) _fesEl.textContent = _proy.fechaEstimadaTxt ? ('Estimado: ' + _proy.fechaEstimadaTxt) : 'Sin datos';
   _setText('k-en-envio',       _enEnvio);
   _setText('k-pendiente-acta', m.pendienteActa || 0);   // GH3.42.9: nuevo KPI
   _setText('k-por-aprobar',    _porApr);
@@ -967,7 +985,7 @@ function renderReportesEjecutivos() {
   var p5 = '<div class="exec-riesgos">' +
     [['Sin movimiento',ris.sinMovimiento,'Equipos en Pendiente sin avance'],
      ['Pend. aprobación',ris.pendienteAprobacion,'Esperando validación gerencia'],
-     ['Pend. devolución',ris.pendienteDevolucion,'Lista recolección sin recibir'],
+     ['En lista, sin recibir',ris.pendienteDevolucion,'Agregado a recolección, aún no llega a bodega'],
      ['Registros incompletos',ris.registrosIncompletos,'Sin técnico/ciudad/empresa']]
     .filter(function(r){ return (r[1]||0) > 0; })
     .map(function(r) {
@@ -2654,7 +2672,7 @@ function _renderRiesgos(_stats, _allStats) {
   var nov  = (_allStats.novedades || []).length;
   var items = [
     { l:'Equipos cruzados',       v: nov,                         c:'accent', d:'Novedades a resolver' },
-    { l:'Pend. devolución',       v: ris.pendienteDevolucion,     c:'accent', d:'Lista recolección sin recibir' },
+    { l:'En lista, sin recibir',       v: ris.pendienteDevolucion,     c:'accent', d:'Agregado a recolección, aún no llega a bodega' },
     { l:'Pend. aprobación',       v: ris.pendienteAprobacion,     c:'amb',    d:'Esperando validación gerencia' },
     { l:'Sin movimiento',         v: ris.sinMovimiento,           c:'amb',    d:'En Pendiente sin avance' },
     { l:'Sin técnico asignado',   v: cal.sinTecnico || 0,         c:'amb',    d:'Requiere asignación' },

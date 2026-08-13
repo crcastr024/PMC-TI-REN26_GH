@@ -237,7 +237,15 @@
     <div class="view active" id="view-resumen">
       <div class="hero">
         <div class="hero-inner">
-          <div class="hero-eyebrow">PMC-TI-REN26 · Renovación Tecnológica</div>
+          <div class="hero-top-row">
+            <div class="hero-eyebrow">PMC-TI-REN26 · Renovación Tecnológica</div>
+            <!-- GH3.42.63 AUTORIZADO: badge de estado del cronograma —
+                 nunca existía aquí (hallazgo original: un director veía
+                 "94% avance" sin saber si eso es bueno o va retrasado).
+                 Mismo dato que ya usa Seguimiento (m.proyeccion.tipo),
+                 sin cálculo nuevo. -->
+            <span class="hero-status-badge" id="h-status-badge" style="display:none"></span>
+          </div>
           <h1 class="hero-title">Renovamos <strong>146</strong> equipos<br>para <strong id="h-users">134</strong> colaboradores</h1>
           <p class="hero-sub">Coordinación operativa centralizada · Trazabilidad serial por serial · <strong>HBT + HGS</strong></p>
           <div class="hero-kpis">
@@ -245,6 +253,7 @@
             <div class="hero-kpi"><span class="hero-kpi-label">Pendientes</span><span class="hero-kpi-val accent" id="h-pendientes">—</span><span class="hero-kpi-sub">Sin iniciar</span></div>
             <div class="hero-kpi"><span class="hero-kpi-label">En proceso</span><span class="hero-kpi-val amb" id="h-proceso">—</span><span class="hero-kpi-sub">└ <strong id="h-entregados" style="color:var(--green)">—</strong> ya entregados</span></div>
             <div class="hero-kpi"><span class="hero-kpi-label">Avance global</span><span class="hero-kpi-val red" id="h-pct">0%</span><span class="hero-kpi-sub">Ponderado</span></div>
+            <div class="hero-kpi"><span class="hero-kpi-label">Días restantes</span><span class="hero-kpi-val" id="h-dias-restantes">—</span><span class="hero-kpi-sub" id="h-fecha-estimada-sub">—</span></div>
           </div>
         </div>
       </div>

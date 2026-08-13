@@ -1387,3 +1387,41 @@ Aprobado por Cristian tras ver la maqueta en el chat.
   legible. Balance de divs sin cambios respecto al hueco preexistente
   (631/630, documentado desde antes, sin síntoma). `node --check`,
   balance de llaves en 7 CSS.
+
+## GH3.42.63
+AUTORIZADO — Resumen recibe el mismo trabajo que ya se hizo en
+Seguimiento, a pedido de Cristian ("realiza algo con la vista de
+resumen").
+
+- **Hallazgo original, nunca corregido hasta ahora** (de muy atrás en
+  esta sesión): Resumen no tenía ningún indicador de si el proyecto
+  iba a tiempo o retrasado — un director veía "94% avance" sin saber
+  si eso era bueno. Seguimiento ya lo resolvió hace varias versiones;
+  Resumen se quedó atrás.
+- **Fix**: badge "● A tiempo / Riesgo / Crítico" junto al eyebrow del
+  hero, y 5ª tarjeta "Días restantes" (con la fecha estimada como
+  subtítulo) en la fila de KPIs. Usa exactamente `m.proyecto.semaforo`
+  y `m.proyeccion.fechaEstimadaTxt` — el MISMO campo y mapeo de texto
+  que ya usa el badge de Seguimiento (línea ~1964 de ui.js) — no se
+  introduce un semáforo nuevo ni una segunda fuente de verdad.
+- **Segunda contradicción de nombres encontrada y corregida**:
+  "Pend. devolución" en Riesgos activos (Seguimiento, usa
+  `lista_recoleccion`) y "Dev. pendientes" en Resumen (usa
+  `fecha_solicitud_devolucion`) son 2 señales legítimamente distintas
+  — una más temprana/amplia (lista de recolección), otra más estricta
+  (solicitud formal) — pero el nombre parecido invitaba a compararlas
+  como si fueran la misma. Renombrado a "En lista, sin recibir" en
+  Riesgos activos para que la diferencia sea explícita, sin forzar
+  ambos números a coincidir (perdería la señal temprana que
+  "Riesgos activos" existe para dar).
+- **Error propio encontrado y corregido antes de entregar**: mi
+  primera edición del HTML dejó divs de cierre sobrantes por un
+  descuido al escribir el reemplazo — detectado con el chequeo de
+  balance de siempre, corregido antes de seguir. Balance final:
+  633/632 (subió +2/+2 desde 631/630 por mi contenido nuevo,
+  correctamente balanceado — el hueco de 1 preexistente no cambió).
+- El hero de Resumen es oscuro fijo (`--hero-bg`, sin variante clara)
+  — badge con colores fijos, mismo criterio que toda la app.
+- Verificado en vivo (inyectado antes de empaquetar): badge "A
+  TIEMPO" en verde, "Días restantes: 2 · Estimado: 18 Ago 2026"
+  correctos. `node --check`, balance de llaves en 7 CSS.
