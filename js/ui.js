@@ -42,6 +42,9 @@ function renderResumen() {
   _setText('k-alistamiento',alistamiento);
   _setText('k-pendientes',  pendientes);
   _setText('k-actas',       actas);
+  // GH3.42.68: renovaciones completadas/cerradas sin calificación del
+  // usuario todavía — mismo campo que ya calcula buildDashboardStats.
+  _setText('k-feedback-pendiente', m.feedbackPendiente || 0);
   // P1 STAB-v10.1: nuevas tarjetas operativas
   var _enEnvio = m.enEnvio || 0;
   var _devPend = m.devolucionesPendientes || 0;
@@ -694,8 +697,20 @@ function renderTecnicos() {
   var _visibleTechs = _myTec ? [_myTec] : techs.filter(function(t){ return t !== 'Sin asignar'; });
 
   // STAB-v10.1 P0+P2: reutilizar buildDashboardStats por técnico
-  var _bdsAll = window.DashboardStats ? DashboardStats.compute(real) : {};
-  var _ptAll  = _bdsAll.porTecnico || {};
+  // GH3.42.65 AUTORIZADO: aplicar filtros de empresa/tipo (si existen)
+  // ANTES de calcular stats — mismo criterio que el toggle de tipo de
+  // Seguimiento (GH3.42.61), reutilizando computePorTecnico() en vez
+  // de duplicar el cálculo.
+  var _tfEmpresaEl = document.getElementById('tf-empresa');
+  var _tfTipoEl = document.getElementById('tf-tipo');
+  var _tfEmpresa = _tfEmpresaEl ? _tfEmpresaEl.value : '';
+  var _tfTipo = _tfTipoEl ? _tfTipoEl.value : '';
+  var _realFiltrado = real.filter(function(u) {
+    if (_tfEmpresa && u.empresa !== _tfEmpresa) return false;
+    if (_tfTipo && u.tipo !== _tfTipo) return false;
+    return true;
+  });
+  var _ptAll = window.computePorTecnico ? computePorTecnico(_realFiltrado) : {};
 
   // GH3.42.11: usar el mismo carrusel flashcard del leaderboard para consistencia visual
   var tecList = _visibleTechs.map(function(t) {
@@ -1827,17 +1842,33 @@ function renderAprobaciones() {
   }
   var rows = pendientes.map(function(r) {
     var id = String(r.id).replace(/'/g, '');
+    // GH3.42.66 AUTORIZADO: columna de calificación — no aparecía en
+    // la tabla de Aprobaciones. Mismo patrón ★/☆ que ya usa el resto
+    // de la app (u.feedback, 0-5).
+    var fb = Number(r.feedback || 0);
+    // GH3.42.67 AUTORIZADO: la calificación la pone el usuario final,
+    // no nosotros — llega naturalmente DESPUÉS de completar la
+    // renovación, no en la etapa de Pendiente aprobación (donde vive
+    // esta tabla). "Sin calificar" sonaba a que algo quedó a medias de
+    // nuestro lado; el texto ahora deja explícito que es una acción
+    // pendiente DEL USUARIO, que se recogerá al completar — mismo
+    // criterio que ya usa la tabla de Usuarios para el indicador ★ de
+    // "Feedback pendiente" (Renovación completada/Cerrado sin feedback).
+    var estrellas = fb > 0
+      ? '<span style="color:var(--amber);letter-spacing:1px">' + '★'.repeat(fb) + '☆'.repeat(5 - fb) + '</span>'
+      : '<span style="color:var(--text-3);font-size:10px;font-style:italic" title="Se solicita al usuario al completar la renovación">Pendiente del usuario</span>';
     return '<tr style="border-bottom:1px solid var(--border)">' +
       '<td style="padding:8px 10px;font-weight:600">' + esc(r.nombre || '—') + '</td>' +
       '<td style="padding:8px 10px;text-align:center">' + esc(r.empresa || '—') + '</td>' +
       '<td style="padding:8px 10px;text-align:center">' + esc(r.tecnico || '—') + '</td>' +
+      '<td style="padding:8px 10px;text-align:center">' + estrellas + '</td>' +
       '<td style="padding:8px 10px;text-align:center"><span style="background:var(--amber-l);color:var(--amber);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">Pendiente</span></td>' +
       '<td style="padding:8px 10px;text-align:center"><button class="btn" style="font-size:10px;padding:4px 10px" onclick="openEditModal(' + id + ')">Revisar</button></td>' +
       '</tr>';
   }).join('');
   content.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--accent);color:#fff">' +
     '<th style="padding:8px 10px;text-align:left">Nombre</th><th style="padding:8px 10px">Empresa</th>' +
-    '<th style="padding:8px 10px">Técnico</th><th style="padding:8px 10px">Estado</th><th style="padding:8px 10px">Acción</th>' +
+    '<th style="padding:8px 10px">Técnico</th><th style="padding:8px 10px">Calificación</th><th style="padding:8px 10px">Estado</th><th style="padding:8px 10px">Acción</th>' +
     '</tr></thead><tbody>' + rows + '</tbody></table>';
 }
 window.renderAprobaciones = renderAprobaciones;

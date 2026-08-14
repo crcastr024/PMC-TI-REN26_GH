@@ -1425,3 +1425,79 @@ resumen").
 - Verificado en vivo (inyectado antes de empaquetar): badge "A
   TIEMPO" en verde, "Días restantes: 2 · Estimado: 18 Ago 2026"
   correctos. `node --check`, balance de llaves en 7 CSS.
+
+## GH3.42.64-66
+4 pedidos de Cristian en una sola ronda.
+
+### GH3.42.64 — Modal ya no se cierra al hacer clic afuera
+Quitado `onclick="if(event.target===this)closeModal()"` del overlay
+del formulario de edición (`#modal-bg`) — confirmado que este id se
+usa EXCLUSIVAMENTE para ese modal, sin efectos colaterales. Las únicas
+salidas ahora son: X (arriba), Cancelar, o Guardar cambios. Nota: el
+comentario en el código decía "DirtyForm eliminado" — ya existió antes
+una protección similar que alguien quitó; esta vez se restringe el
+disparador de cierre, no se agrega un diálogo de confirmación.
+
+### GH3.42.65 — Filtros en "Por técnico" + auditoría de consistencia
+- **Auditoría pedida por Cristian**: verificado en vivo que entregados,
+  pendientes, proceso, finalizados y actas coinciden EXACTOS entre el
+  agregado general (`m.xxx`) y la suma por técnico
+  (`sum(porTecnico[t].xxx)`) — 131=131, 0=0, 111=111, 29=29, 37=37.
+  Única diferencia real: 146 total vs 140 asignados a técnicos — 6
+  equipos backup, ya aclarado en su propio sub-texto, no es un bug.
+- **Filtros nuevos**: Empresa y Tipo en "Por técnico", reutilizando
+  las mismas clases visuales de Seguimiento (`.panel-filter-*`).
+- **Refactor de soporte**: `computePorTecnico(activos)` extraída como
+  función independiente en dashboard.js (antes vivía inline dentro de
+  `buildDashboardStats`), expuesta en `window` — permite recalcular
+  sobre un subconjunto filtrado sin duplicar la lógica. `PROC_ST`/
+  `ENTREGADO_ST` subidos a nivel de módulo para que ambas funciones
+  los compartan.
+- Verificado en vivo: filtro HBT → 38+28+17=83, coincide exacto con
+  el total conocido de HBT sin backups.
+
+### GH3.42.66 — Columna de calificación en Aprobaciones
+La tabla de "Aprobaciones pendientes" no mostraba la calificación
+(estrellas) en absoluto. Agregada columna "Calificación" con el mismo
+patrón ★/☆ que ya usa el resto de la app (`u.feedback`, 0-5), y "Sin
+calificar" en cursiva cuando no hay feedback. Verificado con datos
+sintéticos (no había registros reales pendientes al momento de
+probar): 4★, 5★ y "Sin calificar" se ven correctos.
+
+Verificado en las 3: `node --check` en dashboard.js y ui.js, balance
+de divs sin cambios respecto al hueco preexistente (635/634, +2/+2 por
+el filtro nuevo).
+
+## GH3.42.67
+Aclaración de Cristian sobre la columna de calificación agregada en
+GH3.42.66: la califica el usuario final, no nosotros, y llega después
+de completar la renovación — no es algo que quedó a medias de
+nuestro lado.
+
+- "Sin calificar" → "Pendiente del usuario" (con tooltip: "Se solicita
+  al usuario al completar la renovación"). Mismo criterio que ya usa
+  la tabla de Usuarios para su indicador ★ de "Feedback pendiente"
+  (Renovación completada/Cerrado sin feedback) — no se inventa un
+  concepto nuevo, se alinea el lenguaje con el que ya existía.
+- Verificado: `node --check`.
+
+## GH3.42.68
+KPI de "Feedback pendiente" agregado a Resumen — pedido explícito de
+Cristian, extendiendo la aclaración de GH3.42.67.
+
+- **Cálculo**: `feedbackPendiente` en `buildDashboardStats()` —
+  renovaciones en 'Renovación completada' o 'Cerrado' sin
+  `feedback > 0`. Mismo criterio exacto que el indicador ★ "Feedback
+  pendiente" que ya existía por registro en la tabla de Usuarios
+  (línea ~560 de ui.js) — no se inventa un concepto nuevo, se suma
+  como KPI lo que ya se señalizaba individualmente.
+- **Tarjeta nueva** en "Detalle operativo" de Resumen, junto a "Actas
+  firmadas" (con quien está más relacionado) — mismo formato
+  `metric-card`, color ámbar (pendiente/atención), ícono de estrella.
+- **Hallazgo real al verificar**: 0 registros en toda la base tienen
+  `feedback > 0` — los 29 "Feedback pendiente" son el 100% de las
+  renovaciones completadas. Ningún usuario ha calificado todavía.
+- Verificado en vivo (recarga limpia, sin artefactos de pruebas
+  anteriores): tarjeta única, bien posicionada, valor 29 correcto.
+  `node --check` en ambos archivos, balance de divs sin cambios
+  respecto al hueco preexistente (640/639, +5/+5 por el bloque nuevo).

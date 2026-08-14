@@ -398,6 +398,22 @@
             <div class="metric-card-sub">PandaDoc</div>
           </div>
 
+          <!-- 10b. Feedback pendiente — GH3.42.68 AUTORIZADO: renovaciones
+               ya completadas que siguen esperando la calificación del
+               usuario final. Pedido explícito de Cristian tras aclarar
+               en el chat que la calificación la pone el usuario, no
+               nosotros, y llega después de completar. -->
+          <div class="metric-card amb" data-tip="Renovación completada o cerrada, sin calificación del usuario todavía — no es una acción nuestra pendiente, es del usuario">
+            <div class="metric-card-head">
+              <span class="metric-card-label">Feedback pendiente</span>
+              <div class="metric-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+              </div>
+            </div>
+            <div class="metric-card-val" id="k-feedback-pendiente">—</div>
+            <div class="metric-card-sub">Esperando al usuario</div>
+          </div>
+
           <!-- 11. Backups -->
           <div class="metric-card" id="card-backups" style="border-top-color:var(--text-3,#666)" onclick="goView('backup')" data-tip="Equipos backup disponibles en bodega para asignación">
             <div class="metric-card-head">
@@ -497,6 +513,23 @@
           <h1 class="hero-title">Por <strong>técnico</strong></h1>
           <p class="hero-sub">3 técnicos coordinados · carga de trabajo balanceada</p>
         </div>
+      </div>
+      <!-- GH3.42.65 AUTORIZADO: filtros en 'Por técnico' — pedido
+           explícito de Cristian. Reutiliza computePorTecnico() sobre
+           un subconjunto filtrado de getReal(), sin duplicar lógica. -->
+      <div class="panel-filter-bar" id="tec-filter-bar">
+        <div class="panel-filter-title">Filtros</div>
+        <select class="panel-filter-sel" id="tf-empresa" onchange="renderTecnicos()">
+          <option value="">Todas las empresas</option>
+          <option value="HBT">HBT</option>
+          <option value="HGS">HGS</option>
+        </select>
+        <select class="panel-filter-sel" id="tf-tipo" onchange="renderTecnicos()">
+          <option value="">Todos los tipos</option>
+          <option value="PORTATIL">Portátil</option>
+          <option value="TORRE">Torre</option>
+        </select>
+        <button class="panel-filter-clear" onclick="document.getElementById('tf-empresa').value='';document.getElementById('tf-tipo').value='';renderTecnicos()">Limpiar filtros</button>
       </div>
       <div class="section">
         <div class="tec-grid" id="tec-grid"></div>
@@ -1131,7 +1164,7 @@
 <!-- RC2.7 · Login Screen — mostrada cuando authMode=msal y no autenticado -->
 
 <!-- ═══ Modal principal de edición ═══ -->
-<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+<div class="modal-bg" id="modal-bg">
 <div class="modal">
 <div class="modal-head">
 <div class="modal-title-block">

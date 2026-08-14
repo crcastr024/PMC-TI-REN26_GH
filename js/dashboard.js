@@ -6,6 +6,72 @@
 
 
 
+// TASK 3 — estados canónicos de proceso (sin Pendiente, sin Completado/Cancelado)
+// GH3.42.23 FIX: se quita 'Cerrado' (duplicaba conteo con `finalizados` —
+// un registro Cerrado se contaba en "En proceso" Y en "Finalizados" a la
+// vez, contradiciendo la etiqueta "Exclusivo" del KPI). Se agrega
+// 'Pendiente acta' (estado agregado en GH3.42.8, nunca se sumó aquí —
+// esos registros no contaban en Pendientes, En proceso NI Finalizados,
+// causando que Pendientes+Proceso+Finalizados no sumara el total real).
+// GH3.42.65: subidos a nivel de módulo (antes locales a
+// buildDashboardStats) para que computePorTecnico() también pueda usarlos.
+var PROC_ST = ['Alistamiento','Programado','En tránsito equipo nuevo',
+  'Entregado equipo nuevo','Pendiente devolución equipo anterior',
+  'En tránsito equipo anterior','Equipo anterior recibido',
+  'Pendiente acta','Pendiente aprobación'];
+// Estados que significan "ya entregado" (hito acumulativo — no disminuye)
+var ENTREGADO_ST = ['Entregado equipo nuevo','Pendiente devolución equipo anterior',
+  'En tránsito equipo anterior','Equipo anterior recibido',
+  'Renovación completada','Pendiente aprobación','Cerrado',
+  'Entregado','Completado'];
+
+// GH3.42.65 AUTORIZADO: extraída de buildDashboardStats() para poder
+// llamarla también con un subconjunto FILTRADO de registros — a pedido
+// de Cristian ("permitir a los técnicos en su vista realizar filtros").
+// Sin esta extracción, el filtro tendría que duplicar toda esta lógica.
+function computePorTecnico(activos) {
+  var porTecnico = {};
+  activos.forEach(function(u) {
+    var t = u.tecnico || 'Sin asignar';
+    if (!porTecnico[t]) porTecnico[t] = {
+      asignados:0, pendientes:0, proceso:0, enEnvio:0, entregados:0, actas:0, finalizados:0, pct:0,
+      alistamiento:0, progresoNuevo:0,
+      aplicaDevolucion:0, devPendientes:0, devProgreso:0, devRecibidos:0,
+      renovacionCompleta:0, pctCompleta:0
+    };
+    var d = porTecnico[t];
+    d.asignados++;
+    if (u.estado === 'Pendiente') d.pendientes++;
+    if (u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo') d.enEnvio++;
+    if (u.estado === 'Alistamiento') d.alistamiento++;
+    if (u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo') d.progresoNuevo++;
+    if (PROC_ST.indexOf(u.estado) >= 0) d.proceso++;
+    var yaEntregado = !!(u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0);
+    if (yaEntregado) d.entregados++;
+    var actaFirmada = !!u.fecha_firma_acta;
+    if (actaFirmada) d.actas++;
+    if (u.estado === 'Renovación completada' || u.estado === 'Cerrado' || u.estado === 'Finalizado' || u.estado === 'Completado') d.finalizados++;
+
+    var tieneEqAnterior = !!(u.eq_ant_tipo && String(u.eq_ant_tipo).trim());
+    var noAplicaDevolucion = u.estado_devolucion === 'No aplica' || !tieneEqAnterior;
+    var yaRecibido = false;
+    if (!noAplicaDevolucion) {
+      d.aplicaDevolucion++;
+      if (u.fecha_recepcion_bodega) { d.devRecibidos++; yaRecibido = true; }
+      else if (u.estado_devolucion === 'Solicitada' || u.estado_devolucion === 'En tránsito') d.devProgreso++;
+      else d.devPendientes++;
+    }
+    if (yaEntregado && actaFirmada && (noAplicaDevolucion || yaRecibido)) d.renovacionCompleta++;
+  });
+  Object.keys(porTecnico).forEach(function(t) {
+    var d = porTecnico[t];
+    d.pct = d.asignados ? Math.round(d.entregados / d.asignados * 100) : 0;
+    d.pctCompleta = d.asignados ? Math.round(d.renovacionCompleta / d.asignados * 100) : 0;
+  });
+  return porTecnico;
+}
+window.computePorTecnico = computePorTecnico;
+
 // ════════════════════════════════════════════════════════════════════
 // ════════════════════════════════════════════════════════════════════
 // STAB-v09.1 TASK 1 — buildDashboardStats(users)
@@ -17,29 +83,20 @@ function buildDashboardStats(users) {
   var backups = all.filter(function(u){ return isBackup(u); });
   var activos = all.filter(function(u){ return !isBackup(u); });
 
-  // TASK 3 — estados canónicos de proceso (sin Pendiente, sin Completado/Cancelado)
-  // GH3.42.23 FIX: se quita 'Cerrado' (duplicaba conteo con `finalizados` —
-  // un registro Cerrado se contaba en "En proceso" Y en "Finalizados" a la
-  // vez, contradiciendo la etiqueta "Exclusivo" del KPI). Se agrega
-  // 'Pendiente acta' (estado agregado en GH3.42.8, nunca se sumó aquí —
-  // esos registros no contaban en Pendientes, En proceso NI Finalizados,
-  // causando que Pendientes+Proceso+Finalizados no sumara el total real).
-  var PROC_ST = ['Alistamiento','Programado','En tránsito equipo nuevo',
-    'Entregado equipo nuevo','Pendiente devolución equipo anterior',
-    'En tránsito equipo anterior','Equipo anterior recibido',
-    'Pendiente acta','Pendiente aprobación'];
-  // Estados que significan "ya entregado" (hito acumulativo — no disminuye)
-  var ENTREGADO_ST = ['Entregado equipo nuevo','Pendiente devolución equipo anterior',
-    'En tránsito equipo anterior','Equipo anterior recibido',
-    'Renovación completada','Pendiente aprobación','Cerrado',
-    'Entregado','Completado'];
-
   var pendientes   = activos.filter(function(u){ return u.estado === 'Pendiente'; }).length;
   var proceso      = activos.filter(function(u){ return PROC_ST.indexOf(u.estado) >= 0; }).length;
   var entregados   = activos.filter(function(u){
     return u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0;
   }).length;
   var actas        = activos.filter(function(u){ return !!u.fecha_firma_acta; }).length;
+  // GH3.42.68 AUTORIZADO: renovaciones ya completadas que siguen
+  // esperando la calificación del usuario final — mismo criterio que
+  // el indicador ★ "Feedback pendiente" que ya existía por registro
+  // en la tabla de Usuarios (línea ~560 de ui.js), ahora sumado como
+  // KPI. Pedido explícito de Cristian tras la aclaración de GH3.42.67.
+  var feedbackPendiente = activos.filter(function(u){
+    return (u.estado === 'Renovación completada' || u.estado === 'Cerrado') && !(u.feedback > 0);
+  }).length;
   // GH3.42.5 FIX BUG REP-05: criterio unificado con setReport('finalizados')
   // Los 3 estados son terminales: Renovación completada, Cerrado, Finalizado
   var finalizados  = activos.filter(function(u){
@@ -110,57 +167,10 @@ function buildDashboardStats(users) {
     };
   });
 
-  var porTecnico = {};
-  activos.forEach(function(u) {
-    var t = u.tecnico || 'Sin asignar';
-    if (!porTecnico[t]) porTecnico[t] = {
-      asignados:0, pendientes:0, proceso:0, enEnvio:0, entregados:0, actas:0, finalizados:0, pct:0,
-      // GH3.42.54 AUTORIZADO: desglose por pista + Renovación completa
-      alistamiento:0, progresoNuevo:0,
-      aplicaDevolucion:0, devPendientes:0, devProgreso:0, devRecibidos:0,
-      renovacionCompleta:0, pctCompleta:0
-    };
-    var d = porTecnico[t];
-    d.asignados++;
-    if (u.estado === 'Pendiente') d.pendientes++;
-    if (u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo') d.enEnvio++;
-    if (u.estado === 'Alistamiento') d.alistamiento++;
-    if (u.estado === 'Programado' || u.estado === 'En tránsito equipo nuevo') d.progresoNuevo++;
-    if (PROC_ST.indexOf(u.estado) >= 0) d.proceso++;
-    var yaEntregado = !!(u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0);
-    if (yaEntregado) d.entregados++;
-    var actaFirmada = !!u.fecha_firma_acta;
-    if (actaFirmada) d.actas++;
-    if (u.estado === 'Renovación completada' || u.estado === 'Cerrado' || u.estado === 'Finalizado' || u.estado === 'Completado') d.finalizados++;
-
-    // Pista "equipo anterior" — solo si aplica. eq_ant_tipo vacío o
-    // estado_devolucion === 'No aplica' → se excluye del todo. 'NO'
-    // (valor literal, dato heredado del Excel) y 'Pendiente' se leen
-    // igual: pendiente sin iniciar trámite — confirmado con Cristian
-    // sobre los datos reales (71 registros con 'NO' literal, 67 de
-    // ellos con equipo anterior real cargado).
-    var tieneEqAnterior = !!(u.eq_ant_tipo && String(u.eq_ant_tipo).trim());
-    var noAplicaDevolucion = u.estado_devolucion === 'No aplica' || !tieneEqAnterior;
-    var yaRecibido = false;
-    if (!noAplicaDevolucion) {
-      d.aplicaDevolucion++;
-      // GH3.42.60 AUTORIZADO: fecha_recepcion_bodega como fuente única
-      // de verdad — más completa que estado_devolucion (confirmado con
-      // datos reales: 67 vs 62, sin ningún caso al revés).
-      if (u.fecha_recepcion_bodega) { d.devRecibidos++; yaRecibido = true; }
-      else if (u.estado_devolucion === 'Solicitada' || u.estado_devolucion === 'En tránsito') d.devProgreso++;
-      else d.devPendientes++; // cubre 'NO', 'Pendiente', vacío
-    }
-
-    // Renovación completa: los 3 objetivos que aplican a ESTE registro,
-    // todos cumplidos (si no aplica devolución, solo entrega + acta).
-    if (yaEntregado && actaFirmada && (noAplicaDevolucion || yaRecibido)) d.renovacionCompleta++;
-  });
-  Object.keys(porTecnico).forEach(function(t) {
-    var d = porTecnico[t];
-    d.pct = d.asignados ? Math.round(d.entregados / d.asignados * 100) : 0;
-    d.pctCompleta = d.asignados ? Math.round(d.renovacionCompleta / d.asignados * 100) : 0;
-  });
+  // GH3.42.65 AUTORIZADO: extraído a computePorTecnico() (función
+  // reutilizable, expuesta en window) para poder recalcular con datos
+  // filtrados desde 'Por técnico' sin duplicar esta lógica.
+  var porTecnico = computePorTecnico(activos);
 
   // Por ciudad
   var porCiudad = {};
@@ -243,6 +253,7 @@ function buildDashboardStats(users) {
     enProceso:    proceso,         // alias backward compat
     entregados:   entregados,
     actas:        actas,
+    feedbackPendiente: feedbackPendiente,
     finalizados:  finalizados,
     backup:       backups.length,
     devoluciones: devoluciones,
