@@ -1621,3 +1621,28 @@ decisión conjunta con Cristian tras analizarla en detalle en el chat.
   hay elemento en el DOM que las llame). No se eliminaron para
   acotar el alcance de este cambio — pueden limpiarse en otra pasada
   específica de code cleanup.
+
+## GH3.42.74
+FIX crítico descubierto al verificar GH3.42.73 en producción — la
+eliminación del div `#pe-botella` (Cuello de botella) causó que la
+llamada muerta a `_renderCuelloBotella(_stats)` en línea 2170 de
+ui.js reventara con `Cannot set properties of null`.
+
+- **Impacto real**: la excepción silenciosa impedía que se ejecutara
+  TODO el resto de `renderPanelEjecutivo` — incluyendo el
+  renderizado de **Riesgos activos**, las **3 tarjetas nuevas por
+  tipo (GH3.42.71)** y probablemente más elementos abajo.
+- **En vivo se veía**: título "RIESGOS ACTIVOS" con línea separadora
+  y **contenido vacío** (0 caracteres en `#pe-riesgos-list`).
+- **Causa raíz**: en GH3.42.73 documenté "la función queda como
+  código muerto, no se llama" pero olvidé remover la llamada
+  explícita al inicio de renderPanelEjecutivo. La función quedó
+  huérfana pero la línea que la invocaba seguía ejecutándose.
+- **Fix**: eliminada la llamada `_renderCuelloBotella(_stats);` de
+  la línea 2170. La función definición sigue en el archivo (puede
+  limpiarse en un pass de deadcode dedicado, no se toca aquí para
+  acotar el alcance del hotfix).
+- **Verificado en vivo antes de empaquetar**: sobrescribí
+  `_renderCuelloBotella` como noop, re-renderizé la vista, y
+  confirmé que `#pe-riesgos-list` se llena con 529 caracteres
+  (Equipos cruzados 2, En lista sin recibir 32, Pend. aprobación 3).

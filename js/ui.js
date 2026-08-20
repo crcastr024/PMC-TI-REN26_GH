@@ -2166,8 +2166,13 @@ function renderPanelEjecutivo() {
     console.warn('[DestinoFinal] suma incongruente:', _sum, 'vs total', DF.total);
   }
 
-  // ─── Cuello de botella ────────────────────────────────────────────
-  _renderCuelloBotella(_stats);
+  // GH3.42.73/74 FIX: la llamada a _renderCuelloBotella se quitó
+  // porque el div #pe-botella ya no existe (eliminado en GH3.42.73)
+  // y estaba reventando con `Cannot set properties of null`,
+  // impidiendo que se ejecutara TODO el resto de esta función —
+  // incluyendo Riesgos activos, que en producción quedaba vacío.
+  // La función _renderCuelloBotella sigue en el código pero no se
+  // llama; puede limpiarse en un pass de deadcode aparte.
 
   // ─── Equipos nuevos / antiguos / Actas, por tipo ──────────────────
   // GH3.42.71 AUTORIZADO: estas 3 tarjetas SIEMPRE muestran Portátiles
