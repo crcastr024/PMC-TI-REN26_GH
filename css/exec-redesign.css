@@ -691,3 +691,18 @@
 #view-panel .panel-hero-card .risk-item:first-child { border-top: 0; }
 #view-panel .panel-hero-card .ri-l strong { color: #fff; }
 #view-panel .panel-hero-card .ri-d { color: rgba(255,255,255,.5); }
+
+/* GH3.42.71 — 3 tarjetas nuevas de Seguimiento (Equipos nuevos/
+   antiguos/Actas), cada una dividida en 2 columnas (Portátiles/
+   Torres) lado a lado. Viven en zona de tema adaptable normal, no
+   dentro del hero oscuro fijo — usan los tokens de tema existentes. */
+.seg-tipo-split {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  margin-top: 8px;
+}
+.seg-tipo-col { border-left: 2px solid var(--border); padding-left: 12px; }
+.seg-tipo-col:first-child { border-left: none; padding-left: 0; }
+.seg-tipo-label {
+  font-size: 9px; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px;
+}

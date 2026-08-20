@@ -1501,3 +1501,123 @@ Cristian, extendiendo la aclaración de GH3.42.67.
   anteriores): tarjeta única, bien posicionada, valor 29 correcto.
   `node --check` en ambos archivos, balance de divs sin cambios
   respecto al hueco preexistente (640/639, +5/+5 por el bloque nuevo).
+
+## GH3.42.69
+Quitada la tarjeta "En proceso" del hero de Seguimiento — pedido
+explícito de Cristian, no era entendible (se superpone con
+Entregados, ya que PROC_ST incluye estados posteriores a la entrega —
+tema discutido varias veces en esta sesión).
+
+- Ocultada con `display:none` en vez de eliminada — el JS sigue
+  escribiendo en `pe-proceso` sin romper nada, solo se quitó de la
+  vista. Verificado en vivo.
+
+## GH3.42.70
+FIX real, reportado por Cristian con captura — "Cuello de botella"
+mostraba "Atascados en: Renovación completada", que no tiene sentido
+(es un estado terminal, no un obstáculo).
+
+- **Causa exacta**: existían 2 lógicas de cuello de botella distintas
+  y en conflicto. `dashboard.js` calculaba una variable `bottle` que
+  SÍ excluía correctamente los estados terminales/no-iniciados
+  (`pipeline.slice(1,-2)`) — pero esa variable nunca se usaba en
+  ningún lado. La función que realmente pinta la tarjeta
+  (`_renderCuelloBotella`, ui.js) hacía su propio ordenamiento sobre
+  TODOS los 11 estados del pipeline, sin excluir nada — por eso
+  "Renovación completada" (con muchos registros simplemente porque el
+  proyecto avanza) se elegía como si fuera un atasco.
+- **Fix**: excluidos `'Pendiente'`, `'Renovación completada'`,
+  `'Cerrado'` directamente en `_renderCuelloBotella` — no tiene
+  sentido llamarle "atasco" a algo que ya terminó, ni a algo que ni
+  siquiera empezó.
+- Verificado con los números exactos de la captura de Cristian: con el
+  fix, el cuello de botella real pasa a ser "Pendiente devolución
+  equipo anterior" (36, 26%) — coincide exacto con el primer ítem de
+  la lista de "otros" que ya se veía debajo, confirmando que ESE
+  siempre fue el atasco real.
+- `node --check`. No se tocó la variable `bottle` de dashboard.js (no
+  se usa en ningún lado; queda como código muerto, no se eliminó para
+  no ampliar el alcance de este fix puntual).
+
+## GH3.42.71
+Las 3 tarjetas que Cristian pidió — Equipos nuevos / Equipos antiguos /
+Actas, con Portátiles y Torres lado a lado dentro de cada una.
+Especificación confirmada punto por punto en el chat antes de construir.
+
+- **Equipos nuevos**: En tránsito (Alistamiento+Programado+En tránsito
+  equipo nuevo) / Entregados (hito acumulativo ya establecido).
+- **Equipos antiguos** (excluye "no aplica" — sin eq_ant_tipo o
+  estado_devolucion='No aplica'): Pendientes = estado_devolucion en
+  'Pendiente' o 'NO' (confirmado: no era 'No aplica', que sigue
+  significando "no le corresponde devolver nada"). En tránsito =
+  Solicitada + En tránsito (Cristian confirmó mantener esta categoría,
+  el tachado de su mensaje no aplicaba). Recibido = fecha_recepcion_
+  bodega (fuente única de verdad, GH3.42.60).
+- **Actas** (solo sobre equipos YA entregados — decisión propuesta y
+  aceptada): Pendiente crear = sin fecha_envio_acta. Por firmar = con
+  fecha_envio_acta, sin fecha_firma_acta. Firmadas = ambas fechas.
+  (Nota: existen 2 pares de nombres de columna con datos idénticos —
+  fecha_envio_acta/fecha_acta_enviada y fecha_firma_acta/fecha_acta_
+  firmada, 71 y 58 registros respectivamente en ambos — se usan los
+  primeros, que ya usa el resto de la app).
+- **`computeTarjetasSeguimiento(activos)`** nueva en dashboard.js,
+  reutilizando ENTREGADO_ST (nivel de módulo desde GH3.42.65).
+- **Ubicación**: sección nueva justo después del hero, antes de la
+  barra de filtros — decisión propia (Cristian delegó este punto).
+- **Hallazgo al implementar**: estas tarjetas NO pueden usar la
+  variable `records` de `renderPanelEjecutivo()` — esa ya tiene el
+  filtro de tipo aplicado (GH3.42.34/61), así que si alguien tiene
+  "Portátiles" activo en el toggle, la columna de Torres saldría en
+  cero. Se armó `_matchPFsinTipo` — mismos filtros (empresa/ciudad/
+  proyecto/técnico/estado/feedback) pero sin el de tipo, para que
+  estas 3 tarjetas siempre muestren ambos lados.
+- **Verificación honesta**: Chrome no se pudo conectar en esta sesión
+  (Cristian pidió el de casa, no llegó a autorizarse). Verificado con
+  simulación exhaustiva en Node (7 registros sintéticos, rastreo
+  manual campo por campo, todos coinciden exacto) y cruce de los 16
+  IDs generados por JS contra el HTML (todos coinciden). NO verificado
+  visualmente en navegador real — pendiente de confirmar en la próxima
+  conexión.
+- `node --check` en ambos archivos, balance de llaves en 7 CSS,
+  balance de divs (+38/+38, mismo hueco preexistente sin cambios).
+
+## GH3.42.72
+Quitada "En proceso" también del hero de Resumen — mismo pedido que
+ya se hizo para Seguimiento (GH3.42.69). Reemplazada por "Entregados"
+como tarjeta propia (antes vivía anidada debajo de "En proceso" con
+"└ X ya entregados").
+
+- Confirmado seguro: `_setText` ya valida `if(el)` antes de escribir,
+  así que dejar de tener el id `h-proceso` en el HTML no rompe nada.
+- Encontrada una tercera ocurrencia de "En proceso" en "Home Técnico"
+  (vista personal de un técnico al iniciar sesión) — NO se tocó,
+  pendiente de revisar junto con Cristian cuando lleguemos a esa vista
+  en la revisión 1 a 1.
+- Verificado: balance de divs sin cambios (678/677).
+
+## GH3.42.73
+Eliminada "Cuello de botella" completa del hero de Seguimiento —
+decisión conjunta con Cristian tras analizarla en detalle en el chat.
+
+- **Por qué**: (1) la lista de "otros" mezclaba pasos normales del
+  flujo (Equipo anterior recibido, Entregado equipo nuevo) con
+  atascos, como si compitieran — pero "recibido" y "entregado" son
+  lo que queremos, no un problema; (2) duplicaba "En lista, sin
+  recibir" de Riesgos activos con nombre distinto y número
+  ligeramente distinto, diciendo lo mismo dos veces; (3) "Impacto
+  ALTO/MEDIO" aparecía sin referencia de qué es cada nivel; (4) el
+  único atasco real accionable ("devolución equipo anterior") ya está
+  en Riesgos activos y en las 3 tarjetas nuevas por tipo (GH3.42.71).
+- **Fix**: eliminado el div wrapper, la tarjeta y su div interno.
+  "Riesgos activos" pasa a ocupar el ancho completo del hero
+  (contenedor cambió de `panel-grid-2` a solo `panel-hero-embed`).
+- Verificado en vivo: hero se ve limpio y aireado, Riesgos activos
+  con "Equipos cruzados 2" y "En lista, sin recibir 32" bien
+  visibles. Balance de divs correcto: 675/674 (−3/−3 desde 678/677,
+  eliminados exactamente los 3 divs esperados; mismo hueco
+  preexistente sin cambios).
+- **No tocado**: la variable `bottle` en dashboard.js y la función
+  `_renderCuelloBotella` en ui.js quedan como código muerto (ya no
+  hay elemento en el DOM que las llame). No se eliminaron para
+  acotar el alcance de este cambio — pueden limpiarse en otra pasada
+  específica de code cleanup.

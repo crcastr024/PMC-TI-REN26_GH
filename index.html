@@ -251,7 +251,12 @@
           <div class="hero-kpis">
             <div class="hero-kpi"><span class="hero-kpi-label">Total equipos</span><span class="hero-kpi-val">146</span><span class="hero-kpi-sub" id="h-empresas">HBT 88 · HGS 58</span></div>
             <div class="hero-kpi"><span class="hero-kpi-label">Pendientes</span><span class="hero-kpi-val accent" id="h-pendientes">—</span><span class="hero-kpi-sub">Sin iniciar</span></div>
-            <div class="hero-kpi"><span class="hero-kpi-label">En proceso</span><span class="hero-kpi-val amb" id="h-proceso">—</span><span class="hero-kpi-sub">└ <strong id="h-entregados" style="color:var(--green)">—</strong> ya entregados</span></div>
+            <!-- GH3.42.72: 'En proceso' quitada del hero de Resumen —
+                 mismo pedido que ya se hizo para Seguimiento
+                 (GH3.42.69), confuso que muestre un número más grande
+                 que Entregados cuando se superponen. Reemplazada por
+                 Entregados como tarjeta propia, no anidada. -->
+            <div class="hero-kpi"><span class="hero-kpi-label">Entregados</span><span class="hero-kpi-val grn" id="h-entregados">—</span><span class="hero-kpi-sub">Acumulativo</span></div>
             <div class="hero-kpi"><span class="hero-kpi-label">Avance global</span><span class="hero-kpi-val red" id="h-pct">0%</span><span class="hero-kpi-sub">Ponderado</span></div>
             <div class="hero-kpi"><span class="hero-kpi-label">Días restantes</span><span class="hero-kpi-val" id="h-dias-restantes">—</span><span class="hero-kpi-sub" id="h-fecha-estimada-sub">—</span></div>
           </div>
@@ -861,7 +866,13 @@
             <div class="panel-kpi" style="cursor:pointer" onclick="_goToReport('entregados')" data-tip="Ver detalle en Ejecutivos"><div class="panel-kpi-label">Entregados (hito)</div><div class="panel-kpi-val grn" id="pe-entregados">—</div><div class="panel-kpi-sub">Acumulativo</div></div>
             <div class="panel-kpi" style="cursor:pointer" onclick="_goToReport('actas')" data-tip="Ver detalle en Ejecutivos"><div class="panel-kpi-label">Actas firmadas</div><div class="panel-kpi-val grn" id="pe-actas">—</div><div class="panel-kpi-sub">Acumulativo</div></div>
             <div class="panel-kpi" style="cursor:pointer" onclick="_goToReport('finalizados')" data-tip="Ver detalle en Ejecutivos"><div class="panel-kpi-label">Finalizados</div><div class="panel-kpi-val grn" id="pe-cerrados">—</div><div class="panel-kpi-sub">Ren. completada + Cerrado</div></div>
-            <div class="panel-kpi"><div class="panel-kpi-label">En proceso</div><div class="panel-kpi-val amb" id="pe-proceso">—</div><div class="panel-kpi-sub">Exclusivo</div></div>
+            <!-- GH3.42.69: 'En proceso' quitada — pedido explícito de
+                 Cristian, no era entendible (se superpone con
+                 Entregados, ya que PROC_ST incluye estados posteriores
+                 a la entrega). El id pe-proceso queda sin usar en el
+                 JS; no se tocó ese cálculo por si se necesita en otra
+                 parte, solo se quitó de la vista. -->
+            <div class="panel-kpi" style="display:none"><div class="panel-kpi-label">En proceso</div><div class="panel-kpi-val amb" id="pe-proceso">—</div><div class="panel-kpi-sub">Exclusivo</div></div>
             <div class="panel-kpi" style="cursor:pointer" onclick="_goToReport('pendientes')" data-tip="Ver detalle en Ejecutivos"><div class="panel-kpi-label">Pendientes</div><div class="panel-kpi-val accent" id="pe-pendientes">—</div><div class="panel-kpi-sub">Sin iniciar</div></div>
             <div class="panel-kpi" style="cursor:pointer" onclick="_goToReport('envio')" data-tip="Ver detalle en Ejecutivos"><div class="panel-kpi-label">En envío</div><div class="panel-kpi-val" id="pe-en-envio">—</div><div class="panel-kpi-sub">Prog. + Tránsito</div></div>
             <div class="panel-kpi"><div class="panel-kpi-label">Backups</div><div class="panel-kpi-val" id="pe-backup">—</div><div class="panel-kpi-sub">HBT 3 · HGS 1</div></div>
@@ -885,9 +896,77 @@
             <button type="button" class="ptt-btn" data-tipo="PORTATIL" onclick="_setTipoToggle('PORTATIL')">Portátiles</button>
             <button type="button" class="ptt-btn" data-tipo="TORRE" onclick="_setTipoToggle('TORRE')">Torres</button>
           </div>
-          <div class="panel-grid-2 panel-hero-embed" style="margin-top:14px">
-            <div class="panel-card panel-hero-card"><div class="panel-card-title">Cuello de botella</div><div id="pe-botella"></div></div>
+          <!-- GH3.42.73: 'Cuello de botella' eliminada — decisión
+               conjunta con Cristian tras analizarla en detalle. Los
+               problemas reales que tenía: (1) la lista de 'otros'
+               mezclaba pasos normales del flujo (Equipo recibido,
+               Entregado) con atascos, como si compitieran; (2)
+               duplicaba 'En lista, sin recibir' de Riesgos con nombre
+               distinto y número ligeramente distinto; (3) 'Impacto
+               ALTO/MEDIO' aparecía sin referencia. La función real
+               que cumplía ya la cumplen mejor las 3 tarjetas nuevas
+               por tipo (GH3.42.71) y Riesgos activos. Riesgos ahora
+               ocupa el ancho completo. -->
+          <div class="panel-hero-embed" style="margin-top:14px">
             <div class="panel-card panel-hero-card"><div class="panel-card-title">Riesgos activos</div><div id="pe-riesgos-list" class="exec-risks"></div></div>
+          </div>
+        </div>
+      </div>
+      <!-- GH3.42.71 AUTORIZADO: 3 tarjetas nuevas — Equipos nuevos /
+           Equipos antiguos / Actas, con Portátiles y Torres lado a
+           lado dentro de cada una (confirmado con Cristian: siempre
+           ambos tipos visibles, sin necesidad de togglear). Viven
+           fuera del hero (zona de tema adaptable normal) para no
+           repetir el trabajo de estilos oscuros forzados que hizo
+           falta en GH3.42.62 para Cuello de botella/Riesgos. -->
+      <div class="panel-grid-3" id="seg-tarjetas-tipo" style="margin:14px 28px">
+        <div class="panel-card">
+          <div class="panel-card-title">Equipos nuevos</div>
+          <div class="seg-tipo-split">
+            <div class="seg-tipo-col">
+              <div class="seg-tipo-label">Portátiles</div>
+              <div class="panel-stat-row"><span class="panel-stat-label">En tránsito</span><span class="panel-stat-val" id="st-PORTATIL-nuevo-transito">—</span></div>
+              <div class="panel-stat-row"><span class="panel-stat-label">Entregados</span><span class="panel-stat-val grn" id="st-PORTATIL-nuevo-entregados">—</span></div>
+            </div>
+            <div class="seg-tipo-col">
+              <div class="seg-tipo-label">Torres</div>
+              <div class="panel-stat-row"><span class="panel-stat-label">En tránsito</span><span class="panel-stat-val" id="st-TORRE-nuevo-transito">—</span></div>
+              <div class="panel-stat-row"><span class="panel-stat-label">Entregados</span><span class="panel-stat-val grn" id="st-TORRE-nuevo-entregados">—</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-card-title">Equipos antiguos</div>
+          <div class="seg-tipo-split">
+            <div class="seg-tipo-col">
+              <div class="seg-tipo-label">Portátiles</div>
+              <div class="panel-stat-row"><span class="panel-stat-label">Pendientes</span><span class="panel-stat-val accent" id="st-PORTATIL-ant-pendientes">—</span></div>
+              <div class="panel-stat-row"><span class="panel-stat-label">En tránsito</span><span class="panel-stat-val" id="st-PORTATIL-ant-transito">—</span></div>
+              <div class="panel-stat-row"><span class="panel-stat-label">Recibido</span><span class="panel-stat-val grn" id="st-PORTATIL-ant-recibido">—</span></div>
+            </div>
+            <div class="seg-tipo-col">
+              <div class="seg-tipo-label">Torres</div>
+              <div class="panel-stat-row"><span class="panel-stat-label">Pendientes</span><span class="panel-stat-val accent" id="st-TORRE-ant-pendientes">—</span></div>
+              <div class="panel-stat-row"><span class="panel-stat-label">En tránsito</span><span class="panel-stat-val" id="st-TORRE-ant-transito">—</span></div>
+              <div class="panel-stat-row"><span class="panel-stat-label">Recibido</span><span class="panel-stat-val grn" id="st-TORRE-ant-recibido">—</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-card-title">Actas <span style="font-weight:400;text-transform:none;font-size:9px;color:var(--text-3)">(sobre entregados)</span></div>
+          <div class="seg-tipo-split">
+            <div class="seg-tipo-col">
+              <div class="seg-tipo-label">Portátiles</div>
+              <div class="panel-stat-row"><span class="panel-stat-label">Pendiente crear</span><span class="panel-stat-val accent" id="st-PORTATIL-acta-crear">—</span></div>
+              <div class="panel-stat-row"><span class="panel-stat-label">Por firmar</span><span class="panel-stat-val amb" id="st-PORTATIL-acta-firmar">—</span></div>
+              <div class="panel-stat-row"><span class="panel-stat-label">Firmadas</span><span class="panel-stat-val grn" id="st-PORTATIL-acta-firmada">—</span></div>
+            </div>
+            <div class="seg-tipo-col">
+              <div class="seg-tipo-label">Torres</div>
+              <div class="panel-stat-row"><span class="panel-stat-label">Pendiente crear</span><span class="panel-stat-val accent" id="st-TORRE-acta-crear">—</span></div>
+              <div class="panel-stat-row"><span class="panel-stat-label">Por firmar</span><span class="panel-stat-val amb" id="st-TORRE-acta-firmar">—</span></div>
+              <div class="panel-stat-row"><span class="panel-stat-label">Firmadas</span><span class="panel-stat-val grn" id="st-TORRE-acta-firmada">—</span></div>
+            </div>
           </div>
         </div>
       </div>

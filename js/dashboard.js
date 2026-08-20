@@ -72,6 +72,60 @@ function computePorTecnico(activos) {
 }
 window.computePorTecnico = computePorTecnico;
 
+// GH3.42.71 AUTORIZADO — 3 tarjetas nuevas para Seguimiento (Equipos
+// nuevos / Equipos antiguos / Actas), por tipo de equipo (Portátil y
+// Torre, lado a lado). Especificación confirmada con Cristian en el
+// chat, punto por punto:
+// - Equipo nuevo: En tránsito (Alistamiento+Programado+En tránsito
+//   equipo nuevo) / Entregados (hito acumulativo, ya establecido).
+// - Equipo antiguo: excluye "no aplica" (sin eq_ant_tipo O
+//   estado_devolucion='No aplica'). Pendientes = estado_devolucion
+//   en 'Pendiente' o el valor literal 'NO' (confirmado con Cristian:
+//   se refería a estos 2, no a 'No aplica'). En tránsito = Solicitada
+//   + En tránsito (Cristian pidió mantener esta categoría, no
+//   quitarla — el tachado de su mensaje no aplicaba). Recibido =
+//   fecha_recepcion_bodega (fuente única de verdad, GH3.42.60).
+// - Actas: SOLO sobre equipos YA entregados (decisión propuesta y
+//   aceptada — no tiene sentido "pendiente crear acta" de algo que
+//   ni siquiera se ha entregado). Pendiente crear = sin
+//   fecha_envio_acta. Por firmar = con fecha_envio_acta, sin
+//   fecha_firma_acta. Firmadas = ambas fechas.
+function computeTarjetasSeguimiento(activos) {
+  function paraTipo(tipo) {
+    var recs = activos.filter(function(u){ return u.tipo === tipo; });
+    var enTransitoNuevo = 0, entregados = 0;
+    var eqAntPendientes = 0, eqAntTransito = 0, eqAntRecibido = 0;
+    var actaPendienteCrear = 0, actaPorFirmar = 0, actaFirmada = 0;
+    recs.forEach(function(u) {
+      var yaEntregado = !!(u.fecha_entrega || ENTREGADO_ST.indexOf(u.estado) >= 0);
+      if (['Alistamiento','Programado','En tránsito equipo nuevo'].indexOf(u.estado) >= 0) enTransitoNuevo++;
+      if (yaEntregado) entregados++;
+
+      var tieneEqAnterior = !!(u.eq_ant_tipo && String(u.eq_ant_tipo).trim());
+      var noAplicaDevolucion = u.estado_devolucion === 'No aplica' || !tieneEqAnterior;
+      if (!noAplicaDevolucion) {
+        if (u.fecha_recepcion_bodega) eqAntRecibido++;
+        else if (u.estado_devolucion === 'Solicitada' || u.estado_devolucion === 'En tránsito') eqAntTransito++;
+        else if (u.estado_devolucion === 'Pendiente' || u.estado_devolucion === 'NO') eqAntPendientes++;
+      }
+
+      if (yaEntregado) {
+        if (!u.fecha_envio_acta) actaPendienteCrear++;
+        else if (!u.fecha_firma_acta) actaPorFirmar++;
+        else actaFirmada++;
+      }
+    });
+    return {
+      total: recs.length,
+      equipoNuevo: { enTransito: enTransitoNuevo, entregados: entregados },
+      equipoAntiguo: { pendientes: eqAntPendientes, enTransito: eqAntTransito, recibido: eqAntRecibido },
+      actas: { pendienteCrear: actaPendienteCrear, porFirmar: actaPorFirmar, firmadas: actaFirmada }
+    };
+  }
+  return { PORTATIL: paraTipo('PORTATIL'), TORRE: paraTipo('TORRE') };
+}
+window.computeTarjetasSeguimiento = computeTarjetasSeguimiento;
+
 // ════════════════════════════════════════════════════════════════════
 // ════════════════════════════════════════════════════════════════════
 // STAB-v09.1 TASK 1 — buildDashboardStats(users)

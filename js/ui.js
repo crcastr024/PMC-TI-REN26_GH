@@ -2169,6 +2169,41 @@ function renderPanelEjecutivo() {
   // ─── Cuello de botella ────────────────────────────────────────────
   _renderCuelloBotella(_stats);
 
+  // ─── Equipos nuevos / antiguos / Actas, por tipo ──────────────────
+  // GH3.42.71 AUTORIZADO: estas 3 tarjetas SIEMPRE muestran Portátiles
+  // y Torres lado a lado, sin importar el toggle de tipo activo — por
+  // eso NO pueden usar `records` (que ya tiene pf.tipo aplicado, GH
+  // 3.42.34). Se respetan los demás filtros (empresa/ciudad/proyecto/
+  // técnico/estado/feedback), solo se ignora pf.tipo.
+  var _matchPFsinTipo = function(u) {
+    if (pf.empresa && u.empresa !== pf.empresa) return false;
+    if (pf.ciudad) {
+      var nc2 = window.CityNormalizer ? CityNormalizer.normalize(u.ciudad) : u.ciudad;
+      var nf2 = window.CityNormalizer ? CityNormalizer.normalize(pf.ciudad) : pf.ciudad;
+      if (nc2 !== nf2) return false;
+    }
+    if (pf.proyecto && u.proyecto !== pf.proyecto) return false;
+    if (pf.tecnico && (u.tecnico || '').toLowerCase() !== pf.tecnico.toLowerCase()) return false;
+    if (pf.estado && u.estado !== pf.estado) return false;
+    if (pf.feedback && !(Number(u.feedback || 0) >= Number(pf.feedback))) return false;
+    return true;
+  };
+  var _recordsSinTipo = (window.USERS || []).filter(_matchPFsinTipo).filter(function(u){ return !isBackup(u); });
+  if (window.computeTarjetasSeguimiento) {
+    var _tj = computeTarjetasSeguimiento(_recordsSinTipo);
+    ['PORTATIL','TORRE'].forEach(function(tipo) {
+      var d = _tj[tipo] || { equipoNuevo:{}, equipoAntiguo:{}, actas:{} };
+      set('st-' + tipo + '-nuevo-transito',   d.equipoNuevo.enTransito || 0);
+      set('st-' + tipo + '-nuevo-entregados', d.equipoNuevo.entregados || 0);
+      set('st-' + tipo + '-ant-pendientes',   d.equipoAntiguo.pendientes || 0);
+      set('st-' + tipo + '-ant-transito',     d.equipoAntiguo.enTransito || 0);
+      set('st-' + tipo + '-ant-recibido',     d.equipoAntiguo.recibido || 0);
+      set('st-' + tipo + '-acta-crear',       d.actas.pendienteCrear || 0);
+      set('st-' + tipo + '-acta-firmar',      d.actas.porFirmar || 0);
+      set('st-' + tipo + '-acta-firmada',     d.actas.firmadas || 0);
+    });
+  }
+
   // ─── Riesgos activos ──────────────────────────────────────────────
   _renderRiesgos(_stats, _allStats);
 
@@ -2669,7 +2704,17 @@ function _renderCuelloBotella(_stats) {
   var botEl = document.getElementById('pe-botella');
   var pipe   = _stats.pipeline || [];
   var total  = _stats.total || 0;
-  var sorted = pipe.filter(function(p){ return p.count>0; }).sort(function(a,b){ return b.count-a.count; });
+  // GH3.42.70 FIX: excluir estados terminales/no-iniciados del cuello
+  // de botella — 'Renovación completada'/'Cerrado' significan que YA
+  // TERMINÓ, no que está atascado (es lo opuesto); 'Pendiente'
+  // significa que ni siquiera empezó. dashboard.js ya calculaba esto
+  // bien en una variable separada (`bottle`, con slice(1,-2)) que
+  // nunca llegaba a usarse aquí — esta función hacía su propio orden
+  // sobre TODOS los estados sin excluir nada. Reportado por Cristian
+  // con captura: "Atascados en: Renovación completada" no tiene
+  // sentido, es un estado terminal, no un obstáculo.
+  var ESTADOS_NO_BOTELLA = ['Pendiente', 'Renovación completada', 'Cerrado'];
+  var sorted = pipe.filter(function(p){ return p.count>0 && ESTADOS_NO_BOTELLA.indexOf(p.estado)<0; }).sort(function(a,b){ return b.count-a.count; });
   if (!sorted.length) {
     botEl.innerHTML = '<div style="color:var(--text-3);font-size:11px;padding:8px 0">Sin registros en proceso</div>';
     return;
