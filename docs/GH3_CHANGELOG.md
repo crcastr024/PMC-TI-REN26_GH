@@ -1646,3 +1646,50 @@ ui.js reventara con `Cannot set properties of null`.
   `_renderCuelloBotella` como noop, re-renderizé la vista, y
   confirmé que `#pe-riesgos-list` se llena con 529 caracteres
   (Equipos cruzados 2, En lista sin recibir 32, Pend. aprobación 3).
+
+## GH3.42.75
+Reubicadas las 3 tarjetas por tipo — pedido de Cristian: al lugar
+donde estaba Cuello de botella, entre el toggle Vista general/
+Portátiles/Torres y Riesgos activos, DENTRO del hero oscuro.
+
+- **Cambios en HTML**: bloque de las 3 tarjetas movido a nuevo lugar
+  con clase `.panel-hero-embed` y cada `.panel-card` con
+  `.panel-hero-card` para heredar el estilo oscuro (GH3.42.62).
+  Bloque viejo (que quedaba después de la barra de filtros) eliminado.
+- **Cambios en CSS**: agregadas variantes oscuras para `.seg-tipo-col`,
+  `.seg-tipo-label`, `.panel-stat-label` y `.panel-stat-val` cuando
+  viven dentro de `.panel-hero-card` (colores rgba fijos, mismo
+  criterio de GH3.42.62 ya que el hero es siempre oscuro).
+- **Verificado en vivo antes de empaquetar**: las 3 tarjetas se ven
+  correctamente sobre el hero oscuro, texto legible, valores reales
+  poblados (En tránsito Portátiles 2, Torres 1; Entregados 120 y 17;
+  Pendientes 30 y 15; Actas Pendiente crear 57 y 9). Sin IDs
+  duplicados (verificado con regex), balance de divs sin cambios
+  (675/674, mismo hueco preexistente). `node --check`.
+
+## GH3.42.76
+Eliminado el toggle "Vista general / Portátiles / Torres" del hero
+de Seguimiento — pedido de Cristian tras verificar en vivo que
+generaba confusión visual.
+
+- **Motivo real**: los botones filtraban el hero de arriba (Total,
+  Entregados, etc.) pero NO las 3 tarjetas nuevas (por diseño de
+  GH3.42.71, siempre muestran ambos tipos lado a lado). Estar
+  ubicados JUNTO A tarjetas etiquetadas "Portátiles"/"Torres" y no
+  afectarlas era la fuente de la confusión.
+- **Fix**: eliminado el markup `<div class="panel-tipo-toggle">` y
+  sus 3 botones. El filtro de tipo sigue disponible en el dropdown
+  `pf-tipo` de la barra de filtros para quien lo necesite (con el
+  alcance más amplio: filtra hero + gauge + burn down + ciudades +
+  tabla, aunque no las 3 tarjetas nuevas — mismo diseño que antes).
+- **Código JS conservado**: las funciones `_setTipoToggle()` y
+  `_onTipoSelectChange()` en ui.js quedan como código huérfano
+  seguro — usan `querySelectorAll` que devuelve NodeList vacío si
+  no hay elementos, no rompen nada. Se pueden limpiar en un pass de
+  deadcode dedicado. Mismo criterio que se aplicó con
+  `_renderCuelloBotella` (GH3.42.73/74).
+- Verificado en vivo antes de empaquetar: hero se ve limpio, sin
+  toggle, las 3 tarjetas fluyen naturalmente. Balance de divs
+  correcto: 674/673 (-1/-1 desde 675/674, eliminado exactamente 1
+  div del wrapper; los 3 botones no son divs). Mismo hueco
+  preexistente sin cambios.

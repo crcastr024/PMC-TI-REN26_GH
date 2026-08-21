@@ -891,82 +891,73 @@
                claro se habría visto con texto claro sobre fondo claro,
                bajo contraste). Encontrado al revisar la estructura real
                antes de dar por bueno el cambio aprobado en el chat. -->
-          <div class="panel-tipo-toggle" id="panel-tipo-toggle">
-            <button type="button" class="ptt-btn active" data-tipo="" onclick="_setTipoToggle('')">Vista general</button>
-            <button type="button" class="ptt-btn" data-tipo="PORTATIL" onclick="_setTipoToggle('PORTATIL')">Portátiles</button>
-            <button type="button" class="ptt-btn" data-tipo="TORRE" onclick="_setTipoToggle('TORRE')">Torres</button>
+          <!-- GH3.42.76: toggle Vista general/Portátiles/Torres
+               eliminado — pedido de Cristian. Los botones filtraban
+               el hero pero NO las 3 tarjetas nuevas (por diseño,
+               GH3.42.71 muestra ambos tipos siempre), lo que creaba
+               confusión visual. El filtro de tipo sigue disponible
+               en el dropdown pf-tipo de la barra de filtros. Se
+               conservan las funciones _setTipoToggle() y
+               _onTipoSelectChange() en ui.js por si necesitan
+               reutilizarse; solo se quitó el markup del toggle. -->
+          <!-- GH3.42.75: 3 tarjetas por tipo movidas aquí — pedido de
+               Cristian: al lugar donde estaba Cuello de botella
+               (entre toggle y Riesgos activos), DENTRO del hero
+               oscuro. Ahora usan .panel-hero-card para heredar los
+               estilos oscuros ya definidos (GH3.42.62). -->
+          <div class="panel-grid-3 panel-hero-embed" id="seg-tarjetas-tipo" style="margin-top:14px">
+            <div class="panel-card panel-hero-card">
+              <div class="panel-card-title">Equipos nuevos</div>
+              <div class="seg-tipo-split">
+                <div class="seg-tipo-col">
+                  <div class="seg-tipo-label">Portátiles</div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">En tránsito</span><span class="panel-stat-val" id="st-PORTATIL-nuevo-transito">—</span></div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">Entregados</span><span class="panel-stat-val grn" id="st-PORTATIL-nuevo-entregados">—</span></div>
+                </div>
+                <div class="seg-tipo-col">
+                  <div class="seg-tipo-label">Torres</div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">En tránsito</span><span class="panel-stat-val" id="st-TORRE-nuevo-transito">—</span></div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">Entregados</span><span class="panel-stat-val grn" id="st-TORRE-nuevo-entregados">—</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-card panel-hero-card">
+              <div class="panel-card-title">Equipos antiguos</div>
+              <div class="seg-tipo-split">
+                <div class="seg-tipo-col">
+                  <div class="seg-tipo-label">Portátiles</div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">Pendientes</span><span class="panel-stat-val accent" id="st-PORTATIL-ant-pendientes">—</span></div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">En tránsito</span><span class="panel-stat-val" id="st-PORTATIL-ant-transito">—</span></div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">Recibido</span><span class="panel-stat-val grn" id="st-PORTATIL-ant-recibido">—</span></div>
+                </div>
+                <div class="seg-tipo-col">
+                  <div class="seg-tipo-label">Torres</div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">Pendientes</span><span class="panel-stat-val accent" id="st-TORRE-ant-pendientes">—</span></div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">En tránsito</span><span class="panel-stat-val" id="st-TORRE-ant-transito">—</span></div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">Recibido</span><span class="panel-stat-val grn" id="st-TORRE-ant-recibido">—</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-card panel-hero-card">
+              <div class="panel-card-title">Actas <span style="font-weight:400;text-transform:none;font-size:9px;opacity:.6">(sobre entregados)</span></div>
+              <div class="seg-tipo-split">
+                <div class="seg-tipo-col">
+                  <div class="seg-tipo-label">Portátiles</div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">Pendiente crear</span><span class="panel-stat-val accent" id="st-PORTATIL-acta-crear">—</span></div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">Por firmar</span><span class="panel-stat-val amb" id="st-PORTATIL-acta-firmar">—</span></div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">Firmadas</span><span class="panel-stat-val grn" id="st-PORTATIL-acta-firmada">—</span></div>
+                </div>
+                <div class="seg-tipo-col">
+                  <div class="seg-tipo-label">Torres</div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">Pendiente crear</span><span class="panel-stat-val accent" id="st-TORRE-acta-crear">—</span></div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">Por firmar</span><span class="panel-stat-val amb" id="st-TORRE-acta-firmar">—</span></div>
+                  <div class="panel-stat-row"><span class="panel-stat-label">Firmadas</span><span class="panel-stat-val grn" id="st-TORRE-acta-firmada">—</span></div>
+                </div>
+              </div>
+            </div>
           </div>
-          <!-- GH3.42.73: 'Cuello de botella' eliminada — decisión
-               conjunta con Cristian tras analizarla en detalle. Los
-               problemas reales que tenía: (1) la lista de 'otros'
-               mezclaba pasos normales del flujo (Equipo recibido,
-               Entregado) con atascos, como si compitieran; (2)
-               duplicaba 'En lista, sin recibir' de Riesgos con nombre
-               distinto y número ligeramente distinto; (3) 'Impacto
-               ALTO/MEDIO' aparecía sin referencia. La función real
-               que cumplía ya la cumplen mejor las 3 tarjetas nuevas
-               por tipo (GH3.42.71) y Riesgos activos. Riesgos ahora
-               ocupa el ancho completo. -->
           <div class="panel-hero-embed" style="margin-top:14px">
             <div class="panel-card panel-hero-card"><div class="panel-card-title">Riesgos activos</div><div id="pe-riesgos-list" class="exec-risks"></div></div>
-          </div>
-        </div>
-      </div>
-      <!-- GH3.42.71 AUTORIZADO: 3 tarjetas nuevas — Equipos nuevos /
-           Equipos antiguos / Actas, con Portátiles y Torres lado a
-           lado dentro de cada una (confirmado con Cristian: siempre
-           ambos tipos visibles, sin necesidad de togglear). Viven
-           fuera del hero (zona de tema adaptable normal) para no
-           repetir el trabajo de estilos oscuros forzados que hizo
-           falta en GH3.42.62 para Cuello de botella/Riesgos. -->
-      <div class="panel-grid-3" id="seg-tarjetas-tipo" style="margin:14px 28px">
-        <div class="panel-card">
-          <div class="panel-card-title">Equipos nuevos</div>
-          <div class="seg-tipo-split">
-            <div class="seg-tipo-col">
-              <div class="seg-tipo-label">Portátiles</div>
-              <div class="panel-stat-row"><span class="panel-stat-label">En tránsito</span><span class="panel-stat-val" id="st-PORTATIL-nuevo-transito">—</span></div>
-              <div class="panel-stat-row"><span class="panel-stat-label">Entregados</span><span class="panel-stat-val grn" id="st-PORTATIL-nuevo-entregados">—</span></div>
-            </div>
-            <div class="seg-tipo-col">
-              <div class="seg-tipo-label">Torres</div>
-              <div class="panel-stat-row"><span class="panel-stat-label">En tránsito</span><span class="panel-stat-val" id="st-TORRE-nuevo-transito">—</span></div>
-              <div class="panel-stat-row"><span class="panel-stat-label">Entregados</span><span class="panel-stat-val grn" id="st-TORRE-nuevo-entregados">—</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="panel-card">
-          <div class="panel-card-title">Equipos antiguos</div>
-          <div class="seg-tipo-split">
-            <div class="seg-tipo-col">
-              <div class="seg-tipo-label">Portátiles</div>
-              <div class="panel-stat-row"><span class="panel-stat-label">Pendientes</span><span class="panel-stat-val accent" id="st-PORTATIL-ant-pendientes">—</span></div>
-              <div class="panel-stat-row"><span class="panel-stat-label">En tránsito</span><span class="panel-stat-val" id="st-PORTATIL-ant-transito">—</span></div>
-              <div class="panel-stat-row"><span class="panel-stat-label">Recibido</span><span class="panel-stat-val grn" id="st-PORTATIL-ant-recibido">—</span></div>
-            </div>
-            <div class="seg-tipo-col">
-              <div class="seg-tipo-label">Torres</div>
-              <div class="panel-stat-row"><span class="panel-stat-label">Pendientes</span><span class="panel-stat-val accent" id="st-TORRE-ant-pendientes">—</span></div>
-              <div class="panel-stat-row"><span class="panel-stat-label">En tránsito</span><span class="panel-stat-val" id="st-TORRE-ant-transito">—</span></div>
-              <div class="panel-stat-row"><span class="panel-stat-label">Recibido</span><span class="panel-stat-val grn" id="st-TORRE-ant-recibido">—</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="panel-card">
-          <div class="panel-card-title">Actas <span style="font-weight:400;text-transform:none;font-size:9px;color:var(--text-3)">(sobre entregados)</span></div>
-          <div class="seg-tipo-split">
-            <div class="seg-tipo-col">
-              <div class="seg-tipo-label">Portátiles</div>
-              <div class="panel-stat-row"><span class="panel-stat-label">Pendiente crear</span><span class="panel-stat-val accent" id="st-PORTATIL-acta-crear">—</span></div>
-              <div class="panel-stat-row"><span class="panel-stat-label">Por firmar</span><span class="panel-stat-val amb" id="st-PORTATIL-acta-firmar">—</span></div>
-              <div class="panel-stat-row"><span class="panel-stat-label">Firmadas</span><span class="panel-stat-val grn" id="st-PORTATIL-acta-firmada">—</span></div>
-            </div>
-            <div class="seg-tipo-col">
-              <div class="seg-tipo-label">Torres</div>
-              <div class="panel-stat-row"><span class="panel-stat-label">Pendiente crear</span><span class="panel-stat-val accent" id="st-TORRE-acta-crear">—</span></div>
-              <div class="panel-stat-row"><span class="panel-stat-label">Por firmar</span><span class="panel-stat-val amb" id="st-TORRE-acta-firmar">—</span></div>
-              <div class="panel-stat-row"><span class="panel-stat-label">Firmadas</span><span class="panel-stat-val grn" id="st-TORRE-acta-firmada">—</span></div>
-            </div>
           </div>
         </div>
       </div>

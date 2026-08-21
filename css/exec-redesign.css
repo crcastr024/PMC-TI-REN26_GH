@@ -702,6 +702,13 @@
 }
 .seg-tipo-col { border-left: 2px solid var(--border); padding-left: 12px; }
 .seg-tipo-col:first-child { border-left: none; padding-left: 0; }
+/* GH3.42.75: variantes oscuras cuando las tarjetas viven DENTRO del
+   hero (heredan .panel-hero-card, GH3.42.62). Mismo criterio: colores
+   fijos rgba, no tokens de tema, porque el hero es oscuro siempre. */
+#view-panel .panel-hero-card .seg-tipo-col { border-left-color: rgba(255,255,255,.1); }
+#view-panel .panel-hero-card .seg-tipo-label { color: rgba(255,255,255,.5); }
+#view-panel .panel-hero-card .panel-stat-label { color: rgba(255,255,255,.6); }
+#view-panel .panel-hero-card .panel-stat-val { color: rgba(255,255,255,.9); }
 .seg-tipo-label {
   font-size: 9px; font-weight: 700; color: var(--text-3);
   text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px;
